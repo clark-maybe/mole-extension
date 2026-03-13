@@ -24,7 +24,7 @@ import { matchWorkflows } from './functions/site-workflow-matcher';
 import { handleChat } from './ai/orchestrator';
 import { chatComplete } from './ai/llm-client';
 import type { HandleChatOptions } from './ai/orchestrator';
-import { injectAIResponseRunner } from './functions/resident-runtime';
+import { injectAIResponseRunner, getActiveResidentJobs, stopResidentJobById } from './functions/resident-runtime';
 import type {
     AIStreamEvent,
     AIErrorPayload,
@@ -2970,6 +2970,7 @@ async function handleTimerTrigger(timerId: string, source: 'alarm' | 'runtime_ti
                 await TimerStore.remove(timerId);
                 RuntimeResourceManager.unregisterFromAllSessions('timer', timerId);
                 console.log(`[Mole] 周期任务已达最大次数，已清理: ${timerId}`);
+                void broadcastBgTasksChanged();
             } else {
                 const intervalMs = task.intervalMs || Math.max(1, Math.round((task.intervalMinutes || 1) * 60 * 1000));
                 await TimerStore.update(timerId, {
@@ -2982,6 +2983,7 @@ async function handleTimerTrigger(timerId: string, source: 'alarm' | 'runtime_ti
             TimerScheduler.clear(timerId);
             await TimerStore.remove(timerId);
             RuntimeResourceManager.unregisterFromAllSessions('timer', timerId);
+            void broadcastBgTasksChanged();
         }
 
         // 检查标签页是否存在
@@ -3833,6 +3835,68 @@ Channel.on('__ai_cancel', (data) => {
         sessionId: id,
     };
     void submitSessionOp(op);
+});
+
+// ============ 后台任务管理（供悬浮球 UI 查询和关闭） ============
+
+/** 收集最新的后台任务列表并广播到所有标签页 */
+async function broadcastBgTasksChanged(): Promise<void> {
+    try {
+        const [timers, residentJobs] = await Promise.all([
+            TimerStore.getAll(),
+            getActiveResidentJobs(),
+        ]);
+        Channel.broadcast('__bg_tasks_changed', { timers, residentJobs });
+    } catch (err) {
+        console.warn('[Mole] broadcastBgTasksChanged 失败:', err);
+    }
+}
+
+/** 查询所有活跃的后台任务（定时器 + 常驻任务） */
+Channel.on('__bg_tasks_query', async (_data, _sender, sendResponse) => {
+    try {
+        const [timers, residentJobs] = await Promise.all([
+            TimerStore.getAll(),
+            getActiveResidentJobs(),
+        ]);
+        sendResponse({ timers, residentJobs });
+    } catch (err: any) {
+        sendResponse({ timers: [], residentJobs: [], error: err.message || '查询失败' });
+    }
+    return true;
+});
+
+/** 关闭指定的后台任务（定时器或常驻任务） */
+Channel.on('__bg_task_close', async (data, _sender, sendResponse) => {
+    const kind = data?.kind as string;
+    const id = data?.id as string;
+    if (!kind || !id) {
+        sendResponse({ success: false, error: '缺少 kind 或 id' });
+        return true;
+    }
+    try {
+        if (kind === 'timer') {
+            TimerScheduler.clear(id);
+            await chrome.alarms.clear(`mole_timer_${id}`);
+            await TimerStore.remove(id);
+            RuntimeResourceManager.unregisterFromAllSessions('timer', id);
+        } else if (kind === 'resident') {
+            const result = await stopResidentJobById(id);
+            if (!result.success) {
+                sendResponse(result);
+                void broadcastBgTasksChanged();
+                return true;
+            }
+        } else {
+            sendResponse({ success: false, error: `未知 kind: ${kind}` });
+            return true;
+        }
+        sendResponse({ success: true });
+        void broadcastBgTasksChanged();
+    } catch (err: any) {
+        sendResponse({ success: false, error: err.message || '关闭失败' });
+    }
+    return true;
 });
 
 /**

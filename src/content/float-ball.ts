@@ -2164,6 +2164,168 @@ const getStyles = () => `
       transition: none !important;
     }
   }
+
+  /* ===== 后台任务角标 ===== */
+
+  .mole-bg-task-badge {
+    position: absolute;
+    top: 2px;
+    left: 22px;
+    min-width: 16px;
+    height: 16px;
+    border-radius: 999px;
+    background: var(--ec-primary-strong);
+    color: #fff;
+    font-size: 10px;
+    font-weight: 700;
+    line-height: 16px;
+    text-align: center;
+    padding: 0 4px;
+    display: none;
+    z-index: 2;
+    pointer-events: none;
+  }
+
+  .mole-bg-task-badge.visible {
+    display: block;
+  }
+
+  /* ===== 后台任务面板 ===== */
+
+  .mole-bg-tasks-panel {
+    display: none;
+    padding: 6px 14px 8px;
+  }
+
+  .mole-bg-tasks-panel.visible {
+    display: block;
+  }
+
+  .mole-bg-tasks-header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--ec-text-muted);
+    cursor: pointer;
+    padding: 4px 6px;
+    border-radius: 8px;
+    transition: background 0.15s;
+    user-select: none;
+  }
+
+  .mole-bg-tasks-header:hover {
+    background: rgba(0, 113, 227, 0.06);
+  }
+
+  .mole-bg-tasks-count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 18px;
+    min-width: 18px;
+    padding: 0 6px;
+    border-radius: 999px;
+    background: var(--ec-primary-soft);
+    color: var(--ec-primary-strong);
+    font-size: 11px;
+    font-weight: 600;
+  }
+
+  .mole-bg-tasks-toggle {
+    margin-left: auto;
+    font-size: 10px;
+    transition: transform 0.2s ease;
+  }
+
+  .mole-bg-tasks-panel.open .mole-bg-tasks-toggle {
+    transform: rotate(90deg);
+  }
+
+  .mole-bg-tasks-list {
+    display: none;
+    gap: 4px;
+    margin-top: 6px;
+  }
+
+  .mole-bg-tasks-panel.open .mole-bg-tasks-list {
+    display: grid;
+  }
+
+  .mole-bg-task-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.7);
+    transition: background 0.15s;
+  }
+
+  .mole-bg-task-item:hover {
+    background: rgba(255, 255, 255, 0.9);
+  }
+
+  .mole-bg-task-icon {
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+  }
+
+  .mole-bg-task-icon img {
+    width: 100%;
+    height: 100%;
+  }
+
+  .mole-bg-task-info {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-width: 0;
+  }
+
+  .mole-bg-task-name {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--ec-text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .mole-bg-task-meta {
+    font-size: 11px;
+    color: var(--ec-text-muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .mole-bg-task-close {
+    width: 22px;
+    height: 22px;
+    border-radius: 7px;
+    border: none;
+    background: transparent;
+    color: var(--ec-text-muted);
+    font-size: 14px;
+    line-height: 22px;
+    text-align: center;
+    cursor: pointer;
+    opacity: 0;
+    flex-shrink: 0;
+    transition: opacity 0.15s, background 0.15s, color 0.15s;
+    padding: 0;
+  }
+
+  .mole-bg-task-item:hover .mole-bg-task-close {
+    opacity: 1;
+  }
+
+  .mole-bg-task-close:hover {
+    background: var(--ec-danger-soft);
+    color: var(--ec-danger);
+  }
 `;
 
 // ============ 位置存储 ============
@@ -2357,6 +2519,12 @@ export const initFloatBall = async () => {
   `;
 
   pill.appendChild(logo);
+
+  // 后台任务角标
+  const bgTaskBadgeEl = document.createElement('span');
+  bgTaskBadgeEl.className = 'mole-bg-task-badge';
+  pill.appendChild(bgTaskBadgeEl);
+
   pill.appendChild(pillInfoEl);
   trigger.appendChild(pill);
   trigger.appendChild(pillNoticeEl);
@@ -2447,6 +2615,12 @@ export const initFloatBall = async () => {
   const footerTextEl = searchbox.querySelector('.mole-footer-text') as HTMLSpanElement;
   const footerTimeEl = searchbox.querySelector('.mole-footer-time') as HTMLSpanElement;
   const dividerBottomEl = searchbox.querySelector('.mole-divider-bottom') as HTMLDivElement;
+
+  // 后台任务面板（插入到 dividerBottom 之前）
+  const bgTasksPanelEl = document.createElement('div');
+  bgTasksPanelEl.className = 'mole-bg-tasks-panel';
+  searchbox.insertBefore(bgTasksPanelEl, dividerBottomEl);
+
   const hintEl = searchbox.querySelector('.mole-input-hint') as HTMLSpanElement;
   const imageViewerCloseEl = imageViewerEl.querySelector('.mole-image-viewer-close') as HTMLButtonElement;
   const imageViewerImgEl = imageViewerEl.querySelector('.mole-image-viewer-img') as HTMLImageElement;
@@ -2565,6 +2739,8 @@ export const initFloatBall = async () => {
   let selfTabId: number | null = null;
   /** 当前会话发起页签的 tabId（从 session_sync 中获取） */
   let sessionOriginTabId: number | undefined = undefined;
+  /** 后台任务数据（定时器 + 常驻任务） */
+  let bgTasksData: { timers: any[]; residentJobs: any[] } | null = null;
 
   // 初始化时获取自身 tabId
   Channel.send('__get_tab_info', {}, (tabInfo: any) => {
@@ -3435,6 +3611,134 @@ export const initFloatBall = async () => {
     if (ms < 1000) return `${Math.round(ms)}ms`;
     return `${(ms / 1000).toFixed(1)}s`;
   };
+
+  /** 格式化间隔毫秒数为可读文本 */
+  const formatInterval = (ms: number): string => {
+    if (ms >= 60000) return `${Math.round(ms / 60000)} 分钟`;
+    if (ms >= 1000) return `${Math.round(ms / 1000)} 秒`;
+    return `${ms} 毫秒`;
+  };
+
+  // ---- 后台任务查询与面板渲染 ----
+
+  /** 查询后台任务数据 */
+  const queryBgTasks = () => {
+    Channel.send('__bg_tasks_query', {}, (resp: any) => {
+      bgTasksData = resp;
+      updateBgTaskBadge();
+      renderBgTasksPanel();
+    });
+  };
+
+  /** 更新胶囊角标 */
+  const updateBgTaskBadge = () => {
+    const count = (bgTasksData?.timers?.length || 0) + (bgTasksData?.residentJobs?.length || 0);
+    if (count > 0) {
+      bgTaskBadgeEl.textContent = String(count);
+      bgTaskBadgeEl.classList.add('visible');
+    } else {
+      bgTaskBadgeEl.classList.remove('visible');
+    }
+  };
+
+  /** 渲染后台任务面板 */
+  const renderBgTasksPanel = () => {
+    const count = (bgTasksData?.timers?.length || 0) + (bgTasksData?.residentJobs?.length || 0);
+    if (count === 0) {
+      bgTasksPanelEl.classList.remove('visible');
+      bgTasksPanelEl.innerHTML = '';
+      return;
+    }
+
+    let html = '';
+
+    // 头部
+    html += `<div class="mole-bg-tasks-header">`;
+    html += `<span class="mole-bg-tasks-title">后台任务</span>`;
+    html += `<span class="mole-bg-tasks-count">${count}</span>`;
+    html += `<span class="mole-bg-tasks-toggle">\u25B6</span>`;
+    html += `</div>`;
+
+    // 列表
+    html += `<div class="mole-bg-tasks-list">`;
+
+    // 定时器任务
+    if (bgTasksData?.timers) {
+      for (const t of bgTasksData.timers) {
+        const icon = FUNCTION_ICONS['timer'] || '';
+        const name = escapeHtml(String(t.action || '').slice(0, 40));
+        let meta = '';
+        if (t.type === 'timeout') {
+          meta = `延时 \u00B7 将在 ${formatClock(t.nextRunAt)} 执行`;
+        } else {
+          meta = `周期 \u00B7 已执行 ${t.currentCount || 0} 次`;
+          if (t.nextRunAt) {
+            meta += ` \u00B7 下次 ${formatClock(t.nextRunAt)}`;
+          }
+        }
+        html += `<div class="mole-bg-task-item" data-kind="timer" data-id="${escapeHtml(String(t.id))}">`;
+        html += `<span class="mole-bg-task-icon">${icon ? `<img src="${icon}" alt="" />` : ''}</span>`;
+        html += `<div class="mole-bg-task-info">`;
+        html += `<span class="mole-bg-task-name">${name}</span>`;
+        html += `<span class="mole-bg-task-meta">${escapeHtml(meta)}</span>`;
+        html += `</div>`;
+        html += `<button class="mole-bg-task-close" type="button" title="关闭">\u00D7</button>`;
+        html += `</div>`;
+      }
+    }
+
+    // 常驻任务
+    if (bgTasksData?.residentJobs) {
+      for (const j of bgTasksData.residentJobs) {
+        const icon = FUNCTION_ICONS['resident_runtime'] || '';
+        const name = escapeHtml(String(j.name || ''));
+        let meta = `常驻 \u00B7 间隔 ${formatInterval(j.intervalMs || 0)}`;
+        if (j.lastSuccess === true) {
+          meta += ' \u00B7 上次成功';
+        } else if (j.lastSuccess === false) {
+          meta += ' \u00B7 上次失败';
+        }
+        html += `<div class="mole-bg-task-item" data-kind="resident" data-id="${escapeHtml(String(j.id))}">`;
+        html += `<span class="mole-bg-task-icon">${icon ? `<img src="${icon}" alt="" />` : ''}</span>`;
+        html += `<div class="mole-bg-task-info">`;
+        html += `<span class="mole-bg-task-name">${name}</span>`;
+        html += `<span class="mole-bg-task-meta">${escapeHtml(meta)}</span>`;
+        html += `</div>`;
+        html += `<button class="mole-bg-task-close" type="button" title="关闭">\u00D7</button>`;
+        html += `</div>`;
+      }
+    }
+
+    html += `</div>`;
+
+    bgTasksPanelEl.innerHTML = html;
+    bgTasksPanelEl.classList.add('visible');
+  };
+
+  // 后台任务面板事件委托（仅绑定一次，避免每次 render 累积监听器）
+  bgTasksPanelEl.addEventListener('click', (e: Event) => {
+    const target = e.target as HTMLElement;
+
+    // 头部点击：折叠/展开
+    if (target.closest('.mole-bg-tasks-header')) {
+      bgTasksPanelEl.classList.toggle('open');
+      return;
+    }
+
+    // 关闭按钮点击
+    if (!target.classList.contains('mole-bg-task-close')) return;
+    const item = target.closest('.mole-bg-task-item') as HTMLElement | null;
+    if (!item) return;
+    const kind = item.getAttribute('data-kind');
+    const id = item.getAttribute('data-id');
+    if (!kind || !id) return;
+    Channel.send('__bg_task_close', { kind, id }, (resp: any) => {
+      if (resp?.success !== false) {
+        showPillNotice('已关闭', 'success');
+        queryBgTasks();
+      }
+    });
+  });
 
   const simplifySessionOpLabel = (label?: string): string => {
     const raw = String(label || '').trim();
@@ -4913,6 +5217,13 @@ export const initFloatBall = async () => {
     saveSnapshot();
   });
 
+  // ---- 后台任务变更监听 ----
+  Channel.on('__bg_tasks_changed', (data: any) => {
+    bgTasksData = data;
+    updateBgTaskBadge();
+    renderBgTasksPanel();
+  });
+
   // ---- 事件回放监听：收到 background 发送的完整事件日志，重建 UI ----
   Channel.on('__session_replay', (data: SessionReplayPayload | null | undefined) => {
     if (!data?.sessionId || !Array.isArray(data.events)) return;
@@ -5049,6 +5360,9 @@ export const initFloatBall = async () => {
     }
   });
 
+  // 初始化时查询后台任务以更新角标
+  queryBgTasks();
+
   // ---- 事件委托：统一处理结果区所有点击交互 ----
   // 使用委托而非逐个绑定，这样快照恢复后点击仍然有效
   resultEl.addEventListener('click', (e) => {
@@ -5162,6 +5476,7 @@ export const initFloatBall = async () => {
         renderWorkflowHints();
       }
       updateInputUI();
+      queryBgTasks();
 
       requestAnimationFrame(() => {
         if (!inputEl.disabled) inputEl.focus();

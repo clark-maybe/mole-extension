@@ -724,3 +724,46 @@ export const residentRuntimeFunction: FunctionDefinition = {
     return { success: false, error: `unsupported action: ${action}` };
   },
 };
+
+// ============ 供 background 直接调用的程序化接口 ============
+
+/** 获取所有启用中的常驻任务摘要（供 UI 展示） */
+export const getActiveResidentJobs = async (): Promise<Array<{
+  id: string;
+  name: string;
+  tabId: number;
+  enabled: boolean;
+  intervalMs: number;
+  lastRunAt?: number;
+  lastSuccess?: boolean;
+  failureCount: number;
+  siteWorkflow?: string;
+}>> => {
+  await ensureResidentRuntimeReady();
+  return Array.from(residentJobs.values())
+    .filter(j => j.enabled)
+    .map(j => ({
+      id: j.id,
+      name: j.name,
+      tabId: j.tabId,
+      enabled: j.enabled,
+      intervalMs: j.intervalMs,
+      lastRunAt: j.lastRunAt,
+      lastSuccess: j.lastSuccess,
+      failureCount: j.failureCount,
+      siteWorkflow: j.siteWorkflow,
+    }));
+};
+
+/** 按 ID 停用常驻任务（供 UI 手动关闭） */
+export const stopResidentJobById = async (jobId: string): Promise<{ success: boolean; error?: string }> => {
+  await ensureResidentRuntimeReady();
+  const job = residentJobs.get(jobId);
+  if (!job) return { success: false, error: `job not found: ${jobId}` };
+  job.enabled = false;
+  job.updatedAt = Date.now();
+  residentJobs.set(job.id, job);
+  await clearJobAlarm(job.id);
+  await persistRuntimeStore();
+  return { success: true };
+};
