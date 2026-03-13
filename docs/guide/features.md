@@ -1,92 +1,92 @@
-# 功能介绍
+# Features
 
-## 为什么叫 Mole（鼹鼠）？
+## Why "Mole"?
 
-Mole 的工作方式就像一只鼹鼠：你提出问题后，它钻入地下（后台），在隧道网络中默默挖掘——调用工具、搜索网页、解析数据。找到宝藏后，它浮出地面，把结果呈现在悬浮球中。整个过程不打扰你正在做的事。
+Mole works just like its namesake: after you ask a question, it burrows underground (into the background), silently digging through tunnel networks — calling tools, searching the web, parsing data. Once it finds the treasure, it surfaces and presents the results in the floating ball. The whole process never interrupts what you're doing.
 
-> 地面 = 悬浮球（你看到的入口）
-> 地下 = Background（AI 工作的地方）
-> 隧道 = Channel + MCP（连接一切的通信网络）
+> Surface = Floating ball (the entry point you see)
+> Underground = Background (where the AI works)
+> Tunnels = Channel + MCP (the communication network connecting everything)
 
-## 悬浮球 AI 对话
+## Floating Ball AI Chat
 
-Mole 在每个网页上注入一个悬浮球，作为与 AI 交互的入口。
+Mole injects a floating ball on every webpage as the entry point for AI interaction.
 
-- **Shadow DOM 隔离** - 悬浮球的样式完全隔离在 Shadow DOM 内，不会影响宿主网页的样式，也不会被宿主网页的样式干扰
-- **快捷键唤起** - `Cmd+E`（Mac）/ `Ctrl+E`（Windows）快速唤起搜索框
-- **拖拽定位** - 悬浮球可以拖拽到屏幕任意位置，位置会持久化到 `chrome.storage.local`
-- **贴边微隐藏** - 胶囊形态贴边微隐藏，hover 时滑出，不干扰正常浏览
-- **流式响应** - AI 回复以流式方式呈现，实时展示思考过程和工具调用状态
+- **Shadow DOM isolation** — The floating ball's styles are fully isolated within Shadow DOM, never affecting or being affected by the host page's styles
+- **Keyboard shortcut** — `Cmd+E` (Mac) / `Ctrl+E` (Windows) to quickly summon the search box
+- **Drag to reposition** — The floating ball can be dragged anywhere on screen; position persists to `chrome.storage.local`
+- **Edge-hugging** — Capsule shape hugs the screen edge, slides out on hover, never disrupts normal browsing
+- **Streaming responses** — AI replies stream in real time, showing the thinking process and tool call status
 
-## Agentic Loop 架构
+## Agentic Loop Architecture
 
-Mole 的核心是一个极简的 Agentic Loop（代理循环），设计哲学是：
+At Mole's core is a minimal Agentic Loop, with this design philosophy:
 
-> **代码管机制和边界（保下限），模型管决策和策略（定上限）**
+> **Code handles mechanics and boundaries (guarantees the floor), the model handles decisions and strategy (determines the ceiling)**
 
-### 核心循环
+### Core Loop
 
 ```
-采样 -> 有工具调用 -> 执行 -> 回写 -> 继续采样
-         无工具调用 -> 结束
+Sample → Has tool calls → Execute → Write back → Continue sampling
+         No tool calls  → Finish
 ```
 
-### 代码负责（机制 + 边界）
+### Code is Responsible For (Mechanics + Boundaries)
 
-- 采样 -> 执行 -> 回写循环
-- 预算执行（轮数上限、调用数上限、上下文长度限制）
-- 死循环检测（相同工具+参数重复 N 次自动终止）
-- 空响应重试
-- 上下文超长自动压缩
-- 子任务递归入口
+- Sample → Execute → Write-back loop
+- Budget enforcement (turn limits, call count limits, context length limits)
+- Infinite loop detection (same tool + params repeated N times → auto-terminate)
+- Empty response retry
+- Auto context compression when too long
+- Subtask recursion entry point
 
-### 模型负责（决策 + 策略）
+### Model is Responsible For (Decisions + Strategy)
 
-- 意图分类 / 工具选择 / 任务拆分
-- 验证策略 / 何时停止 / 回复措辞
+- Intent classification / tool selection / task decomposition
+- Verification strategy / when to stop / response wording
 
-## 任务分级
+## Task Levels
 
-Mole 按任务复杂度分为四个等级，由模型自主判断：
+Mole classifies tasks into four levels by complexity, determined autonomously by the model:
 
-### 第一类：直接回答
+### Level 1: Direct Answer
 
-问候、闲聊、知识问答等，直接用文字回答，不调用任何工具。
+Greetings, casual chat, knowledge Q&A — answered directly with text, no tools called.
 
-### 第二类：单步操作
+### Level 2: Single-Step Operation
 
-一个明确的小目标（搜索、点击、截图、查询），调用最合适的工具，拿到结果后回复。
+One clear small goal (search, click, screenshot, query) — calls the most suitable tool, replies after getting results.
 
-### 第三类：多步任务
+### Level 3: Multi-Step Task
 
-需要 2 步以上才能完成的目标。每一步根据上一步的实际结果来决定下一步，不会在开头就把所有步骤都规划好。
+Goals requiring 2+ steps. Each step decides the next based on the actual result of the previous step, rather than planning all steps upfront.
 
-### 第四类：复合任务
+### Level 4: Compound Task
 
-包含多个相对独立的子目标。使用 `spawn_subtask` 将每个独立子目标拆分为隔离任务执行，每个子任务有独立的上下文，避免信息混杂。
+Contains multiple relatively independent sub-goals. Uses `spawn_subtask` to split each independent sub-goal into an isolated task with its own context, preventing information cross-contamination.
 
-## CDP 深度控制
+## Deep CDP Control
 
-Mole 通过 Chrome DevTools Protocol（CDP）接入 10 个协议域，提供浏览器进程级别的深度控制能力，弥补 Content Script 的固有限制：
+Mole connects to 10 Chrome DevTools Protocol (CDP) domains, providing browser-process-level deep control that overcomes Content Script limitations:
 
-- **可信事件注入** — 发送 `isTrusted=true` 的鼠标/键盘事件，绕过反爬的事件来源检测
-- **对话框处理** — 自动检测和处理 alert/confirm/prompt 对话框，不再阻断自动化流程
-- **iframe 穿透** — 跨域 iframe 中执行 JS、获取文本，解决验证码和支付表单等场景
-- **网络可见性** — 完整的请求/响应数据（包括 body 和 headers），以及 Cookie 读写
-- **请求拦截** — 拦截请求后修改参数放行、返回 Mock 响应、或模拟失败，支持注入认证 headers 和绕过 CORS
-- **DOM 深度操作** — 无视同源策略直接查询/修改 DOM，获取精确 box model 几何信息
-- **页面存储** — 跨域读写 localStorage / sessionStorage，无需 content script
-- **CSS 样式** — 获取计算样式和匹配规则、修改内联样式、动态注入 CSS 规则
-- **视觉高亮** — 高亮标注 DOM 元素或区域，AI 操作时让用户直观看到操作对象
-- **设备模拟** — 模拟移动端视口、覆盖 User-Agent、伪造地理位置和时区
-- **控制台捕获** — 自动收集 console 输出和未捕获异常，辅助诊断页面问题
+- **Trusted event injection** — Sends `isTrusted=true` mouse/keyboard events, bypassing anti-bot event source detection
+- **Dialog handling** — Automatically detects and handles alert/confirm/prompt dialogs, preventing automation flow interruption
+- **iframe piercing** — Execute JS and get text within cross-origin iframes, solving CAPTCHA and payment form scenarios
+- **Network visibility** — Complete request/response data (including body and headers), plus Cookie read/write
+- **Request interception** — Intercept requests to modify and continue, return mock responses, or simulate failures; supports auth header injection and CORS bypass
+- **Deep DOM operations** — Query/modify DOM ignoring same-origin policy, get precise box model geometry
+- **Page storage** — Cross-origin read/write of localStorage / sessionStorage without content scripts
+- **CSS styles** — Get computed styles and matching rules, modify inline styles, dynamically inject CSS rules
+- **Visual highlighting** — Highlight DOM elements or regions so users can see what the AI is operating on
+- **Device emulation** — Simulate mobile viewports, override User-Agent, spoof geolocation and timezone
+- **Console capture** — Automatically collect console output and uncaught exceptions to help diagnose page issues
 
-所有 CDP 工具共享统一的会话管理器（`cdp-session.ts`），自动管理 debugger 的 attach/detach 生命周期和域事件监听。
+All CDP tools share a unified session manager (`cdp-session.ts`) that automatically manages debugger attach/detach lifecycle and domain event listeners.
 
-## 上下文自动压缩
+## Automatic Context Compression
 
-当对话上下文变得过长时，Mole 会自动压缩历史上下文，保留关键信息，确保在 LLM 的上下文窗口限制内持续工作。这使得长时间的多步任务不会因为上下文溢出而失败。
+When conversation context grows too long, Mole automatically compresses historical context while preserving key information, ensuring continued operation within the LLM's context window limits. This prevents long multi-step tasks from failing due to context overflow.
 
-## 会话历史记录
+## Session History
 
-Mole 支持会话历史记录，可以在 Options 页面查看和管理过往的对话记录。每次对话的完整过程（包括工具调用和结果）都会被保存。
+Mole supports session history — you can view and manage past conversations in the Options page. The complete process of each conversation (including tool calls and results) is saved.

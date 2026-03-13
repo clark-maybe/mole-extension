@@ -1,33 +1,33 @@
-# 站点工作流
+# Site Workflows
 
-## 概述
+## Overview
 
-站点工作流（Site Workflow）是 MoleClaw 的声明式自动化系统。通过 JSON 格式定义一系列步骤，无需编写代码即可自动化网站操作。
+Site Workflows are MoleClaw's declarative automation system. Define a series of steps in JSON format to automate website operations without writing code.
 
-核心理念：**扩展 = 解释器引擎，Manifest = 内容分发**。源码中不硬编码任何工作流定义，所有工作流通过 Manifest 文件分发和同步。
+Core principle: **Extension = interpreter engine, Manifest = content distribution**. No workflow definitions are hardcoded in the source code — all workflows are distributed and synced via Manifest files.
 
-## 内置工作流
+## Built-in Workflows
 
-MoleClaw 默认包含以下预定义工作流：
+MoleClaw comes with the following predefined workflows:
 
-| 工作流 | 说明 | URL 匹配 |
-|--------|------|----------|
-| 京东商品搜索 | 在京东搜索商品，返回商品卡片列表 | 所有页面 |
-| 百度搜索 | 在百度搜索关键词，返回搜索结果列表 | 所有页面 |
-| Boss 直聘消息回复 | 在 Boss 直聘聊天页面操作会话、采集消息、自动回复 | `*.zhipin.com` |
-| 淘宝商品搜索 | 在淘宝搜索商品，返回商品列表 | 所有页面 |
-| 淘宝商品详情 | 采集淘宝/天猫商品详情页的结构化数据 | 所有页面 |
-| 今日热榜 | 采集今日热榜 Top 100 热点新闻 | 所有页面 |
+| Workflow | Description | URL Match |
+|----------|-------------|-----------|
+| JD Product Search | Search products on JD.com, returns product card list | All pages |
+| Baidu Search | Search keywords on Baidu, returns search result list | All pages |
+| Boss Zhipin Message Reply | Operate chats, collect messages, auto-reply on Boss Zhipin | `*.zhipin.com` |
+| Taobao Product Search | Search products on Taobao, returns product list | All pages |
+| Taobao Product Details | Collect structured data from Taobao/Tmall product detail pages | All pages |
+| Toutiao Hot List | Collect the Top 100 trending news from Toutiao Hot List | All pages |
 
-## 工作流结构
+## Workflow Structure
 
-每个工作流是一个 JSON 对象，包含以下字段：
+Each workflow is a JSON object with the following fields:
 
 ```json
 {
-  "name": "工作流名称",
-  "label": "显示标签",
-  "description": "工作流描述，AI 据此判断何时使用",
+  "name": "workflow_name",
+  "label": "Display Label",
+  "description": "Workflow description — AI uses this to decide when to invoke it",
   "url_patterns": ["*://*.example.com/*"],
   "version": 1,
   "enabled": true,
@@ -36,7 +36,7 @@ MoleClaw 默认包含以下预定义工作流：
     "properties": {
       "keyword": {
         "type": "string",
-        "description": "搜索关键词"
+        "description": "Search keyword"
       }
     },
     "required": ["keyword"]
@@ -46,7 +46,7 @@ MoleClaw 默认包含以下预定义工作流：
     "steps": [
       {
         "action": "tab_navigate",
-        "note": "导航到目标页面",
+        "note": "Navigate to the target page",
         "params": {
           "action": "navigate",
           "url": "https://example.com/search?q={{keyword}}"
@@ -55,7 +55,7 @@ MoleClaw 默认包含以下预定义工作流：
       },
       {
         "action": "page_action",
-        "note": "等待结果加载",
+        "note": "Wait for results to load",
         "params": {
           "action": "wait_for_element",
           "selector": ".results",
@@ -64,7 +64,7 @@ MoleClaw 默认包含以下预定义工作流：
       },
       {
         "action": "dom_manipulate",
-        "note": "采集结果数据",
+        "note": "Collect result data",
         "params": {
           "action": "query",
           "selector": ".result-item",
@@ -78,53 +78,53 @@ MoleClaw 默认包含以下预定义工作流：
 }
 ```
 
-### 关键字段说明
+### Key Fields
 
-- **`url_patterns`** - URL 匹配规则，使用通配符语法，决定工作流在哪些页面可用
-- **`parameters`** - JSON Schema 格式的参数定义，AI 调用时传入
-- **`plan.steps`** - 步骤数组，每一步调用一个内置工具
-- **`plan.steps[].action`** - 要调用的工具名称
-- **`plan.steps[].params`** - 工具参数，支持 `{{变量}}` 模板语法
-- **`plan.steps[].saveAs`** - 将步骤结果存储为变量，供后续步骤引用
-- **`plan.steps[].when`** - 条件执行，值为 falsy 时跳过该步骤
-- **`plan.steps[].retry`** - 重试配置（`maxAttempts`、`delayMs`、`backoffFactor`）
-- **`plan.steps[].onError`** - 错误处理策略（`"continue"` 跳过继续）
-- **`plan.resultPath`** - 最终结果的取值路径
-- **`plan.closeOpenedTabs`** - 是否在完成后关闭新开的标签页（`"on_success"`）
+- **`url_patterns`** — URL matching rules using wildcard syntax; determines which pages the workflow is available on
+- **`parameters`** — Parameter definitions in JSON Schema format, passed by the AI when invoking
+- **`plan.steps`** — Array of steps, each calling a built-in tool
+- **`plan.steps[].action`** — Name of the tool to call
+- **`plan.steps[].params`** — Tool parameters, supports `{{variable}}` template syntax
+- **`plan.steps[].saveAs`** — Store the step result as a variable for subsequent steps to reference
+- **`plan.steps[].when`** — Conditional execution; step is skipped when the value is falsy
+- **`plan.steps[].retry`** — Retry configuration (`maxAttempts`, `delayMs`, `backoffFactor`)
+- **`plan.steps[].onError`** — Error handling strategy (`"continue"` to skip and proceed)
+- **`plan.resultPath`** — Path to extract the final result from
+- **`plan.closeOpenedTabs`** — Whether to close newly opened tabs after completion (`"on_success"`)
 
-## 自定义工作流
+## Custom Workflows
 
-### 通过 Options 页面
+### Via the Options Page
 
-1. 右键点击 Mole 扩展图标，选择 **选项**
-2. 在工作流管理区域，点击 **添加工作流**
-3. 粘贴工作流 JSON 定义
-4. 保存后立即生效
+1. Right-click the Mole extension icon and select **Options**
+2. In the workflow management area, click **Add Workflow**
+3. Paste the workflow JSON definition
+4. Save — takes effect immediately
 
-### 通过 Manifest 远程同步
+### Via Remote Manifest Sync
 
-MoleClaw 支持从远程 URL 同步工作流 Manifest。
+MoleClaw supports syncing workflow Manifests from remote URLs.
 
-#### Manifest 格式
+#### Manifest Format
 
 ```json
 {
   "version": 2,
   "updatedAt": "2025-01-01T00:00:00Z",
   "workflows": [
-    { /* 工作流定义 */ },
-    { /* 工作流定义 */ }
+    { /* workflow definition */ },
+    { /* workflow definition */ }
   ]
 }
 ```
 
-#### 同步机制
+#### Sync Mechanism
 
-- 支持配置多个 Manifest 源
-- 默认每 6 小时自动同步一次（通过 Chrome Alarms API）
-- 也可以在 Options 页面手动触发同步
-- 远程工作流标记为 `source: "remote"`，用户手动添加的标记为 `source: "user"`
+- Supports configuring multiple Manifest sources
+- Auto-syncs every 6 hours by default (via Chrome Alarms API)
+- Can also be manually triggered from the Options page
+- Remote workflows are tagged as `source: "remote"`, user-added ones as `source: "user"`
 
-::: tip 提示
-你可以搭建自己的 Manifest 服务，集中管理和分发工作流给团队使用。
+::: tip
+You can host your own Manifest service to centrally manage and distribute workflows to your team.
 :::

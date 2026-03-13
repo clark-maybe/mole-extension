@@ -1,77 +1,78 @@
-# 快速开始
+# Getting Started
 
-## 安装
+## Installation
 
-MoleClaw 目前通过源码构建安装。
+MoleClaw is currently installed by building from source.
 
-### 1. 克隆仓库
+### 1. Clone the Repository
 
 ```bash
 git clone https://github.com/clark-maybe/mole-extension.git
 cd mole-extension
 ```
 
-### 2. 安装依赖
+### 2. Install Dependencies
 
 ```bash
 npm install
 ```
 
-### 3. 构建扩展
+### 3. Build the Extension
 
 ```bash
 npm run build
 ```
 
-构建产物输出到 `build_version/mole-extension_1.0.0/` 目录。
+Build output goes to the `build_version/mole-extension_1.0.0/` directory.
 
-### 4. 加载到 Chrome
+### 4. Load into Chrome
 
-1. 打开 Chrome，访问 `chrome://extensions/`
-2. 开启右上角的 **开发者模式**
-3. 点击 **加载已解压的扩展程序**
-4. 选择 `build_version/mole-extension_1.0.0/` 目录
-5. 扩展安装完成，图标出现在浏览器工具栏
+1. Open Chrome and navigate to `chrome://extensions/`
+2. Enable **Developer mode** in the top right corner
+3. Click **Load unpacked**
+4. Select the `build_version/mole-extension_1.0.0/` directory
+5. The extension is installed — the icon appears in the browser toolbar
 
-## 首次使用
+## First Use
 
-### 配置 LLM
+### Configure Your LLM
 
-Mole 需要连接一个 OpenAI API 兼容的 LLM 服务。首次使用前需要完成配置：
+Mole needs to connect to an OpenAI API-compatible LLM service. Complete the configuration before first use:
 
-1. 点击浏览器工具栏的 Mole 图标，打开弹窗
-2. 进入 **Options 页面**（右键扩展图标 > 选项）
-3. 填写以下配置：
-   - **API Endpoint** - LLM 服务地址（默认 `https://api.openai.com/v1`）
-   - **API Key** - 你的 API 密钥
-   - **Model** - 使用的模型名称（如 `gpt-4o-mini`、`gpt-4o` 等）
-4. 点击保存
+1. Click the Mole icon in the browser toolbar to open the popup
+2. Go to the **Options page** (right-click the extension icon > Options)
+3. Fill in the following settings:
+   - **API Endpoint** — LLM service URL (default: `https://api.openai.com/v1`)
+   - **API Key** — Your API key
+   - **Model** — Model name to use (e.g., `gpt-4o-mini`, `gpt-4o`, etc.)
+4. Click Save
 
-::: tip 提示
-Mole 兼容任何 OpenAI API 格式的服务，包括但不限于：OpenAI、Azure OpenAI、Claude（通过兼容层）、本地部署的 Ollama 等。
+::: tip
+Mole is compatible with any OpenAI API-format service, including but not limited to: OpenAI, Azure OpenAI, Claude (via compatibility layer), locally deployed Ollama, etc.
 :::
 
-### 唤起 AI 助手
-配置完成后，访问任意网页：
+### Summon the AI Assistant
 
-- **快捷键**：按 `Cmd+E`（Mac）或 `Ctrl+E`（Windows/Linux）唤起搜索框
-- **悬浮球**：页面右侧会出现一个贴边的悬浮球，hover 滑出，点击即可唤起
+After configuration, visit any webpage:
 
-## 基本交互
+- **Keyboard shortcut**: Press `Cmd+E` (Mac) or `Ctrl+E` (Windows/Linux) to summon the search box
+- **Floating ball**: A capsule-shaped floating ball appears on the right side of the page — hover to slide out, click to open
 
-1. 通过快捷键或悬浮球唤起搜索框
-2. 输入自然语言指令，例如：
-   - "帮我截个图"
-   - "这个页面讲了什么"
-   - "在京东搜索 iPhone 16"
-   - "帮我把这个页面的表格数据提取出来"
-3. AI 会自动选择合适的工具执行任务
-4. 执行过程中会显示工具调用状态，最终以流式方式返回结果
+## Basic Interaction
 
-::: info 任务分级
-Mole 会根据请求的复杂度自动分级处理：
-- **直接回答** - 简单问答，不调用工具
-- **单步操作** - 一个工具即可完成
-- **多步任务** - 需要多个工具协作
-- **复合任务** - 拆分为独立子任务并行执行
+1. Summon the search box via shortcut or floating ball
+2. Type natural language instructions, for example:
+   - "Take a screenshot of this page"
+   - "What is this page about"
+   - "Search for iPhone 16 on Amazon"
+   - "Extract the table data from this page"
+3. The AI will automatically choose the right tools to execute the task
+4. Tool call status is displayed during execution, and results stream back in real time
+
+::: info Task Levels
+Mole automatically classifies requests by complexity:
+- **Direct answer** — Simple Q&A, no tools needed
+- **Single-step** — One tool call is sufficient
+- **Multi-step** — Multiple tools working together
+- **Compound task** — Split into independent subtasks executed in parallel
 :::

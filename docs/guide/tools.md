@@ -1,142 +1,142 @@
-# 内置工具列表
+# Built-in Tools
 
-MoleClaw 内置了 35+ 个工具，覆盖浏览器自动化的各个场景。AI 会根据用户的自然语言指令自动选择最合适的工具。
+MoleClaw includes 35+ built-in tools covering all aspects of browser automation. The AI automatically selects the most suitable tools based on your natural language instructions.
 
-## 页面感知类
+## Page Awareness
 
-| 工具 | 说明 |
-|------|------|
-| `page_viewer` | 获取当前页面的可见文本内容，用于理解页面信息 |
-| `page_snapshot` | 对页面进行结构化快照，支持按查询条件定位目标元素，返回元素树和 element_id |
-| `page_skeleton` | 提取页面骨架结构，快速了解页面整体布局 |
-| `page_assert` | 断言页面状态是否符合预期，用于关键操作后的验证 |
-| `page_repair` | 当 page_assert 失败时，尝试自动修复页面状态 |
-| `screenshot` | 页面截图，支持可见区域、全页截图、区域截图和元素截图（CDP 增强） |
-| `selection_context` | 获取用户在页面上选中的文本及其上下文信息 |
+| Tool | Description |
+|------|-------------|
+| `page_viewer` | Get the current page's visible text content for understanding page information |
+| `page_snapshot` | Take a structured snapshot of the page, supports query-based element targeting, returns element tree and element_id |
+| `page_skeleton` | Extract page skeleton structure for a quick overview of the overall layout |
+| `page_assert` | Assert whether the page state meets expectations, used for verification after critical operations |
+| `page_repair` | When page_assert fails, attempt to automatically repair the page state |
+| `screenshot` | Take page screenshots — supports visible area, full page, region, and element screenshots (CDP enhanced) |
+| `selection_context` | Get the text selected by the user on the page along with its surrounding context |
 
-## 页面操作类
+## Page Operations
 
-| 工具 | 说明 |
-|------|------|
-| `page_action` | 执行页面级操作：点击、填写、滚动、等待元素、按键等，基于 CSS 选择器 |
-| `element_action` | 基于 element_id 的精确元素操作：点击、填写、获取信息等，比 page_action 更可靠 |
-| `dom_manipulate` | 直接操作 DOM：查询元素、修改属性、插入/删除节点等 |
-| `js_execute` | 在页面上下文中执行自定义 JavaScript 代码，用于复杂的页面交互 |
+| Tool | Description |
+|------|-------------|
+| `page_action` | Execute page-level operations: click, fill, scroll, wait for element, keypress, etc., based on CSS selectors |
+| `element_action` | Precise element operations based on element_id: click, fill, get info, etc. — more reliable than page_action |
+| `dom_manipulate` | Direct DOM manipulation: query elements, modify attributes, insert/remove nodes, etc. |
+| `js_execute` | Execute custom JavaScript code in the page context for complex page interactions |
 
-## 导航与标签页
+## Navigation & Tabs
 
-| 工具 | 说明 |
-|------|------|
-| `tab_navigate` | 标签页导航：在当前标签页跳转 URL、新开标签页、关闭标签页等 |
-| `fetch_url` | 在后台发起 HTTP 请求获取 URL 内容，不影响当前页面 |
+| Tool | Description |
+|------|-------------|
+| `tab_navigate` | Tab navigation: navigate URL in current tab, open new tab, close tab, etc. |
+| `fetch_url` | Make HTTP requests in the background to fetch URL content without affecting the current page |
 
-## 浏览器能力
+## Browser Capabilities
 
-| 工具 | 说明 |
-|------|------|
-| `clipboard_ops` | 剪贴板操作：读取和写入剪贴板内容 |
-| `storage_kv` | 键值存储：在扩展的本地存储中读写数据，支持跨会话持久化 |
-| `notification` | 发送浏览器桌面通知 |
-| `bookmark_ops` | 书签操作：搜索、创建、删除书签 |
-| `history_search` | 搜索浏览器历史记录 |
-| `download_file` | 下载文件到本地 |
-| `network_monitor` | 监控页面的网络请求，基于 WebRequest API 捕获 XHR/Fetch 请求和响应 |
+| Tool | Description |
+|------|-------------|
+| `clipboard_ops` | Clipboard operations: read and write clipboard content |
+| `storage_kv` | Key-value storage: read/write data in the extension's local storage, supports cross-session persistence |
+| `notification` | Send browser desktop notifications |
+| `bookmark_ops` | Bookmark operations: search, create, delete bookmarks |
+| `history_search` | Search browser history |
+| `download_file` | Download files to local disk |
+| `network_monitor` | Monitor page network requests via WebRequest API, captures XHR/Fetch requests and responses |
 
-## 定时与自动化
+## Timers & Automation
 
-| 工具 | 说明 |
-|------|------|
-| `set_timeout` | 设置延时任务，指定时间后执行一次 |
-| `set_interval` | 设置定时任务，按固定间隔重复执行 |
-| `clear_timer` | 清除已设置的定时器（timeout 或 interval） |
-| `resident_runtime` | 常驻运行器：在后台持续运行任务，适合需要长时间监控或定期执行的场景 |
+| Tool | Description |
+|------|-------------|
+| `set_timeout` | Set a delayed task to execute once after a specified time |
+| `set_interval` | Set a recurring task to execute at fixed intervals |
+| `clear_timer` | Clear a previously set timer (timeout or interval) |
+| `resident_runtime` | Resident runner: continuously run tasks in the background, suitable for long-term monitoring or periodic execution |
 
-## 工作流与任务
+## Workflows & Tasks
 
-| 工具 | 说明 |
-|------|------|
-| `site_workflow` | 执行预定义的站点工作流，根据当前页面 URL 自动匹配可用的工作流 |
-| `spawn_subtask` | 将独立子目标拆分为隔离任务执行，每个子任务有独立上下文 |
+| Tool | Description |
+|------|-------------|
+| `site_workflow` | Execute predefined site workflows, automatically matches available workflows based on the current page URL |
+| `spawn_subtask` | Split independent sub-goals into isolated tasks, each with its own context |
 
-## CDP 增强工具 <Badge type="tip" text="Chrome DevTools Protocol" />
+## CDP Enhanced Tools <Badge type="tip" text="Chrome DevTools Protocol" />
 
-通过 `chrome.debugger` API 接入 Chrome DevTools Protocol，提供浏览器进程级别的深度控制能力。这些工具在常规 Content Script 手段受限时（反爬检测、跨域 iframe、网络细节等）尤为关键。
+Connected to Chrome DevTools Protocol via the `chrome.debugger` API, providing browser-process-level deep control. These tools are especially critical when regular Content Script approaches are limited (anti-bot detection, cross-origin iframes, network details, etc.).
 
-### 输入与交互
+### Input & Interaction
 
-| 工具 | 说明 |
-|------|------|
-| `cdp_input` | 发送可信鼠标/键盘事件（`isTrusted=true`），支持点击、双击、右键、悬停、拖拽、输入文字、按键、滚动。绕过反爬的事件来源检测 |
-| `cdp_dialog` | 查询和处理 JavaScript 对话框（alert/confirm/prompt/beforeunload），支持手动处理和自动策略 |
+| Tool | Description |
+|------|-------------|
+| `cdp_input` | Send trusted mouse/keyboard events (`isTrusted=true`): click, double-click, right-click, hover, drag, type text, keypress, scroll. Bypasses anti-bot event source detection |
+| `cdp_dialog` | Query and handle JavaScript dialogs (alert/confirm/prompt/beforeunload), supports manual handling and auto strategies |
 
-### 页面与 Frame
+### Pages & Frames
 
-| 工具 | 说明 |
-|------|------|
-| `cdp_frame` | 跨 iframe 操作：列出页面所有 frame、在指定 frame 中执行 JS、获取 iframe 文本快照。解决跨域 iframe（验证码、支付表单等）无法操作的问题 |
+| Tool | Description |
+|------|-------------|
+| `cdp_frame` | Cross-iframe operations: list all page frames, execute JS in a specific frame, get iframe text snapshot. Solves cross-origin iframe issues (CAPTCHAs, payment forms, etc.) |
 
-### 网络与 Cookie
+### Network & Cookies
 
-| 工具 | 说明 |
-|------|------|
-| `cdp_network` | CDP 增强版网络监听：完整的请求/响应数据（包括 body 和 headers）、统计汇总，以及跨域 Cookie 读写（get/set/delete） |
+| Tool | Description |
+|------|-------------|
+| `cdp_network` | CDP-enhanced network monitoring: complete request/response data (including body and headers), statistical summaries, and cross-origin Cookie read/write (get/set/delete) |
 
-### 环境模拟
+### Environment Emulation
 
-| 工具 | 说明 |
-|------|------|
-| `cdp_emulation` | 设备与环境模拟：视口尺寸（移动端）、User-Agent 覆盖、地理位置伪造、语言/时区设置、网络条件模拟（3G/离线等） |
+| Tool | Description |
+|------|-------------|
+| `cdp_emulation` | Device and environment emulation: viewport size (mobile), User-Agent override, geolocation spoofing, language/timezone settings, network condition simulation (3G/offline, etc.) |
 
-### 请求拦截
+### Request Interception
 
-| 工具 | 说明 |
-|------|------|
-| `cdp_fetch` | 请求拦截与篡改（Fetch 域）：拦截页面网络请求，可修改请求参数后放行、直接返回自定义响应（Mock API）、或模拟请求失败。适用于注入认证 headers、Mock 数据、绕过 CORS 等场景 |
+| Tool | Description |
+|------|-------------|
+| `cdp_fetch` | Request interception and modification (Fetch domain): intercept page network requests to modify and continue, return custom responses (Mock API), or simulate failures. Useful for auth header injection, data mocking, and CORS bypass |
 
-### DOM 深度操作
+### Deep DOM Operations
 
-| 工具 | 说明 |
-|------|------|
-| `cdp_dom` | 跨域 DOM 操作（DOM 域）：通过 CDP 直接查询/修改 DOM 节点，无视同源策略。支持 CSS 选择器查询、HTML 读写、属性操作、获取元素精确 box model（margin/border/padding/content）、节点删除 |
+| Tool | Description |
+|------|-------------|
+| `cdp_dom` | Cross-origin DOM operations (DOM domain): query/modify DOM nodes via CDP, ignoring same-origin policy. Supports CSS selector queries, HTML read/write, attribute operations, precise element box model (margin/border/padding/content), and node removal |
 
-### 页面存储
+### Page Storage
 
-| 工具 | 说明 |
-|------|------|
-| `cdp_storage` | 页面存储操作（DOMStorage 域）：读写目标页面的 localStorage 和 sessionStorage，无需 content script。适用于读取登录 token、修改缓存配置、清除存储数据等 |
+| Tool | Description |
+|------|-------------|
+| `cdp_storage` | Page storage operations (DOMStorage domain): read/write the target page's localStorage and sessionStorage without content scripts. Useful for reading login tokens, modifying cache configs, and clearing storage data |
 
-### 样式操作
+### Style Operations
 
-| 工具 | 说明 |
-|------|------|
-| `cdp_css` | CSS 样式检查与修改（CSS 域）：获取元素计算样式、匹配的 CSS 规则、修改内联样式、动态添加 CSS 规则、读写完整样式表。适用于样式诊断、动态注入 CSS、提取设计 token |
+| Tool | Description |
+|------|-------------|
+| `cdp_css` | CSS style inspection and modification (CSS domain): get computed styles and matching CSS rules, modify inline styles, dynamically add CSS rules, read/write complete stylesheets. Useful for style diagnostics, dynamic CSS injection, and design token extraction |
 
-### 视觉高亮
+### Visual Highlighting
 
-| 工具 | 说明 |
-|------|------|
-| `cdp_overlay` | 元素高亮标注（Overlay 域）：高亮指定 DOM 节点、CSS 选择器匹配的元素或矩形区域，支持自定义颜色。AI 操作时可视化标注目标，让用户观察到操作对象 |
+| Tool | Description |
+|------|-------------|
+| `cdp_overlay` | Element highlighting (Overlay domain): highlight specified DOM nodes, elements matching CSS selectors, or rectangular regions with custom colors. Visually marks AI operation targets so users can observe what's being operated on |
 
-### 调试诊断
+### Debug & Diagnostics
 
-| 工具 | 说明 |
-|------|------|
-| `cdp_console` | 捕获页面 console.log/warn/error 输出和未捕获的 JavaScript 异常，辅助 AI 诊断页面问题 |
+| Tool | Description |
+|------|-------------|
+| `cdp_console` | Capture page console.log/warn/error output and uncaught JavaScript exceptions to help AI diagnose page issues |
 
-::: warning 注意
-CDP 工具需要 `debugger` 权限。使用时浏览器顶部会显示调试器提示条，这是 Chrome 的安全机制，属于正常现象。
+::: warning Note
+CDP tools require the `debugger` permission. A debugger notification bar will appear at the top of the browser during use — this is Chrome's security mechanism and is expected behavior.
 :::
 
-## 工具使用优先级
+## Tool Selection Priority
 
-当 AI 需要操作页面时，会按以下优先级选择工具：
+When the AI needs to operate on a page, it selects tools in this priority order:
 
-1. **`site_workflow`** - 首选：当前页面有匹配的预定义工作流时优先使用，速度快且可靠
-2. **`page_snapshot`** + `element_action` - 先快照定位元素，再基于 element_id 精确操作
-3. **`page_action`** - 基于 CSS 选择器的操作，当 element_id 不可用时使用
-4. **`cdp_input`** - 当页面有反爬检测拦截常规点击时，使用 CDP 发送可信事件
-5. **`dom_manipulate`** - 直接 DOM 操作，作为最后手段
+1. **`site_workflow`** — Preferred: use predefined workflows when available for the current page, fast and reliable
+2. **`page_snapshot`** + `element_action` — Snapshot to locate elements, then operate precisely by element_id
+3. **`page_action`** — CSS selector-based operations when element_id is unavailable
+4. **`cdp_input`** — When anti-bot detection blocks regular clicks, use CDP to send trusted events
+5. **`dom_manipulate`** — Direct DOM manipulation as a last resort
 
-::: tip 提示
-你不需要手动选择工具，只需用自然语言描述你的需求，AI 会自动选择最合适的工具组合来完成任务。
+::: tip
+You don't need to manually choose tools — just describe your needs in natural language, and the AI will automatically select the best tool combination for the task.
 :::
