@@ -18,8 +18,7 @@ MoleClaw includes 35+ built-in tools covering all aspects of browser automation.
 
 | Tool | Description |
 |------|-------------|
-| `page_action` | Execute page-level operations: click, fill, scroll, wait for element, keypress, etc., based on CSS selectors |
-| `element_action` | Precise element operations based on element_id: click, fill, get info, etc. — more reliable than page_action |
+| `page_action` | Execute page interaction operations with two targeting modes: element_id (from page_snapshot, preferred) and CSS selector. Supports click, fill, scroll, scroll into view, hover, keypress, wait for element, get element info, etc. |
 | `dom_manipulate` | Direct DOM manipulation: query elements, modify attributes, insert/remove nodes, etc. |
 | `js_execute` | Execute custom JavaScript code in the page context for complex page interactions |
 
@@ -40,15 +39,12 @@ MoleClaw includes 35+ built-in tools covering all aspects of browser automation.
 | `bookmark_ops` | Bookmark operations: search, create, delete bookmarks |
 | `history_search` | Search browser history |
 | `download_file` | Download files to local disk |
-| `network_monitor` | Monitor page network requests via WebRequest API, captures XHR/Fetch requests and responses |
 
 ## Timers & Automation
 
 | Tool | Description |
 |------|-------------|
-| `set_timeout` | Set a delayed task to execute once after a specified time |
-| `set_interval` | Set a recurring task to execute at fixed intervals |
-| `clear_timer` | Clear a previously set timer (timeout or interval) |
+| `timer` | Unified timer management: set delayed tasks, recurring tasks, clear timers, and list active timers |
 | `resident_runtime` | Resident runner: continuously run tasks in the background, suitable for long-term monitoring or periodic execution |
 
 ## Workflows & Tasks
@@ -132,8 +128,8 @@ CDP tools require the `debugger` permission. A debugger notification bar will ap
 When the AI needs to operate on a page, it selects tools in this priority order:
 
 1. **`site_workflow`** — Preferred: use predefined workflows when available for the current page, fast and reliable
-2. **`page_snapshot`** + `element_action` — Snapshot to locate elements, then operate precisely by element_id
-3. **`page_action`** — CSS selector-based operations when element_id is unavailable
+2. **`page_snapshot`** + `page_action(element_id=...)` — Snapshot to locate elements, then operate precisely by element_id
+3. **`page_action(selector=...)`** — CSS selector-based operations when element_id is unavailable
 4. **`cdp_input`** — When anti-bot detection blocks regular clicks, use CDP to send trusted events
 5. **`dom_manipulate`** — Direct DOM manipulation as a last resort
 

@@ -61,8 +61,8 @@ export const buildSystemPrompt = (tools: ToolSchema[], hasSubtask: boolean): str
 1. site_workflow — 首选：当前页面有匹配的预定义工作流时，优先使用，速度快且可靠
 2. page_skeleton — 整体感知：先获取页面骨架了解布局和区域划分（200-500 tokens），再决定下一步
 3. page_snapshot(query=...) — 精确定位：基于骨架树信息定位具体操作元素
-4. element_action(click/fill/get_info) — 基于 element_id 操作
-5. page_action — 退路方案：当 element_id 失效时
+4. page_action(element_id=...) — 基于 element_id 精确操作（优先）
+5. page_action(selector=...) — 基于 CSS selector 操作（element_id 失效时退回）
 6. dom_manipulate — 最后手段：直接 CSS selector
 
 ### 验证时机
@@ -110,7 +110,7 @@ export const buildSubtaskPrompt = (): string => {
 - 不要展开到其他话题
 
 ## 工具使用
-和主任务相同的工具使用原则。优先使用 site_workflow，其次 page_skeleton 了解结构，再 page_snapshot 定位，再 element_action 操作。
+和主任务相同的工具使用原则。优先使用 site_workflow，其次 page_skeleton 了解结构，再 page_snapshot 定位，再 page_action 操作。
 
 ## 回复
 直接给出子任务的结果，供主任务汇总使用。中文回复。`;

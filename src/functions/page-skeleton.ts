@@ -24,7 +24,7 @@ export const pageSkeletonFunction: FunctionDefinition = {
     '获取当前页面的层级化骨架结构，返回类 Accessibility Tree 的简化文本表示。',
     '用极少的 token 即可理解页面整体布局、区域划分和交互元素分布。',
     '适合在操作前先获取全局结构，再用 page_snapshot 精确定位具体元素。',
-    '交互元素会自动分配 element_id，可直接用于 element_action。',
+    '交互元素会自动分配 element_id，可直接用于 page_action。',
     '支持 expand_selector 渐进展开特定区域。',
   ].join(' '),
   supportsParallel: true,

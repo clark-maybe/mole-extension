@@ -1,7 +1,9 @@
 /**
  * 页面交互操作工具函数
- * 在用户当前浏览的页面上执行 DOM 操作（点击、填写、选择、滚动、获取元素信息）
- * 通过向 content script 发送 __execute_page_action 消息实现
+ * 在用户当前浏览的页面上执行原子交互操作
+ * 支持两种定位方式：element_id（来自 page_snapshot，优先）和 CSS selector
+ * element_id 模式通过 __page_grounding_action 消息走 page-grounding.ts
+ * selector 模式通过 __execute_page_action 消息走 action-executor.ts
  */
 
 import type { FunctionDefinition, ToolExecutionContext } from './types';
@@ -167,19 +169,23 @@ const waitForTabNavigationStable = async (
 
 export const pageActionFunction: FunctionDefinition = {
   name: 'page_action',
-  description: '在用户当前浏览的页面上执行原子交互操作。支持点击、填写、清空、聚焦、下拉选择、滚动、悬停、键盘输入、等待元素出现、获取元素信息。建议先用 page_viewer/get_element_info 了解页面结构再执行。',
+  description: '在用户当前浏览的页面上执行原子交互操作。支持两种定位方式：优先传 element_id（来自 page_snapshot），也可传 CSS selector。支持点击、填写、清空、聚焦、选择、滚动、滚动到元素可见、悬停、键盘输入、等待元素、获取元素信息等。',
   supportsParallel: false,
   parameters: {
     type: 'object',
     properties: {
       action: {
         type: 'string',
-        enum: ['click', 'click_text', 'fill', 'clear', 'focus', 'select', 'scroll', 'hover', 'press_key', 'wait_for_element', 'wait_text', 'wait_navigation', 'get_element_info'],
-        description: '操作类型：click/click_text/fill/clear/focus/select/scroll/hover/press_key/wait_for_element/wait_text/wait_navigation/get_element_info',
+        enum: ['click', 'click_text', 'fill', 'clear', 'focus', 'select', 'scroll', 'scroll_into_view', 'hover', 'press_key', 'wait_for_element', 'wait_text', 'wait_navigation', 'get_info'],
+        description: '操作类型：click(点击)/click_text(按文本点击)/fill(填写)/clear(清空)/focus(聚焦)/select(下拉选择)/scroll(滚动)/scroll_into_view(滚动到元素可见)/hover(悬停)/press_key(键盘)/wait_for_element(等待元素)/wait_text(等待文本)/wait_navigation(等待导航)/get_info(获取元素信息)',
       },
       selector: {
         type: 'string',
         description: 'CSS 选择器，用于定位目标元素。如 "#submit-btn"、".search-input"、"button[type=submit]"、"input[name=email]"',
+      },
+      element_id: {
+        type: 'string',
+        description: 'page_snapshot 返回的元素句柄 ID。优先使用 element_id 定位，失效时退回 selector。',
       },
       text: {
         type: 'string',
@@ -244,27 +250,32 @@ export const pageActionFunction: FunctionDefinition = {
     },
     required: ['action'],
   },
-  validate: (params: { action?: string; selector?: string; text?: string; value?: string; key?: string; direction?: string; scroll_to?: string }) => {
+  validate: (params: { action?: string; element_id?: string; selector?: string; text?: string; value?: string; key?: string; direction?: string; scroll_to?: string }) => {
     const action = params?.action;
     if (!action) return '缺少 action';
 
-    const requireSelectorActions = new Set([
-      'click', 'fill', 'clear', 'focus', 'select', 'hover', 'wait_for_element', 'get_element_info',
+    // get_element_info 映射为 get_info（向后兼容）
+    const normalizedAction = action === 'get_element_info' ? 'get_info' : action;
+
+    // 需要定位器的 action（element_id 或 selector 至少一个）
+    const requireLocatorActions = new Set([
+      'click', 'fill', 'clear', 'focus', 'select', 'hover',
+      'wait_for_element', 'get_info', 'scroll_into_view',
     ]);
-    if (requireSelectorActions.has(action) && !params.selector) {
-      return `${action} 需要提供 selector`;
+    if (requireLocatorActions.has(normalizedAction) && !params.element_id && !params.selector) {
+      return `${normalizedAction} 需要提供 element_id 或 selector`;
     }
-    if ((action === 'click_text' || action === 'wait_text') && !params.text) {
-      return `${action} 需要提供 text`;
+    if ((normalizedAction === 'click_text' || normalizedAction === 'wait_text') && !params.text) {
+      return `${normalizedAction} 需要提供 text`;
     }
-    if ((action === 'fill' || action === 'select') && typeof params.value !== 'string') {
-      return `${action} 需要提供 value（字符串）`;
+    if ((normalizedAction === 'fill' || normalizedAction === 'select') && typeof params.value !== 'string') {
+      return `${normalizedAction} 需要提供 value（字符串）`;
     }
-    if (action === 'press_key' && !params.key) {
+    if (normalizedAction === 'press_key' && !params.key) {
       return 'press_key 需要提供 key';
     }
-    if (action === 'scroll' && !params.selector && !params.scroll_to && !params.direction) {
-      return 'scroll 需要 selector 或 scroll_to 或 direction';
+    if (normalizedAction === 'scroll' && !params.selector && !params.element_id && !params.scroll_to && !params.direction) {
+      return 'scroll 需要 element_id/selector 或 scroll_to 或 direction';
     }
     return null;
   },
@@ -272,6 +283,7 @@ export const pageActionFunction: FunctionDefinition = {
     params: {
       action: string;
       selector?: string;
+      element_id?: string;
       text?: string;
       match_mode?: 'contains' | 'exact';
       value?: string;
@@ -318,6 +330,44 @@ export const pageActionFunction: FunctionDefinition = {
       }
     }
 
+    // get_element_info 映射为 get_info（向后兼容）
+    if (params.action === 'get_element_info') {
+      params = { ...params, action: 'get_info' };
+    }
+
+    // 以下 action 只存在于 page-grounding 通道
+    const groundingOnlyActions = new Set(['scroll_into_view', 'get_info']);
+
+    // 路由判断：有 element_id 或 grounding-only action 时走 page-grounding 通道
+    if (params.element_id || groundingOnlyActions.has(params.action)) {
+      try {
+        const response = await sendToTabWithRetry<{ success: boolean; data?: any; error?: string }>(
+          tabId,
+          '__page_grounding_action',
+          {
+            action: params.action,
+            element_id: params.element_id,
+            selector: params.selector,
+            value: params.value,
+            key: params.key,
+            modifiers: params.modifiers,
+          },
+          {
+            signal: context?.signal,
+            deadlineMs: 12000,
+            timeoutMessage: '等待元素操作响应超时',
+          },
+        );
+        if (!response?.success) {
+          return { success: false, error: response?.error || '页面操作执行失败' };
+        }
+        return { success: true, data: response.data };
+      } catch (err: any) {
+        return { success: false, error: err.message || '页面操作执行失败' };
+      }
+    }
+
+    // 无 element_id 且非 grounding-only action 时走原有 action-executor 通道
     try {
       // 发送操作到 content script
       const response = await sendToTabWithRetry<{

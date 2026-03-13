@@ -77,9 +77,6 @@ const LOGO_TIMEOUT = `data:image/svg+xml;charset=utf-8,${encodeURIComponent('<sv
 // 周期任务（时钟+循环）
 const LOGO_INTERVAL = `data:image/svg+xml;charset=utf-8,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#6366f1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/><path d="M22.7 13.5a10 10 0 0 1-7.2 8.8"/><path d="M20 17l2.7-3.5L26 17"/></svg>')}`;
 
-// 取消定时器（时钟+X）
-const LOGO_CLEAR_TIMER = `data:image/svg+xml;charset=utf-8,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="9" y1="9" x2="15" y2="15"/><line x1="15" y1="9" x2="9" y2="15"/></svg>')}`;
-
 // 通知（铃铛）
 const LOGO_NOTIFICATION = `data:image/svg+xml;charset=utf-8,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#eab308" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>')}`;
 
@@ -94,9 +91,6 @@ const LOGO_DOWNLOAD = `data:image/svg+xml;charset=utf-8,${encodeURIComponent('<s
 
 // DOM 操作（树形结构）
 const LOGO_DOM_MANIPULATE = `data:image/svg+xml;charset=utf-8,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#0ea5e9" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="7" height="5" rx="1"/><rect x="15" y="9" width="7" height="5" rx="1"/><rect x="15" y="17" width="7" height="5" rx="1"/><path d="M5.5 7v3.5a2 2 0 0 0 2 2H15"/><path d="M5.5 10.5V17a2 2 0 0 0 2 2H15"/></svg>')}`;
-
-// 网络监听（波形）
-const LOGO_NETWORK_MONITOR = `data:image/svg+xml;charset=utf-8,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12h4l2-4 4 8 2-4h8"/><circle cx="4" cy="12" r="1.5"/><circle cx="20" cy="12" r="1.5"/></svg>')}`;
 
 // 站点工作流（齿轮+闪电）
 const LOGO_SITE_WORKFLOW = `data:image/svg+xml;charset=utf-8,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#8b5cf6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>')}`;
@@ -148,15 +142,12 @@ const FUNCTION_ICONS: Record<string, string> = {
   screenshot: LOGO_SCREENSHOT,
   selection_context: LOGO_SELECTION,
   storage_kv: LOGO_STORAGE,
-  set_timeout: LOGO_TIMEOUT,
-  set_interval: LOGO_INTERVAL,
-  clear_timer: LOGO_CLEAR_TIMER,
+  timer: LOGO_TIMEOUT,
   notification: LOGO_NOTIFICATION,
   bookmark_ops: LOGO_BOOKMARK,
   history_search: LOGO_HISTORY,
   download_file: LOGO_DOWNLOAD,
   dom_manipulate: LOGO_DOM_MANIPULATE,
-  network_monitor: LOGO_NETWORK_MONITOR,
   resident_runtime: LOGO_INTERVAL,
   site_workflow: LOGO_SITE_WORKFLOW,
   page_skeleton: LOGO_PAGE_SKELETON,
@@ -184,15 +175,12 @@ const FUNCTION_LABELS: Record<string, string> = {
   screenshot: '页面截图',
   selection_context: '选中文本',
   storage_kv: '数据存储',
-  set_timeout: '定时任务',
-  set_interval: '周期任务',
-  clear_timer: '取消定时',
+  timer: '定时器',
   notification: '发送通知',
   bookmark_ops: '收藏管理',
   history_search: '历史记录',
   download_file: '下载文件',
   dom_manipulate: 'DOM 操作',
-  network_monitor: '网络监听',
   resident_runtime: '常驻运行',
   site_workflow: '站点流程',
   page_skeleton: '页面骨架',
@@ -3059,7 +3047,6 @@ export const initFloatBall = async () => {
     if (toolName === 'tab_navigate') return '我已切换到相关页面继续处理';
     if (toolName === 'js_execute') return '我已执行页面内的辅助操作';
     if (toolName === 'history_search') return '我已搜索相关信息';
-    if (toolName === 'network_monitor') return '我已检查页面的网络请求';
     if (toolName === 'download_file') return '我已尝试下载所需文件';
     if (toolName === 'clipboard_ops') return '我已处理剪贴板内容';
     if (toolName === 'storage_kv') return '我已保存当前任务需要的数据';

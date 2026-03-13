@@ -42,7 +42,6 @@ import type {
 } from './ai/types';
 import { TimerStore } from './lib/timer-store';
 import { TimerScheduler } from './lib/timer-scheduler';
-import { NetworkMonitorStore } from './lib/network-monitor';
 import { CDPSessionManager } from './lib/cdp-session';
 import { MAX_SESSION_HISTORY, SESSION_HISTORY_STORAGE_KEY } from './session-history/constants';
 import type {
@@ -134,7 +133,7 @@ interface ActiveTurnRuntime {
     tasks: Map<string, RunningSessionTask>;
 }
 
-type RuntimeResourceKind = 'network_monitor' | 'timer';
+type RuntimeResourceKind = 'timer';
 
 interface RuntimeResourceEntry {
     key: string;
@@ -949,15 +948,6 @@ interface RuntimeResourceHandler {
 }
 
 const RUNTIME_RESOURCE_HANDLERS: Record<RuntimeResourceKind, RuntimeResourceHandler> = {
-    network_monitor: {
-        close: async (resourceId: string) => {
-            try {
-                NetworkMonitorStore.stop(resourceId);
-            } catch (err) {
-                console.warn('[Mole] 关闭 network_monitor 资源失败:', resourceId, err);
-            }
-        },
-    },
     timer: {
         close: async (resourceId: string) => {
             try {
@@ -1031,7 +1021,7 @@ const RuntimeResourceManager = {
     parseEvent(payload: Record<string, any>): RuntimeResourceEventPayload | null {
         const resource = payload?.resource;
         if (!resource || typeof resource !== 'object') return null;
-        if (resource.kind !== 'network_monitor' && resource.kind !== 'timer') return null;
+        if (resource.kind !== 'timer') return null;
         const action = resource.action === 'closed' ? 'closed' : resource.action === 'opened' ? 'opened' : null;
         if (!action) return null;
         const ids = Array.isArray(resource.resourceIds)
@@ -2916,33 +2906,9 @@ Channel.on('__log_report', (data, sender) => {
 // tab 关闭时清理注册
 chrome.tabs.onRemoved.addListener((tabId) => {
     Channel.unregisterTab(tabId);
-    const activeMonitorIds = NetworkMonitorStore
-        .list({ includeInactive: false })
-        .filter(session => session.tabId === tabId)
-        .map(session => session.id);
-    NetworkMonitorStore.stopByTab(tabId);
-    RuntimeResourceManager.unregisterManyFromAllSessions('network_monitor', activeMonitorIds);
     // CDP debugger 会话清理
     CDPSessionManager.detachTab(tabId).catch(() => {});
 });
-
-// ============ 网络请求监听（network_monitor 工具能力） ============
-
-if (NetworkMonitorStore.isSupported()) {
-    const webRequestFilter: chrome.webRequest.RequestFilter = { urls: ['<all_urls>'] };
-
-    chrome.webRequest.onBeforeRequest.addListener((details) => {
-        NetworkMonitorStore.recordBeforeRequest(details);
-    }, webRequestFilter);
-
-    chrome.webRequest.onCompleted.addListener((details) => {
-        NetworkMonitorStore.recordCompleted(details);
-    }, webRequestFilter);
-
-    chrome.webRequest.onErrorOccurred.addListener((details) => {
-        NetworkMonitorStore.recordError(details);
-    }, webRequestFilter);
-}
 
 // ============ 定时器到期处理 ============
 
@@ -3034,7 +3000,7 @@ async function handleTimerTrigger(timerId: string, source: 'alarm' | 'runtime_ti
                 // 直接执行（定时触发禁止再创建定时任务）
                 await runSessionNow(session, task.action, task.tabId, {
                     coalesceKey,
-                    disallowTools: ['set_timeout', 'set_interval'],
+                    disallowTools: ['timer'],
                     maxRounds: 12,
                     maxToolCalls: 30,
                     maxSameToolCalls: 3,

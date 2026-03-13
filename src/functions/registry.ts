@@ -14,13 +14,10 @@ import { pageSnapshotFunction } from './page-snapshot';
 import { pageSkeletonFunction } from './page-skeleton';
 import { pageAssertFunction } from './page-assert';
 import { pageRepairFunction } from './page-repair';
-import { setTimeoutFunction } from './set-timeout';
-import { setIntervalFunction } from './set-interval';
-import { clearTimerFunction } from './clear-timer';
+import { timerFunction } from './timer';
 import { fetchUrlFunction } from './fetch-url';
 import { tabNavigateFunction } from './tab-navigate';
 import { pageActionFunction } from './page-action';
-import { elementActionFunction } from './element-action';
 import { jsExecuteFunction } from './js-execute';
 import { clipboardOpsFunction } from './clipboard-ops';
 import { screenshotFunction } from './screenshot';
@@ -31,7 +28,6 @@ import { bookmarkOpsFunction } from './bookmark-ops';
 import { historySearchFunction } from './history-search';
 import { downloadFileFunction } from './download-file';
 import { domManipulateFunction } from './dom-manipulate';
-import { networkMonitorFunction } from './network-monitor';
 import { residentRuntimeFunction } from './resident-runtime';
 import { siteWorkflowFunction } from './site-workflow';
 import { cdpInputFunction } from './cdp-input';
@@ -90,13 +86,10 @@ const BUILTIN_FUNCTIONS: FunctionDefinition[] = [
   pageSkeletonFunction,
   pageAssertFunction,
   pageRepairFunction,
-  setTimeoutFunction,
-  setIntervalFunction,
-  clearTimerFunction,
+  timerFunction,
   fetchUrlFunction,
   tabNavigateFunction,
   pageActionFunction,
-  elementActionFunction,
   jsExecuteFunction,
   clipboardOpsFunction,
   screenshotFunction,
@@ -107,7 +100,6 @@ const BUILTIN_FUNCTIONS: FunctionDefinition[] = [
   historySearchFunction,
   downloadFileFunction,
   domManipulateFunction,
-  networkMonitorFunction,
   residentRuntimeFunction,
   siteWorkflowFunction,
   cdpInputFunction,

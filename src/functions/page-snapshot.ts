@@ -23,7 +23,7 @@ export const pageSnapshotFunction: FunctionDefinition = {
   description: [
     '获取当前页面的语义化快照，返回可交互/可阅读元素候选列表。',
     '每个候选都会带 element_id、文本、标签、role、是否可点击/可编辑、可见性、位置和 selector 候选。',
-    '适合陌生网站自动化：先用 page_snapshot(query=...) 找到候选元素，再用 element_action 基于 element_id 执行动作。',
+    '适合陌生网站自动化：先用 page_snapshot(query=...) 找到候选元素，再用 page_action(element_id=...) 基于 element_id 执行动作。',
   ].join(' '),
   supportsParallel: true,
   parameters: {

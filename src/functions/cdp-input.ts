@@ -313,7 +313,7 @@ export const cdpInputFunction: FunctionDefinition = {
   name: 'cdp_input',
   description: [
     '通过 Chrome DevTools Protocol 发送可信鼠标/键盘事件（绕过 isTrusted 检测）。',
-    '适用场景：普通 element_action 点击无效（被反爬拦截）、需要拖拽操作（滑块验证）、需要精确坐标操作。',
+    '适用场景：普通 page_action 点击无效（被反爬拦截）、需要拖拽操作（滑块验证）、需要精确坐标操作。',
     '定位方式：优先传 element_id（来自 page_snapshot），也可直接传 x/y 坐标。',
     '支持动作：click / double_click / right_click / hover / drag / type / key_press / scroll。',
     '注意：首次使用时会 attach debugger，页面顶部会出现调试提示条。',
