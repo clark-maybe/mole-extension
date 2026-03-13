@@ -61,7 +61,13 @@
       "Bash(git -C /Users/clark/MySpace/chrome-extension diff src/options/options.css)",
       "Bash(git -C /Users/clark/MySpace/chrome-extension diff src/content/float-ball.ts)",
       "Bash(grep -l \"options\" /Users/clark/MySpace/chrome-extension/vite.config*.ts)",
-      "Bash(tree /Users/clark/MySpace/chrome-extension/docs -L 3 --charset ascii 2>/dev/null || find /Users/clark/MySpace/chrome-extension/docs -type f -name \"*.md\" -o -name \"*.ts\" -o -name \"*.json\" -o -name \"*.css\" | grep -v cache | grep -v dist | sort)"
+      "Bash(tree /Users/clark/MySpace/chrome-extension/docs -L 3 --charset ascii 2>/dev/null || find /Users/clark/MySpace/chrome-extension/docs -type f -name \"*.md\" -o -name \"*.ts\" -o -name \"*.json\" -o -name \"*.css\" | grep -v cache | grep -v dist | sort)",
+      "Bash(export https_proxy=\"http://127.0.0.1:7897\" && git push origin main)",
+      "Bash(git config --list | grep credential)",
+      "Bash(git config credential.helper)",
+      "Bash(ssh-keygen -lf ~/.ssh/id_rsa.pub)",
+      "Bash(ssh -T git@github.com 2>&1 || true)",
+      "Bash(git remote set-url origin git@github.com:clark-maybe/mole-extension.git && git push origin main)"
     ],
     "deny": [],
     "ask": []
