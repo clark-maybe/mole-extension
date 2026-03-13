@@ -3852,6 +3852,19 @@ async function broadcastBgTasksChanged(): Promise<void> {
     }
 }
 
+/** 监听定时器/常驻任务存储变化，自动广播到所有标签页 */
+let _bgTasksBroadcastTimer: ReturnType<typeof setTimeout> | null = null;
+chrome.storage.onChanged.addListener((changes, areaName) => {
+    if (areaName !== 'local') return;
+    if (!changes['mole_timers'] && !changes['mole_resident_runtime_jobs_v1']) return;
+    // 防抖：短时间内多次变更只广播一次
+    if (_bgTasksBroadcastTimer) clearTimeout(_bgTasksBroadcastTimer);
+    _bgTasksBroadcastTimer = setTimeout(() => {
+        _bgTasksBroadcastTimer = null;
+        void broadcastBgTasksChanged();
+    }, 300);
+});
+
 /** 查询所有活跃的后台任务（定时器 + 常驻任务） */
 Channel.on('__bg_tasks_query', async (_data, _sender, sendResponse) => {
     try {
