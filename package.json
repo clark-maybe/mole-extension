@@ -1,0 +1,49 @@
+{
+  "name": "mole-extension",
+  "version": "1.0.0",
+  "description": "MoleClaw - AI-powered browser assistant with workflow automation",
+  "license": "AGPL-3.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/clark-maybe/mole-extension"
+  },
+  "keywords": [
+    "chrome-extension",
+    "ai-assistant",
+    "workflow",
+    "browser-automation"
+  ],
+  "type": "module",
+  "scripts": {
+    "dev": "vite build --watch",
+    "build:popup": "vite build --config vite.config.popup.ts",
+    "build:content": "vite build --config vite.config.content.ts",
+    "build:background": "vite build --config vite.config.background.ts",
+    "build": "npm run build:popup && npm run build:content && npm run build:background && echo 'Build completed!'",
+    "lint": "eslint . --report-unused-disable-directives --max-warnings 0",
+    "preview": "vite preview",
+    "docs:dev": "vitepress dev docs",
+    "docs:build": "vitepress build docs",
+    "docs:preview": "vitepress preview docs"
+  },
+  "dependencies": {
+    "dayjs": "^1.11.13",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+  },
+  "devDependencies": {
+    "@types/chrome": "^0.0.328",
+    "@types/node": "^20.19.2",
+    "@types/react": "^18.2.15",
+    "@types/react-dom": "^18.2.7",
+    "@typescript-eslint/eslint-plugin": "^6.0.0",
+    "@typescript-eslint/parser": "^6.0.0",
+    "@vitejs/plugin-react": "^4.0.3",
+    "eslint": "^8.45.0",
+    "eslint-plugin-react-hooks": "^4.6.0",
+    "eslint-plugin-react-refresh": "^0.4.3",
+    "typescript": "^5.0.2",
+    "vite": "^5.0.0",
+    "vitepress": "^1.6.4"
+  }
+}
