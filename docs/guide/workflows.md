@@ -92,6 +92,24 @@ Each workflow is a JSON object with the following fields:
 - **`plan.resultPath`** — Path to extract the final result from
 - **`plan.closeOpenedTabs`** — Whether to close newly opened tabs after completion (`"on_success"`)
 
+## Recording Workflows
+
+The easiest way to create a custom workflow is to **record it** directly in the floating ball. Instead of writing JSON by hand, just demonstrate the operation and let AI generate the workflow for you.
+
+### Steps
+
+1. Open the floating ball search box (`Cmd+M` / `Ctrl+M`)
+2. Click the **"Record Workflow"** button in the footer area
+3. Perform the operation on the page (click, type, navigate, etc.)
+4. Click **"Stop"** when done
+5. Optionally click on the result element, or click **"Skip"** for full-page snapshot mode
+6. Wait for AI to process — it will clean up the recording, remove noise, identify parameters, and generate a standard workflow
+7. The workflow is saved automatically and can be invoked by AI in future conversations
+
+::: tip
+Recorded workflows are marked with `source: "user"` and stored alongside manually added and remote-synced workflows. You can manage them from the Options page.
+:::
+
 ## Custom Workflows
 
 ### Via the Options Page

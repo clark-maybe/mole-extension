@@ -19,7 +19,7 @@ import {
     executeDebugRemotePlan,
     getSupportedRemotePlanActions,
 } from './functions/remote-workflow';
-import { listSiteWorkflows, reloadRegistryFromStore } from './functions/site-workflow-registry';
+import { listSiteWorkflows, reloadRegistryFromStore, upsertUserWorkflow } from './functions/site-workflow-registry';
 import { matchWorkflows } from './functions/site-workflow-matcher';
 import { handleChat } from './ai/orchestrator';
 import { chatComplete } from './ai/llm-client';
@@ -4088,6 +4088,297 @@ export async function runResidentAIResponse(
 
 // 注入 AI 响应函数到常驻运行器（避免循环依赖）
 injectAIResponseRunner(runResidentAIResponse);
+
+// ============ 工作流录制 ============
+
+/** 录制步骤 */
+interface RecorderStep {
+    seq: number;
+    action: 'click' | 'type' | 'select' | 'submit' | 'navigate';
+    selector: string;
+    selectorCandidates: string[];
+    semanticHint: string;
+    tag: string;
+    value?: string;
+    url: string;
+    timestamp: number;
+}
+
+/** 录制状态 */
+interface RecorderState {
+    active: boolean;
+    tabId: number;
+    startedAt: number;
+    steps: RecorderStep[];
+    startUrl: string;
+}
+
+/** 当前录制状态（内存中） */
+let recorderState: RecorderState | null = null;
+
+/** 导航监听器引用，用于注销 */
+let recorderNavListener: ((details: chrome.webNavigation.WebNavigationFramedCallbackDetails) => void) | null = null;
+
+// ---- Session Storage 辅助函数 ----
+
+/** 持久化录制状态到 session storage */
+const saveRecorderState = async (): Promise<void> => {
+    if (!recorderState) {
+        await chrome.storage.session.remove('mole_recorder_state');
+        return;
+    }
+    await chrome.storage.session.set({ mole_recorder_state: recorderState });
+};
+
+/** 从 session storage 加载录制状态 */
+const loadRecorderState = async (): Promise<RecorderState | null> => {
+    const result = await chrome.storage.session.get('mole_recorder_state');
+    return result.mole_recorder_state || null;
+};
+
+// ---- 导航监听 ----
+
+/** 注册录制期间的导航监听器 */
+const registerRecorderNavListener = (): void => {
+    if (recorderNavListener) return; // 防止重复注册
+
+    recorderNavListener = (details: chrome.webNavigation.WebNavigationFramedCallbackDetails) => {
+        // 只监听录制中的 tab 的主 frame
+        if (!recorderState?.active) return;
+        if (details.tabId !== recorderState.tabId) return;
+        if (details.frameId !== 0) return;
+
+        // 追加 navigate 步骤
+        const step: RecorderStep = {
+            seq: recorderState.steps.length + 1,
+            action: 'navigate',
+            selector: '',
+            selectorCandidates: [],
+            semanticHint: '',
+            tag: '',
+            url: details.url,
+            timestamp: Date.now(),
+        };
+        recorderState.steps.push(step);
+        void saveRecorderState();
+
+        // 通知 content 脚本导航已完成
+        Channel.sendToTab(recorderState.tabId, '__recorder_navigate', { url: details.url });
+    };
+
+    chrome.webNavigation.onCompleted.addListener(recorderNavListener);
+};
+
+/** 注销录制导航监听器 */
+const unregisterRecorderNavListener = (): void => {
+    if (recorderNavListener) {
+        chrome.webNavigation.onCompleted.removeListener(recorderNavListener);
+        recorderNavListener = null;
+    }
+};
+
+// ---- Channel 消息处理器 ----
+
+/** 开始录制 */
+Channel.on('__recorder_start', (data, sender, sendResponse) => {
+    const tabId = sender?.tab?.id || (data?.tabId as number);
+    const url = String(data?.url || '');
+
+    if (!tabId) {
+        sendResponse?.({ success: false, error: '缺少 tabId' });
+        return true;
+    }
+
+    recorderState = {
+        active: true,
+        tabId,
+        startedAt: Date.now(),
+        steps: [],
+        startUrl: url,
+    };
+
+    void saveRecorderState();
+    registerRecorderNavListener();
+
+    console.log(`[Mole] 工作流录制已开始, tab: ${tabId}, url: ${url}`);
+    sendResponse?.({ success: true });
+    return true;
+});
+
+/** 停止录制 */
+Channel.on('__recorder_stop', (_data, _sender, sendResponse) => {
+    if (!recorderState) {
+        sendResponse?.({ success: false, error: '当前没有进行中的录制' });
+        return true;
+    }
+
+    recorderState.active = false;
+    void saveRecorderState();
+    unregisterRecorderNavListener();
+
+    console.log(`[Mole] 工作流录制已停止, 共 ${recorderState.steps.length} 步`);
+    sendResponse?.({ success: true, steps: recorderState.steps });
+    return true;
+});
+
+/** 接收录制步骤（fire-and-forget） */
+Channel.on('__recorder_step', (data) => {
+    if (!recorderState?.active || !data) return;
+
+    const step: RecorderStep = {
+        seq: data.seq ?? (recorderState.steps.length + 1),
+        action: data.action,
+        selector: data.selector || '',
+        selectorCandidates: data.selectorCandidates || [],
+        semanticHint: data.semanticHint || '',
+        tag: data.tag || '',
+        value: data.value,
+        url: data.url || '',
+        timestamp: data.timestamp || Date.now(),
+    };
+
+    recorderState.steps.push(step);
+    void saveRecorderState();
+});
+
+/** 查询当前录制状态 */
+Channel.on('__recorder_state', (_data, _sender, sendResponse) => {
+    sendResponse?.(recorderState);
+    return true;
+});
+
+/** 提交录制结果给 AI 处理 */
+Channel.on('__recorder_submit', (data, _sender, sendResponse) => {
+    const resultSelector = data?.resultSelector as string | undefined;
+    const resultMode = String(data?.resultMode || 'skip') as 'element' | 'snapshot' | 'skip';
+    const workflowName = data?.workflowName as string | undefined;
+
+    if (!recorderState || recorderState.steps.length === 0) {
+        sendResponse?.({ success: false, error: '没有可提交的录制步骤' });
+        return true;
+    }
+
+    const steps = [...recorderState.steps];
+    const startUrl = recorderState.startUrl;
+    const tabId = recorderState.tabId;
+
+    // 异步执行 AI 审计
+    void (async () => {
+        try {
+            // 构建 AI 审计 prompt
+            const prompt = [
+                '你是一个工作流审计助手。以下是用户在浏览器中录制的一系列操作步骤：',
+                '',
+                JSON.stringify(steps, null, 2),
+                '',
+                `起始 URL: ${startUrl}`,
+                `结果选择器: ${resultSelector || '无'}`,
+                `结果模式: ${resultMode}`,
+                workflowName ? `工作流名称建议: ${workflowName}` : '',
+                '',
+                '请完成以下任务：',
+                '1. 去除明显的噪声步骤（误点击、重复操作）',
+                '2. 合并连续的输入动作',
+                '3. 为每步添加中文说明（note 字段）',
+                '4. 识别用户输入的变量部分，用 {{param_name}} 替代，并在 parameters 中定义',
+                '5. 如果有结果选择器，在最后添加断言步骤',
+                '',
+                '输出格式（严格 JSON，无多余文字）：',
+                '{',
+                '  "name": "workflow_名称（英文下划线格式）",',
+                '  "label": "显示名称（中文）",',
+                '  "description": "工作流描述（中文）",',
+                '  "url_patterns": ["匹配的 URL 模式"],',
+                '  "parameters": { JSON Schema 格式的参数定义 },',
+                '  "plan": {',
+                '    "steps": [',
+                '      {',
+                '        "action": "page_action",',
+                '        "params": { "action": "click|fill|select", "selector": "...", "value": "..." },',
+                '        "note": "中文说明"',
+                '      }',
+                '    ],',
+                '    "resultPath": "结果提取路径（可选）"',
+                '  }',
+                '}',
+            ].filter(Boolean).join('\n');
+
+            // 调用 AI 进行审计
+            const input: InputItem[] = [
+                { role: 'user', content: prompt },
+            ];
+
+            const result = await chatComplete(input);
+
+            // 从 AI 返回中提取 JSON
+            let workflowJson: any = null;
+            for (const item of result.output) {
+                if (item.type === 'message' && Array.isArray(item.content)) {
+                    for (const part of item.content) {
+                        if (part.type === 'output_text' && part.text) {
+                            // 尝试提取 JSON（可能被 markdown 代码块包裹）
+                            const jsonMatch = part.text.match(/```(?:json)?\s*([\s\S]*?)```/) ||
+                                              part.text.match(/(\{[\s\S]*\})/);
+                            if (jsonMatch?.[1]) {
+                                try {
+                                    workflowJson = JSON.parse(jsonMatch[1].trim());
+                                } catch {
+                                    // JSON 解析失败，继续尝试
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (!workflowJson) {
+                sendResponse?.({ success: false, error: 'AI 返回的结果无法解析为有效 JSON' });
+                return;
+            }
+
+            // 补充必要字段，调用 upsertUserWorkflow 保存
+            const workflowSpec = {
+                ...workflowJson,
+                enabled: true,
+                source: 'user',
+                version: 1,
+                createdAt: Date.now(),
+                updatedAt: Date.now(),
+            };
+
+            const saveResult = await upsertUserWorkflow(workflowSpec);
+
+            if (!saveResult.success) {
+                sendResponse?.({ success: false, error: saveResult.message });
+                return;
+            }
+
+            // 清理录制状态
+            recorderState = null;
+            void saveRecorderState();
+
+            // 广播结果给发起 tab
+            Channel.sendToTab(tabId, '__recorder_result', { workflow: workflowSpec });
+
+            sendResponse?.({ success: true, workflow: workflowSpec });
+        } catch (err: any) {
+            console.error('[Mole] 工作流录制提交失败:', err);
+            sendResponse?.({ success: false, error: err?.message || '提交处理失败' });
+        }
+    })();
+
+    return true;
+});
+
+// ---- 录制状态恢复（Service Worker 重启后） ----
+
+void loadRecorderState().then((state) => {
+    if (state?.active) {
+        recorderState = state;
+        registerRecorderNavListener();
+        console.log(`[Mole] 录制状态已恢复, tab: ${state.tabId}, 已有 ${state.steps.length} 步`);
+    }
+});
 
 // ============ 保持 Service Worker 活跃 ============
 

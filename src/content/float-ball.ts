@@ -2326,6 +2326,130 @@ const getStyles = () => `
     background: var(--ec-danger-soft);
     color: var(--ec-danger);
   }
+
+  /* ===== 工作流录制 ===== */
+
+  /* 录制按钮 - 放在 footer 中 */
+  .mole-recorder-btn {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    margin-left: auto;
+    padding: 4px 10px;
+    border: 1px solid var(--ec-border-soft);
+    border-radius: 999px;
+    background: transparent;
+    color: var(--ec-text-muted);
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    white-space: nowrap;
+  }
+  .mole-recorder-btn:hover {
+    background: rgba(215, 0, 21, 0.06);
+    border-color: rgba(215, 0, 21, 0.18);
+    color: var(--ec-danger);
+  }
+  .mole-recorder-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--ec-danger);
+    flex-shrink: 0;
+  }
+
+  /* 录制中状态 - footer 录制状态栏 */
+  .mole-recorder-bar {
+    display: none;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 14px;
+    background: rgba(215, 0, 21, 0.04);
+    border-top: 1px solid rgba(215, 0, 21, 0.12);
+    font-size: 12px;
+    color: var(--ec-text-secondary, var(--ec-text-muted));
+  }
+  .mole-recorder-bar.visible { display: flex; }
+  .mole-recorder-bar-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--ec-danger);
+    animation: mole-breathe 1.4s ease-in-out infinite;
+    flex-shrink: 0;
+  }
+  .mole-recorder-bar-info { flex: 1; min-width: 0; }
+  .mole-recorder-bar-stop {
+    padding: 4px 12px;
+    border: 1px solid rgba(215, 0, 21, 0.2);
+    border-radius: 6px;
+    background: transparent;
+    color: var(--ec-danger);
+    font-size: 12px;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .mole-recorder-bar-stop:hover {
+    background: rgba(215, 0, 21, 0.08);
+  }
+
+  /* 胶囊录制状态 */
+  .mole-trigger.recording .mole-pill {
+    border-color: rgba(215, 0, 21, 0.3);
+  }
+  .mole-trigger.recording .mole-pill::after {
+    content: '';
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--ec-danger);
+    animation: mole-breathe 1.4s ease-in-out infinite;
+    opacity: 1;
+    z-index: 2;
+  }
+
+  /* 结果标记遮罩 */
+  .mole-result-mark-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 2147483646;
+    pointer-events: none;
+  }
+  .mole-result-mark-overlay.visible { display: block; }
+  .mole-result-mark-bar {
+    position: fixed;
+    top: 12px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 2147483647;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 18px;
+    border-radius: 12px;
+    background: rgba(15, 23, 42, 0.88);
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 13px;
+    backdrop-filter: blur(12px);
+    box-shadow: 0 4px 24px rgba(0,0,0,0.2);
+    pointer-events: auto;
+  }
+  .mole-result-mark-skip {
+    padding: 4px 12px;
+    border: 1px solid rgba(255,255,255,0.2);
+    border-radius: 6px;
+    background: transparent;
+    color: rgba(255,255,255,0.8);
+    font-size: 12px;
+    cursor: pointer;
+  }
+  .mole-result-mark-skip:hover {
+    background: rgba(255,255,255,0.1);
+  }
 `;
 
 // ============ 位置存储 ============
@@ -2588,6 +2712,9 @@ export const initFloatBall = async () => {
       <span class="mole-footer-icon">✦</span>
       <span class="mole-footer-text">Mole · AI 助手</span>
       <span class="mole-footer-time"></span>
+      <button class="mole-recorder-btn" type="button" title="录制工作流">
+        <span class="mole-recorder-dot"></span>录制
+      </button>
     </div>
   `;
 
@@ -2620,6 +2747,31 @@ export const initFloatBall = async () => {
   const bgTasksPanelEl = document.createElement('div');
   bgTasksPanelEl.className = 'mole-bg-tasks-panel';
   searchbox.insertBefore(bgTasksPanelEl, dividerBottomEl);
+
+  // ---- 录制状态栏（插入到 footer 之前） ----
+  const recorderBarEl = document.createElement('div');
+  recorderBarEl.className = 'mole-recorder-bar';
+  recorderBarEl.innerHTML = `
+    <span class="mole-recorder-bar-dot"></span>
+    <span class="mole-recorder-bar-info">录制中 \u00B7 0 步</span>
+    <button class="mole-recorder-bar-stop" type="button">停止录制</button>
+  `;
+  const footerEl = searchbox.querySelector('.mole-footer') as HTMLDivElement;
+  searchbox.insertBefore(recorderBarEl, footerEl);
+
+  // 录制按钮引用
+  const recorderBtnEl = searchbox.querySelector('.mole-recorder-btn') as HTMLButtonElement;
+
+  // ---- 结果标记遮罩（添加到 shadow DOM 根层级） ----
+  const resultMarkOverlay = document.createElement('div');
+  resultMarkOverlay.className = 'mole-result-mark-overlay';
+  resultMarkOverlay.innerHTML = `
+    <div class="mole-result-mark-bar">
+      <span>点击页面元素作为流程结果，或</span>
+      <button class="mole-result-mark-skip" type="button">跳过</button>
+    </div>
+  `;
+  shadow.appendChild(resultMarkOverlay);
 
   const hintEl = searchbox.querySelector('.mole-input-hint') as HTMLSpanElement;
   const imageViewerCloseEl = imageViewerEl.querySelector('.mole-image-viewer-close') as HTMLButtonElement;
@@ -2741,6 +2893,12 @@ export const initFloatBall = async () => {
   let sessionOriginTabId: number | undefined = undefined;
   /** 后台任务数据（定时器 + 常驻任务） */
   let bgTasksData: { timers: any[]; residentJobs: any[] } | null = null;
+
+  // ---- 工作流录制状态 ----
+  let isRecording = false;
+  let recorderStepCount = 0;
+  let recorderStartedAt = 0;
+  let isResultMarking = false;
 
   // 初始化时获取自身 tabId
   Channel.send('__get_tab_info', {}, (tabInfo: any) => {
@@ -3783,6 +3941,299 @@ export const initFloatBall = async () => {
     return parts.join(' · ');
   };
 
+  // ============ 工作流录制 ============
+
+  /** 生成一个尽可能稳定的 CSS 选择器 */
+  const buildSimpleSelector = (el: Element): string => {
+    // 有 id 直接使用
+    if (el.id) return `#${CSS.escape(el.id)}`;
+    // data-testid / data-test
+    const testId = el.getAttribute('data-testid') || el.getAttribute('data-test');
+    if (testId) return `[data-testid="${CSS.escape(testId)}"]`;
+    const tag = el.tagName.toLowerCase();
+    // name 属性
+    const name = el.getAttribute('name');
+    if (name) return `${tag}[name="${CSS.escape(name)}"]`;
+    // aria-label
+    const ariaLabel = el.getAttribute('aria-label');
+    if (ariaLabel) return `${tag}[aria-label="${CSS.escape(ariaLabel)}"]`;
+    // placeholder
+    const placeholder = el.getAttribute('placeholder');
+    if (placeholder) return `${tag}[placeholder="${CSS.escape(placeholder)}"]`;
+    // class 名（取前 2 个）
+    const classes = Array.from(el.classList).slice(0, 2);
+    if (classes.length > 0) return `${tag}.${classes.map(c => CSS.escape(c)).join('.')}`;
+    // nth-of-type 兜底
+    const parent = el.parentElement;
+    if (parent) {
+      const siblings = Array.from(parent.children).filter(c => c.tagName === el.tagName);
+      const idx = siblings.indexOf(el) + 1;
+      return `${tag}:nth-of-type(${idx})`;
+    }
+    return tag;
+  };
+
+  /** 生成元素的语义描述 */
+  const getElementSemanticHint = (el: Element): string => {
+    const tag = el.tagName.toLowerCase();
+    // 按钮/链接：取文本内容
+    if (tag === 'button' || tag === 'a' || el.getAttribute('role') === 'button') {
+      const text = (el.textContent || '').trim().slice(0, 30);
+      if (text) return text;
+    }
+    // 输入框：取 placeholder / aria-label / name
+    if (tag === 'input' || tag === 'textarea' || tag === 'select') {
+      return el.getAttribute('placeholder')
+        || el.getAttribute('aria-label')
+        || el.getAttribute('name')
+        || tag;
+    }
+    // 其他：aria-label / role / tag
+    return el.getAttribute('aria-label')
+      || el.getAttribute('role')
+      || tag;
+  };
+
+  // ---- 事件捕获 ----
+
+  let inputDebounceTimer: number | null = null;
+  let lastInputTarget: Element | null = null;
+  let lastInputValue = '';
+
+  /** 提交未完成的输入步骤 */
+  const flushInputStep = () => {
+    if (!lastInputTarget || !lastInputValue) return;
+    const target = lastInputTarget;
+    const isSelect = target.tagName === 'SELECT';
+
+    recorderStepCount++;
+    Channel.send('__recorder_step', {
+      seq: recorderStepCount,
+      action: isSelect ? 'select' : 'type',
+      selector: buildSimpleSelector(target),
+      selectorCandidates: [buildSimpleSelector(target)],
+      semanticHint: getElementSemanticHint(target),
+      tag: target.tagName.toLowerCase(),
+      value: lastInputValue,
+      url: window.location.href,
+      timestamp: Date.now(),
+    });
+    lastInputTarget = null;
+    lastInputValue = '';
+    updateRecorderBar();
+  };
+
+  /** click 监听器 */
+  const recorderClickHandler = (e: MouseEvent) => {
+    if (!isRecording) return;
+    const target = e.target as Element;
+    if (!target || target.closest('#mole-root')) return;
+
+    const selector = buildSimpleSelector(target);
+    const semanticHint = getElementSemanticHint(target);
+
+    recorderStepCount++;
+    Channel.send('__recorder_step', {
+      seq: recorderStepCount,
+      action: 'click',
+      selector,
+      selectorCandidates: [selector],
+      semanticHint,
+      tag: target.tagName.toLowerCase(),
+      url: window.location.href,
+      timestamp: Date.now(),
+    });
+    updateRecorderBar();
+  };
+
+  /** input/change 监听器（防抖合并） */
+  const recorderInputHandler = (e: Event) => {
+    if (!isRecording) return;
+    const target = e.target as HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement;
+    if (!target || target.closest('#mole-root')) return;
+
+    // 上一个元素的输入已结束，立即提交
+    if (target !== lastInputTarget && lastInputTarget && lastInputValue) {
+      flushInputStep();
+    }
+
+    lastInputTarget = target;
+    lastInputValue = target.value || '';
+
+    if (inputDebounceTimer) window.clearTimeout(inputDebounceTimer);
+    inputDebounceTimer = window.setTimeout(() => {
+      flushInputStep();
+    }, 800);
+  };
+
+  /** submit 监听器 */
+  const recorderSubmitHandler = (e: Event) => {
+    if (!isRecording) return;
+    const form = e.target as HTMLFormElement;
+    if (!form || form.closest('#mole-root')) return;
+
+    flushInputStep(); // 先提交未完成的输入
+
+    recorderStepCount++;
+    Channel.send('__recorder_step', {
+      seq: recorderStepCount,
+      action: 'submit',
+      selector: buildSimpleSelector(form),
+      selectorCandidates: [buildSimpleSelector(form)],
+      semanticHint: '提交表单',
+      tag: 'form',
+      url: window.location.href,
+      timestamp: Date.now(),
+    });
+    updateRecorderBar();
+  };
+
+  /** 开始事件捕获 */
+  const startRecordingCapture = () => {
+    document.addEventListener('click', recorderClickHandler, true);
+    document.addEventListener('input', recorderInputHandler, true);
+    document.addEventListener('change', recorderInputHandler, true);
+    document.addEventListener('submit', recorderSubmitHandler, true);
+  };
+
+  /** 停止事件捕获 */
+  const stopRecordingCapture = () => {
+    document.removeEventListener('click', recorderClickHandler, true);
+    document.removeEventListener('input', recorderInputHandler, true);
+    document.removeEventListener('change', recorderInputHandler, true);
+    document.removeEventListener('submit', recorderSubmitHandler, true);
+    if (inputDebounceTimer) { window.clearTimeout(inputDebounceTimer); inputDebounceTimer = null; }
+    lastInputTarget = null;
+    lastInputValue = '';
+  };
+
+  /** 更新录制状态栏 */
+  const updateRecorderBar = () => {
+    const barInfo = recorderBarEl.querySelector('.mole-recorder-bar-info') as HTMLSpanElement;
+    if (!barInfo) return;
+    if (isRecording) {
+      const elapsed = Math.max(0, Date.now() - recorderStartedAt);
+      barInfo.textContent = `录制中 \u00B7 ${recorderStepCount} 步 \u00B7 ${formatDuration(elapsed)}`;
+      recorderBarEl.classList.add('visible');
+    } else {
+      recorderBarEl.classList.remove('visible');
+    }
+  };
+
+  /** 提交录制给 background AI 处理 */
+  const submitRecording = (resultSelector: string | null) => {
+    // 更新 footer 提示
+    footerTextEl.textContent = 'AI 正在审计录制...';
+    trigger.classList.remove('recording');
+    recorderBarEl.classList.remove('visible');
+    recorderBtnEl.style.display = '';
+
+    Channel.send('__recorder_submit', {
+      resultSelector,
+      resultMode: resultSelector ? 'element' : 'skip',
+    }, (resp: any) => {
+      if (resp?.success) {
+        showPillNotice('工作流已保存', 'success');
+      } else {
+        showPillNotice(resp?.error || '生成失败', 'error');
+      }
+      footerTextEl.textContent = 'Mole \u00B7 AI 助手';
+    });
+  };
+
+  /** 进入结果标记模式 */
+  const enterResultMarkMode = () => {
+    isResultMarking = true;
+    // 显示提示栏
+    resultMarkOverlay.classList.add('visible');
+    // 关闭搜索框
+    if (isOpen) toggleSearch(false);
+
+    // 注册一次性点击捕获（在 document 上）
+    const markClickHandler = (e: MouseEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const target = e.target as Element;
+      if (!target) return;
+      // 忽略 mole 自身的点击
+      if (target.closest('#mole-root')) return;
+
+      const selector = buildSimpleSelector(target);
+      document.removeEventListener('click', markClickHandler, true);
+      isResultMarking = false;
+      resultMarkOverlay.classList.remove('visible');
+      submitRecording(selector);
+    };
+    document.addEventListener('click', markClickHandler, true);
+
+    // 跳过按钮
+    const skipBtn = resultMarkOverlay.querySelector('.mole-result-mark-skip') as HTMLButtonElement;
+    const skipHandler = () => {
+      document.removeEventListener('click', markClickHandler, true);
+      isResultMarking = false;
+      resultMarkOverlay.classList.remove('visible');
+      submitRecording(null);
+      skipBtn.removeEventListener('click', skipHandler);
+    };
+    skipBtn.addEventListener('click', skipHandler);
+  };
+
+  /** 开始录制 */
+  const startRecording = () => {
+    Channel.send('__recorder_start', { tabId: 0, url: window.location.href }, (resp: any) => {
+      if (resp?.error) {
+        showPillNotice(resp.error, 'error');
+        return;
+      }
+      isRecording = true;
+      recorderStepCount = 0;
+      recorderStartedAt = Date.now();
+      startRecordingCapture();
+      // 更新 UI：胶囊加 recording class，显示 recorderBar，隐藏录制按钮
+      trigger.classList.add('recording');
+      recorderBtnEl.style.display = 'none';
+      updateRecorderBar();
+      showPillNotice('开始录制', 'info');
+    });
+  };
+
+  /** 停止录制 */
+  const stopRecording = () => {
+    flushInputStep(); // 提交未完成的输入
+    stopRecordingCapture();
+    Channel.send('__recorder_stop', {}, () => {
+      isRecording = false;
+      recorderBarEl.classList.remove('visible');
+      // 进入结果标记模式
+      enterResultMarkMode();
+    });
+  };
+
+  // 录制按钮点击事件
+  recorderBtnEl.addEventListener('click', (e) => {
+    e.stopPropagation();
+    if (isRecording || currentTask?.status === 'running') return;
+    startRecording();
+  });
+
+  // 录制状态栏停止按钮
+  const recorderBarStopBtn = recorderBarEl.querySelector('.mole-recorder-bar-stop') as HTMLButtonElement;
+  recorderBarStopBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    stopRecording();
+  });
+
+  // AI 处理结果监听
+  Channel.on('__recorder_result', (data: any) => {
+    trigger.classList.remove('recording');
+    if (data?.success) {
+      showPillNotice('工作流已保存', 'success');
+    } else {
+      showPillNotice(data?.error || '生成失败', 'error');
+    }
+    footerTextEl.textContent = 'Mole \u00B7 AI 助手';
+  });
+
   const updateFooterTime = () => {
     if (!currentTask) {
       footerTimeEl.textContent = '';
@@ -3881,6 +4332,10 @@ export const initFloatBall = async () => {
       updateInputUI();
     } else if (isTakeoverActive()) {
       updatePillState();
+    }
+    // 录制中每秒刷新录制状态栏
+    if (isRecording) {
+      updateRecorderBar();
     }
   }, 1000);
 
@@ -5362,6 +5817,19 @@ export const initFloatBall = async () => {
 
   // 初始化时查询后台任务以更新角标
   queryBgTasks();
+
+  // ---- 恢复录制状态（页面导航后 content 重注入） ----
+  Channel.send('__recorder_state', {}, (state: any) => {
+    if (state?.active) {
+      isRecording = true;
+      recorderStepCount = state.steps?.length || 0;
+      recorderStartedAt = state.startedAt || Date.now();
+      startRecordingCapture();
+      trigger.classList.add('recording');
+      recorderBtnEl.style.display = 'none';
+      updateRecorderBar();
+    }
+  });
 
   // ---- 事件委托：统一处理结果区所有点击交互 ----
   // 使用委托而非逐个绑定，这样快照恢复后点击仍然有效

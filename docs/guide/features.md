@@ -83,6 +83,32 @@ Mole connects to 10 Chrome DevTools Protocol (CDP) domains, providing browser-pr
 
 All CDP tools share a unified session manager (`cdp-session.ts`) that automatically manages debugger attach/detach lifecycle and domain event listeners.
 
+## Workflow Recorder
+
+Mole supports a **"show once, learn forever"** workflow recording mode. Instead of manually writing JSON workflow definitions, you can simply demonstrate the operation on the page, and Mole will learn from your actions.
+
+### How It Works
+
+1. **Start Recording** — Click the "Record Workflow" button in the floating ball's search box footer
+2. **Demonstrate** — Perform the operation on the page as you normally would. Mole captures clicks, text input, form submissions, and page navigations in the background
+3. **Mark Results** — After stopping the recording, you can click on the page element that represents the operation result (e.g., a search result list), or skip this step for full-page snapshot mode
+4. **AI Audit** — Mole sends the raw recorded steps to the AI, which:
+   - Removes noise (accidental clicks, meaningless scrolls)
+   - Merges fragmented actions (multiple keystrokes → one type action)
+   - Identifies parameterizable inputs (marks them as `{{param_name}}`)
+   - Generates assertions based on the result selector
+   - Outputs a standard workflow plan
+5. **Save & Reuse** — The generated workflow is automatically saved to the workflow registry, ready for use in future conversations
+
+### Recording Indicators
+
+- The capsule shows a red recording pulse with "Recording" text
+- The search box footer displays the step count, recording duration, and a "Stop" button
+
+### Cross-Navigation Support
+
+Recording persists across page navigations within the same tab. If the page redirects during your demonstration, Mole automatically records the navigation step and continues capturing on the new page.
+
 ## Automatic Context Compression
 
 When conversation context grows too long, Mole automatically compresses historical context while preserving key information, ensuring continued operation within the LLM's context window limits. This prevents long multi-step tasks from failing due to context overflow.
