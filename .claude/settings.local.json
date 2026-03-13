@@ -69,7 +69,10 @@
       "Bash(ssh -T git@github.com 2>&1 || true)",
       "Bash(git remote set-url origin git@github.com:clark-maybe/mole-extension.git && git push origin main)",
       "Bash(grep -o 'Sider\\\\|Layout\\\\|ConfigProvider\\\\|useApp\\\\|Timeline' /Users/clark/MySpace/mole-extension/build_version/mole-extension_1.0.0/assets/options-*.js | head -20)",
-      "Bash(grep -c 'debug-shell\\\\|mode-switch\\\\|mode-btn\\\\|workspace-grid\\\\|card-list\\\\|history-timeline' /Users/clark/MySpace/mole-extension/build_version/mole-extension_1.0.0/assets/options-*.js)"
+      "Bash(grep -c 'debug-shell\\\\|mode-switch\\\\|mode-btn\\\\|workspace-grid\\\\|card-list\\\\|history-timeline' /Users/clark/MySpace/mole-extension/build_version/mole-extension_1.0.0/assets/options-*.js)",
+      "Bash(npm view antd versions --json 2>&1 | python3 -c \"import sys,json; versions=[v for v in json.load\\(sys.stdin\\) if v.startswith\\('5.'\\)]; print\\(versions[-1] if versions else 'none'\\)\")",
+      "Bash(npm view antd versions --json 2>&1 | python3 -c \"import sys,json; versions=[v for v in json.load\\(sys.stdin\\) if v.startswith\\('5.'\\) and '-' not in v]; print\\(versions[-1] if versions else 'none'\\)\")",
+      "Bash(npm view @ant-design/icons versions --json 2>&1 | python3 -c \"import sys,json; versions=[v for v in json.load\\(sys.stdin\\) if v.startswith\\('5.'\\) and '-' not in v]; print\\(versions[-1] if versions else 'none'\\)\")"
     ],
     "deny": [],
     "ask": []
