@@ -1,6 +1,6 @@
 # Built-in Tools
 
-MoleClaw includes 36+ built-in tools covering all aspects of browser automation. The AI automatically selects the most suitable tools based on your natural language instructions.
+MoleClaw includes 37+ built-in tools covering all aspects of browser automation. The AI automatically selects the most suitable tools based on your natural language instructions.
 
 ## Page Awareness
 
@@ -54,6 +54,7 @@ MoleClaw includes 36+ built-in tools covering all aspects of browser automation.
 | `site_workflow` | Execute predefined site workflows, automatically matches available workflows based on the current page URL |
 | `spawn_subtask` | Split independent sub-goals into isolated tasks, each with its own context |
 | `request_confirmation` | Request user confirmation before performing sensitive or irreversible actions. The user sees the message and can approve or reject with an optional reason |
+| `save_workflow` | Save a user-confirmed workflow definition to the registry, used in the dialog-based recording confirmation flow |
 
 ## CDP Enhanced Tools <Badge type="tip" text="Chrome DevTools Protocol" />
 

@@ -120,6 +120,14 @@ export const buildSystemPrompt = (tools: ToolSchema[], hasSubtask: boolean): str
 
 用户拒绝后，根据用户附言调整方案。不要在拒绝后重复请求相同的确认。
 
+## 保存工作流
+
+当用户通过录制功能创建了工作流并确认后，使用 save_workflow 工具保存。
+- 只在用户明确说"确认"、"保存"、"没问题"等确认性回复后调用
+- 如果用户要求修改步骤，先调整 workflow JSON 再重新展示，并等待用户再次确认
+- 不要在用户还有疑问或要求修改时直接保存
+- 调用时将完整 workflow 对象 JSON.stringify 后传入 workflow_json 参数（字符串类型）
+
 ## 何时停止
 - 拿到了用户要的信息 → 直接回答，停止
 - 操作已完成 → 告知结果，停止

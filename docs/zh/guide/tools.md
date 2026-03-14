@@ -1,6 +1,6 @@
 # 内置工具列表
 
-MoleClaw 内置了 36+ 个工具，覆盖浏览器自动化的各个场景。AI 会根据用户的自然语言指令自动选择最合适的工具。
+MoleClaw 内置了 37+ 个工具，覆盖浏览器自动化的各个场景。AI 会根据用户的自然语言指令自动选择最合适的工具。
 
 ## 页面感知类
 
@@ -54,6 +54,7 @@ MoleClaw 内置了 36+ 个工具，覆盖浏览器自动化的各个场景。AI 
 | `site_workflow` | 执行预定义的站点工作流，根据当前页面 URL 自动匹配可用的工作流 |
 | `spawn_subtask` | 将独立子目标拆分为隔离任务执行，每个子任务有独立上下文 |
 | `request_confirmation` | 在执行敏感或不可逆操作前请求用户确认，用户可批准或拒绝并附带理由 |
+| `save_workflow` | 保存用户确认的工作流定义到 registry，用于录制功能的对话式确认流程 |
 
 ## CDP 增强工具 <Badge type="tip" text="Chrome DevTools Protocol" />
 

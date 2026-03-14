@@ -4247,12 +4247,8 @@ Channel.on('__recorder_state', (_data, _sender, sendResponse) => {
     return true;
 });
 
-/** 提交录制结果给 AI 处理 */
-Channel.on('__recorder_submit', (data, _sender, sendResponse) => {
-    const resultSelector = data?.resultSelector as string | undefined;
-    const resultMode = String(data?.resultMode || 'skip') as 'element' | 'snapshot' | 'skip';
-    const workflowName = data?.workflowName as string | undefined;
-
+/** 提交录制结果给 AI 审计，审计后通过对话确认 */
+Channel.on('__recorder_submit', (_data, _sender, sendResponse) => {
     if (!recorderState || recorderState.steps.length === 0) {
         sendResponse?.({ success: false, error: '没有可提交的录制步骤' });
         return true;
@@ -4272,16 +4268,12 @@ Channel.on('__recorder_submit', (data, _sender, sendResponse) => {
                 JSON.stringify(steps, null, 2),
                 '',
                 `起始 URL: ${startUrl}`,
-                `结果选择器: ${resultSelector || '无'}`,
-                `结果模式: ${resultMode}`,
-                workflowName ? `工作流名称建议: ${workflowName}` : '',
                 '',
                 '请完成以下任务：',
                 '1. 去除明显的噪声步骤（误点击、重复操作）',
                 '2. 合并连续的输入动作',
                 '3. 为每步添加中文说明（note 字段）',
                 '4. 识别用户输入的变量部分，用 {{param_name}} 替代，并在 parameters 中定义',
-                '5. 如果有结果选择器，在最后添加断言步骤',
                 '',
                 '输出格式（严格 JSON，无多余文字）：',
                 '{',
@@ -4290,6 +4282,7 @@ Channel.on('__recorder_submit', (data, _sender, sendResponse) => {
                 '  "description": "工作流描述（中文）",',
                 '  "url_patterns": ["匹配的 URL 模式"],',
                 '  "parameters": { JSON Schema 格式的参数定义 },',
+                '  "readable_steps": "人类可读的步骤描述（Markdown 编号列表，含参数标注）",',
                 '  "plan": {',
                 '    "steps": [',
                 '      {',
@@ -4297,11 +4290,10 @@ Channel.on('__recorder_submit', (data, _sender, sendResponse) => {
                 '        "params": { "action": "click|fill|select", "selector": "...", "value": "..." },',
                 '        "note": "中文说明"',
                 '      }',
-                '    ],',
-                '    "resultPath": "结果提取路径（可选）"',
+                '    ]',
                 '  }',
                 '}',
-            ].filter(Boolean).join('\n');
+            ].join('\n');
 
             // 调用 AI 进行审计
             const input: InputItem[] = [
@@ -4333,37 +4325,86 @@ Channel.on('__recorder_submit', (data, _sender, sendResponse) => {
 
             if (!workflowJson) {
                 sendResponse?.({ success: false, error: 'AI 返回的结果无法解析为有效 JSON' });
+                Channel.broadcast('__recorder_audit_done', { error: 'AI 审计结果解析失败' });
                 return;
             }
 
-            // 补充必要字段，调用 upsertUserWorkflow 保存
-            const workflowSpec = {
-                ...workflowJson,
-                enabled: true,
-                source: 'user',
-                version: 1,
-                createdAt: Date.now(),
-                updatedAt: Date.now(),
-            };
+            // 创建会话，注入审计结果供对话确认
+            const readableSteps = workflowJson.readable_steps || '（步骤解析中…）';
+            const sessionQuery = '确认录制的工作流';
+            const session = createSession(sessionQuery, tabId);
 
-            const saveResult = await upsertUserWorkflow(workflowSpec);
+            // 注入 system context：原始 workflow JSON 供 AI 后续使用
+            session.context.push({
+                role: 'system',
+                content: [
+                    '以下是用户刚刚录制并经过审计的工作流 JSON，用户即将确认或修改。',
+                    '用户确认后，请调用 save_workflow 工具保存。',
+                    '用户如果要求修改步骤，请在 JSON 上进行调整后重新展示，并等待用户再次确认。',
+                    '',
+                    '```json',
+                    JSON.stringify(workflowJson, null, 2),
+                    '```',
+                ].join('\n'),
+            } as InputItem);
 
-            if (!saveResult.success) {
-                sendResponse?.({ success: false, error: saveResult.message });
-                return;
-            }
+            // 注入模拟用户请求 + AI 回复展示审计结果
+            session.context.push({
+                role: 'user',
+                content: '我刚录制了一个操作流程，帮我整理一下。',
+            } as InputItem);
+
+            const paramEntries = Object.entries(workflowJson.parameters?.properties || {});
+            const paramLine = paramEntries.length > 0
+                ? `\n**参数**：${paramEntries.map(([k, v]: [string, any]) => `\`${k}\` — ${v.description || k}`).join('、')}`
+                : '';
+
+            const aiSummary = [
+                '我帮你整理了刚才录制的流程：\n',
+                readableSteps,
+                paramLine,
+                '\n需要修改哪些步骤吗？确认无误我就保存为工作流。',
+            ].filter(Boolean).join('\n');
+
+            session.context.push({
+                role: 'assistant',
+                content: aiSummary,
+            } as InputItem);
 
             // 清理录制状态
             recorderState = null;
             void saveRecorderState();
 
-            // 广播结果给发起 tab
-            Channel.sendToTab(tabId, '__recorder_result', { success: true, workflow: workflowSpec });
+            // 通知悬浮球审计完成，准备对话确认
+            Channel.broadcast('__recorder_audit_done', {
+                sessionId: session.id,
+                summary: aiSummary,
+            });
 
-            sendResponse?.({ success: true, workflow: workflowSpec });
+            // 广播会话同步 + AI 文本展示
+            Channel.broadcast('__session_sync', buildSessionSyncPayload(session));
+            const pushEvent = createSessionPushEvent(session);
+            pushEvent({ type: 'text', content: aiSummary });
+
+            // 标记会话为等待用户输入（done 状态，可继续对话）
+            session.status = 'done';
+            session.endedAt = Date.now();
+            session.durationMs = Math.max(0, session.endedAt - session.startedAt);
+            session.agentState = {
+                phase: 'finalize',
+                round: 0,
+                reason: '等待用户确认工作流',
+                updatedAt: Date.now(),
+            };
+            Channel.broadcast('__session_sync', buildSessionSyncPayload(session));
+            pushEvent({ type: 'turn_completed', content: JSON.stringify({ sessionId: session.id }) });
+            persistRuntimeSessions();
+
+            sendResponse?.({ success: true });
         } catch (err: any) {
             console.error('[Mole] 工作流录制提交失败:', err);
             sendResponse?.({ success: false, error: err?.message || '提交处理失败' });
+            Channel.broadcast('__recorder_audit_done', { error: err?.message || '审计失败' });
         }
     })();
 

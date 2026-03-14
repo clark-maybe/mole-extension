@@ -139,7 +139,7 @@ const LOGO_DATA_PIPELINE = `data:image/svg+xml;charset=utf-8,${encodeURIComponen
 
 // 请求确认（盾牌+勾号，蓝绿色）
 const LOGO_REQUEST_CONFIRMATION = `data:image/svg+xml;charset=utf-8,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#0d9488" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10" stroke="#0d9488" stroke-width="2.5"/></svg>')}`;
-
+const LOGO_SAVE_WORKFLOW = `data:image/svg+xml;charset=utf-8,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#6366f1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>')}`;
 // 函数图标映射（函数名 → logo）
 const FUNCTION_ICONS: Record<string, string> = {
   page_viewer: LOGO_PAGE_VIEWER,
@@ -174,6 +174,7 @@ const FUNCTION_ICONS: Record<string, string> = {
   extract_data: LOGO_EXTRACT_DATA,
   data_pipeline: LOGO_DATA_PIPELINE,
   request_confirmation: LOGO_REQUEST_CONFIRMATION,
+  save_workflow: LOGO_SAVE_WORKFLOW,
 };
 
 // 函数中文名映射（用户可见，不暴露英文标识）
@@ -210,6 +211,7 @@ const FUNCTION_LABELS: Record<string, string> = {
   extract_data: '数据提取',
   data_pipeline: '数据管道',
   request_confirmation: '请求确认',
+  save_workflow: '保存工作流',
 };
 type Side = 'left' | 'right';
 
@@ -2464,37 +2466,55 @@ const getStyles = () => `
 
   /* ===== 工作流录制 ===== */
 
-  /* 录制按钮 - 放在 footer 中 */
-  /* 任务运行中/出错时隐藏录制按钮 */
-  .mole-searchbox.state-running .mole-recorder-btn,
-  .mole-searchbox.state-error .mole-recorder-btn { display: none; }
-
-  .mole-recorder-btn {
-    display: flex;
-    align-items: center;
-    gap: 5px;
-    margin-left: 8px;
-    padding: 4px 10px;
-    border: 1px solid var(--ec-border-soft);
-    border-radius: 999px;
-    background: transparent;
-    color: var(--ec-text-muted);
-    font-size: 12px;
-    cursor: pointer;
-    transition: all 0.15s ease;
-    white-space: nowrap;
-  }
-  .mole-recorder-btn:hover {
-    background: rgba(215, 0, 21, 0.06);
-    border-color: rgba(215, 0, 21, 0.18);
-    color: var(--ec-danger);
-  }
-  .mole-recorder-dot {
-    width: 8px;
-    height: 8px;
+  /* 录制按钮（hover 时出现在 settingsBtn 正下方） */
+  .mole-record-btn {
+    position: absolute;
+    top: calc(100% + 46px);
+    left: 50%;
+    transform: translate(-50%, -4px);
+    width: 30px;
+    height: 30px;
     border-radius: 50%;
-    background: var(--ec-danger);
-    flex-shrink: 0;
+    border: 1px solid var(--ec-border);
+    background: linear-gradient(180deg, var(--ec-surface-strong) 0%, var(--ec-surface) 100%);
+    box-shadow: 0 10px 22px rgba(15, 23, 42, 0.16);
+    color: var(--ec-danger);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    pointer-events: none;
+    cursor: pointer;
+    transition: opacity 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+    z-index: 2;
+  }
+  .mole-trigger.side-right:not(.task-running):not(.task-done):not(.task-error):not(.announce) .mole-record-btn {
+    left: calc(50% + ${PILL_WIDTH - PILL_COMPACT_WIDTH}px);
+  }
+  .mole-trigger.side-left:not(.task-running):not(.task-done):not(.task-error):not(.announce) .mole-record-btn {
+    left: calc(50% - ${PILL_WIDTH - PILL_COMPACT_WIDTH}px);
+  }
+  .mole-record-btn svg {
+    width: 14px;
+    height: 14px;
+  }
+  .mole-record-btn:hover {
+    transform: translate(-50%, -6px);
+    box-shadow: 0 12px 24px rgba(215, 0, 21, 0.2);
+    color: #d70015;
+  }
+  .mole-trigger.hovering .mole-record-btn,
+  .mole-trigger:focus-within .mole-record-btn {
+    opacity: 1;
+    pointer-events: auto;
+    transform: translate(-50%, 0);
+  }
+  .mole-trigger.dragging .mole-record-btn,
+  .mole-trigger.recording .mole-record-btn,
+  .mole-trigger.auditing .mole-record-btn,
+  .mole-trigger.active .mole-record-btn {
+    opacity: 0;
+    pointer-events: none;
   }
 
   /* 录制中状态 - footer 录制状态栏 */
@@ -2568,45 +2588,6 @@ const getStyles = () => `
     z-index: 2;
   }
 
-  /* 结果标记遮罩 */
-  .mole-result-mark-overlay {
-    display: none;
-    position: fixed;
-    inset: 0;
-    z-index: 2147483646;
-    pointer-events: none;
-  }
-  .mole-result-mark-overlay.visible { display: block; }
-  .mole-result-mark-bar {
-    position: fixed;
-    top: 12px;
-    left: 50%;
-    transform: translateX(-50%);
-    z-index: 2147483647;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 10px 18px;
-    border-radius: 12px;
-    background: rgba(15, 23, 42, 0.88);
-    color: rgba(255, 255, 255, 0.9);
-    font-size: 13px;
-    backdrop-filter: blur(12px);
-    box-shadow: 0 4px 24px rgba(0,0,0,0.2);
-    pointer-events: auto;
-  }
-  .mole-result-mark-skip {
-    padding: 4px 12px;
-    border: 1px solid rgba(255,255,255,0.2);
-    border-radius: 6px;
-    background: transparent;
-    color: rgba(255,255,255,0.8);
-    font-size: 12px;
-    cursor: pointer;
-  }
-  .mole-result-mark-skip:hover {
-    background: rgba(255,255,255,0.1);
-  }
 `;
 
 // ============ 位置存储 ============
@@ -2844,6 +2825,19 @@ export const initFloatBall = async () => {
   closeMenuEl.appendChild(closeMenuItemDomain);
   trigger.appendChild(closeMenuEl);
 
+  // ---- 录制按钮（hover 时在 settingsBtn 旁出现） ----
+  const recordBtn = document.createElement('button');
+  recordBtn.className = 'mole-record-btn';
+  recordBtn.type = 'button';
+  recordBtn.title = '录制流程';
+  recordBtn.setAttribute('aria-label', '录制流程');
+  recordBtn.innerHTML = `
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <circle cx="12" cy="12" r="6" fill="currentColor"></circle>
+    </svg>
+  `;
+  trigger.appendChild(recordBtn);
+
   shadow.appendChild(trigger);
 
   // ---- 全局搜索框 ----
@@ -2869,9 +2863,6 @@ export const initFloatBall = async () => {
       <span class="mole-footer-icon">✦</span>
       <span class="mole-footer-text">Mole · AI 助手</span>
       <span class="mole-footer-time"></span>
-      <button class="mole-recorder-btn" type="button" title="录制工作流">
-        <span class="mole-recorder-dot"></span>录制
-      </button>
     </div>
   `;
 
@@ -2916,19 +2907,7 @@ export const initFloatBall = async () => {
   const footerEl = searchbox.querySelector('.mole-footer') as HTMLDivElement;
   searchbox.insertBefore(recorderBarEl, footerEl);
 
-  // 录制按钮引用
-  const recorderBtnEl = searchbox.querySelector('.mole-recorder-btn') as HTMLButtonElement;
-
-  // ---- 结果标记遮罩（添加到 shadow DOM 根层级） ----
-  const resultMarkOverlay = document.createElement('div');
-  resultMarkOverlay.className = 'mole-result-mark-overlay';
-  resultMarkOverlay.innerHTML = `
-    <div class="mole-result-mark-bar">
-      <span>点击页面元素作为流程结果，或</span>
-      <button class="mole-result-mark-skip" type="button">跳过</button>
-    </div>
-  `;
-  shadow.appendChild(resultMarkOverlay);
+  // ---- 结果标记遮罩已移除（改为对话式确认） ----
 
   const hintEl = searchbox.querySelector('.mole-input-hint') as HTMLSpanElement;
   const imageViewerCloseEl = imageViewerEl.querySelector('.mole-image-viewer-close') as HTMLButtonElement;
@@ -3055,7 +3034,6 @@ export const initFloatBall = async () => {
   let isRecording = false;
   let recorderStepCount = 0;
   let recorderStartedAt = 0;
-  let isResultMarking = false;
   let isRecorderAuditing = false;
 
   // 初始化时获取自身 tabId
@@ -4285,71 +4263,27 @@ export const initFloatBall = async () => {
     }
   };
 
-  /** 提交录制给 background AI 处理 */
-  const submitRecording = (resultSelector: string | null) => {
+  /** 提交录制给 background AI 审计 */
+  const submitRecording = () => {
     // 进入审计状态
     isRecorderAuditing = true;
     footerTextEl.textContent = 'AI 正在审计录制...';
     trigger.classList.remove('recording');
     trigger.classList.add('auditing', 'announce');
     recorderBarEl.classList.remove('visible');
-    recorderBtnEl.style.display = 'none';
     updatePillState();
 
-    Channel.send('__recorder_submit', {
-      resultSelector,
-      resultMode: resultSelector ? 'element' : 'skip',
-    }, (resp: any) => {
-      // 回调仅作为 __recorder_result 的兜底（导航丢失监听时）
-      if (!isRecorderAuditing) return; // 已被 __recorder_result 处理
+    Channel.send('__recorder_submit', {}, (resp: any) => {
+      // 回调仅作为审计失败的兜底
+      if (!isRecorderAuditing) return; // 已被 __recorder_audit_done 处理
       isRecorderAuditing = false;
       trigger.classList.remove('auditing');
-      recorderBtnEl.style.display = '';
-      if (resp?.success) {
-        showPillNotice('工作流已保存', 'success');
-      } else {
-        showPillNotice(resp?.error || '生成失败', 'error');
+      if (!resp?.success) {
+        showPillNotice(resp?.error || '审计失败', 'error');
       }
       footerTextEl.textContent = 'Mole \u00B7 AI 助手';
       updatePillState();
     });
-  };
-
-  /** 进入结果标记模式 */
-  const enterResultMarkMode = () => {
-    isResultMarking = true;
-    // 显示提示栏
-    resultMarkOverlay.classList.add('visible');
-    // 关闭搜索框
-    if (isOpen) toggleSearch(false);
-
-    // 注册一次性点击捕获（在 document 上）
-    const markClickHandler = (e: MouseEvent) => {
-      e.preventDefault();
-      e.stopImmediatePropagation();
-      const target = e.target as Element;
-      if (!target) return;
-      // 忽略 mole 自身的点击
-      if (target.closest('#mole-root')) return;
-
-      const selector = buildSimpleSelector(target);
-      document.removeEventListener('click', markClickHandler, true);
-      isResultMarking = false;
-      resultMarkOverlay.classList.remove('visible');
-      submitRecording(selector);
-    };
-    document.addEventListener('click', markClickHandler, true);
-
-    // 跳过按钮
-    const skipBtn = resultMarkOverlay.querySelector('.mole-result-mark-skip') as HTMLButtonElement;
-    const skipHandler = () => {
-      document.removeEventListener('click', markClickHandler, true);
-      isResultMarking = false;
-      resultMarkOverlay.classList.remove('visible');
-      submitRecording(null);
-      skipBtn.removeEventListener('click', skipHandler);
-    };
-    skipBtn.addEventListener('click', skipHandler);
   };
 
   /** 开始录制 */
@@ -4363,9 +4297,8 @@ export const initFloatBall = async () => {
       recorderStepCount = 0;
       recorderStartedAt = Date.now();
       startRecordingCapture();
-      // 更新 UI：胶囊加 recording class，显示 recorderBar，隐藏录制按钮
+      // 更新 UI：胶囊加 recording class，显示 recorderBar
       trigger.classList.add('recording');
-      recorderBtnEl.style.display = 'none';
       updateRecorderBar();
       showPillNotice('开始录制', 'info');
     });
@@ -4378,17 +4311,10 @@ export const initFloatBall = async () => {
     Channel.send('__recorder_stop', {}, () => {
       isRecording = false;
       recorderBarEl.classList.remove('visible');
-      // 进入结果标记模式
-      enterResultMarkMode();
+      // 直接提交给 AI 审计
+      submitRecording();
     });
   };
-
-  // 录制按钮点击事件
-  recorderBtnEl.addEventListener('click', (e) => {
-    e.stopPropagation();
-    if (isRecording || currentTask?.status === 'running') return;
-    startRecording();
-  });
 
   // 录制状态栏停止按钮
   const recorderBarStopBtn = recorderBarEl.querySelector('.mole-recorder-bar-stop') as HTMLButtonElement;
@@ -4397,18 +4323,53 @@ export const initFloatBall = async () => {
     stopRecording();
   });
 
-  // AI 处理结果监听（可靠路径：background 主动推送）
-  Channel.on('__recorder_result', (data: any) => {
+  // 录制按钮点击事件
+  recordBtn.addEventListener('mousedown', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+  });
+  recordBtn.addEventListener('click', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (isRecording || currentTask?.status === 'running' || isRecorderAuditing) return;
+    startRecording();
+  });
+
+  // AI 审计完成后注入对话（替代原直接保存模式）
+  Channel.on('__recorder_audit_done', (data: any) => {
     isRecorderAuditing = false;
     trigger.classList.remove('recording', 'auditing');
-    recorderBtnEl.style.display = '';
-    if (data?.success || data?.workflow) {
-      showPillNotice('工作流已保存', 'success');
-    } else {
-      showPillNotice(data?.error || '生成失败', 'error');
-    }
     footerTextEl.textContent = 'Mole \u00B7 AI 助手';
     updatePillState();
+
+    if (!data?.sessionId) {
+      showPillNotice(data?.error || '审计失败', 'error');
+      return;
+    }
+
+    // 创建本地任务以接收后续的对话流式事件
+    currentTask = {
+      id: data.sessionId,
+      query: '确认录制的工作流',
+      title: buildTaskTitle('确认录制的工作流'),
+      status: 'running',
+      resultHtml: '',
+      callStack: [],
+      errorMsg: '',
+      lastAIText: '',
+      agentPhase: 'plan',
+      agentRound: 0,
+      failureCode: '',
+      liveStatusText: '',
+      startedAt: Date.now(),
+      endedAt: null,
+      durationMs: null,
+      taskKind: 'aux',
+    };
+
+    toggleSearch(true);
+    updateInputUI();
+    showPillNotice('请确认录制的工作流', 'info');
   });
 
   const updateFooterTime = () => {
@@ -4496,12 +4457,8 @@ export const initFloatBall = async () => {
     }
     updateFooterTime();
     // 录制/审计状态保护：防止被常规状态刷新覆盖
-    if (isRecording) {
-      recorderBtnEl.style.display = 'none';
-    }
     if (isRecorderAuditing) {
       footerTextEl.textContent = 'AI 正在审计录制...';
-      recorderBtnEl.style.display = 'none';
     }
     updatePillState();
   };
@@ -6130,7 +6087,6 @@ export const initFloatBall = async () => {
       recorderStartedAt = state.startedAt || Date.now();
       startRecordingCapture();
       trigger.classList.add('recording');
-      recorderBtnEl.style.display = 'none';
       updateRecorderBar();
     }
   });
@@ -6793,7 +6749,7 @@ export const initFloatBall = async () => {
     }, HOVER_LEAVE_DELAY);
   };
 
-  for (const el of [pill, closeBtn, settingsBtn, closeMenuEl]) {
+  for (const el of [pill, closeBtn, settingsBtn, closeMenuEl, recordBtn]) {
     el.addEventListener('mouseenter', enterHover);
     el.addEventListener('mouseleave', leaveHover);
   }
