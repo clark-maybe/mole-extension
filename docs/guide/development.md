@@ -66,7 +66,7 @@ src/
 │   ├── search-parser.ts   # Search engine parser
 │   ├── page-parser.ts     # Web page content parser
 │   └── form-workflow.ts   # Form workflow
-├── functions/             # Tool functions (35+ built-in tools)
+├── functions/             # Tool functions (36+ built-in tools)
 │   ├── registry.ts        # Tool registry (built-in + dynamic)
 │   ├── types.ts           # Tool type definitions
 │   ├── cdp-input.ts       # CDP trusted input events

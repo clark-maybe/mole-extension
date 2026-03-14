@@ -4,7 +4,7 @@ layout: home
 hero:
   name: MoleClaw
   text: Your AI Treasure-Hunting Assistant
-  tagline: Like a mole, it dives underground after you ask, silently digging through tools and data, then surfaces with the treasure. 35+ built-in tools, 10 CDP protocol domains, declarative workflows, any OpenAI-compatible LLM.
+  tagline: Like a mole, it dives underground after you ask, silently digging through tools and data, then surfaces with the treasure. 36+ built-in tools, 10 CDP protocol domains, declarative workflows, any OpenAI-compatible LLM.
   image:
     src: /logo.png
     alt: MoleClaw Logo
@@ -21,7 +21,7 @@ features:
     title: AI-Native Chat
     details: Summon the floating ball anytime for streaming responses and natural language interaction. Shadow DOM style isolation — never affects any webpage.
   - icon: "\U0001F6E0\uFE0F"
-    title: 35+ Built-in Tools
+    title: 36+ Built-in Tools
     details: Page operations, deep CDP control (10 domains), request interception, DOM/CSS/storage manipulation, navigation, screenshots, network diagnostics, device emulation, scheduled tasks... covering every aspect of browser automation.
   - icon: "\U0001F4CB"
     title: Site Workflows

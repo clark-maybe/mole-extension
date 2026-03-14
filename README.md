@@ -25,7 +25,7 @@ After you ask a question, Mole dives underground like a real mole — silently c
 ## Features
 
 - **AI-Native Chat** — Summon the floating ball anytime for natural language interaction with streaming responses
-- **35+ Built-in Tools** — Page operations, deep CDP control (10 domains), request interception, DOM/CSS/storage manipulation, navigation, screenshots, network diagnostics...
+- **36+ Built-in Tools** — Page operations, deep CDP control (10 domains), request interception, DOM/CSS/storage manipulation, navigation, screenshots, network diagnostics, human-in-the-loop confirmation...
 - **Workflow Recorder** — Show Mole how to do it once, it learns and repeats. Record your browser actions, AI cleans them up, and generates a reusable workflow automatically
 - **Site Workflows** — Declarative JSON definitions to automate website operations without writing code
 - **Bring Your Own LLM** — Compatible with any OpenAI API-format service, full data sovereignty

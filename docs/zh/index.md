@@ -4,7 +4,7 @@ layout: home
 hero:
   name: MoleClaw
   text: 你的 AI 挖宝助手
-  tagline: 像鼹鼠一样，提问后潜入后台默默挖掘，找到宝藏后浮出呈现。35+ 内置工具，10 个 CDP 协议域，声明式工作流，支持任意 OpenAI 兼容 LLM。
+  tagline: 像鼹鼠一样，提问后潜入后台默默挖掘，找到宝藏后浮出呈现。36+ 内置工具，10 个 CDP 协议域，声明式工作流，支持任意 OpenAI 兼容 LLM。
   image:
     src: /logo.png
     alt: MoleClaw Logo
@@ -21,7 +21,7 @@ features:
     title: AI 原生对话
     details: 悬浮球随时唤起，流式响应，自然语言交互。Shadow DOM 隔离样式，不影响任何网页。
   - icon: "\U0001F6E0\uFE0F"
-    title: 35+ 内置工具
+    title: 36+ 内置工具
     details: 页面操作、CDP 深度控制（10 域）、请求拦截、DOM/CSS/存储操作、导航、截图、网络诊断、设备模拟、定时任务... 覆盖浏览器自动化的方方面面。
   - icon: "\U0001F4CB"
     title: 站点工作流

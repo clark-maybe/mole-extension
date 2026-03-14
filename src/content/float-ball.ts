@@ -137,6 +137,9 @@ const LOGO_EXTRACT_DATA = `data:image/svg+xml;charset=utf-8,${encodeURIComponent
 // 数据管道（漏斗+箭头，靛蓝色）
 const LOGO_DATA_PIPELINE = `data:image/svg+xml;charset=utf-8,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#4f46e5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>')}`;
 
+// 请求确认（盾牌+勾号，蓝绿色）
+const LOGO_REQUEST_CONFIRMATION = `data:image/svg+xml;charset=utf-8,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#0d9488" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10" stroke="#0d9488" stroke-width="2.5"/></svg>')}`;
+
 // 函数图标映射（函数名 → logo）
 const FUNCTION_ICONS: Record<string, string> = {
   page_viewer: LOGO_PAGE_VIEWER,
@@ -170,6 +173,7 @@ const FUNCTION_ICONS: Record<string, string> = {
   cdp_overlay: LOGO_CDP_OVERLAY,
   extract_data: LOGO_EXTRACT_DATA,
   data_pipeline: LOGO_DATA_PIPELINE,
+  request_confirmation: LOGO_REQUEST_CONFIRMATION,
 };
 
 // 函数中文名映射（用户可见，不暴露英文标识）
@@ -205,6 +209,7 @@ const FUNCTION_LABELS: Record<string, string> = {
   cdp_overlay: '元素高亮',
   extract_data: '数据提取',
   data_pipeline: '数据管道',
+  request_confirmation: '请求确认',
 };
 type Side = 'left' | 'right';
 
@@ -1859,6 +1864,126 @@ const getStyles = () => `
   .mole-screenshot-open:focus-visible {
     box-shadow: var(--ec-focus-ring);
     outline: none;
+  }
+
+  /* 确认卡片 — 独立展示 */
+  .mole-approval-standalone {
+    margin: 10px 0;
+    border-radius: 14px;
+    background: linear-gradient(135deg, rgba(240, 253, 250, 0.95), rgba(204, 251, 241, 0.55));
+    border: 1.5px solid rgba(13, 148, 136, 0.22);
+    box-shadow: 0 4px 20px rgba(13, 148, 136, 0.08);
+    animation: mole-approval-fadein 0.35s ease-out;
+    overflow: hidden;
+  }
+  .mole-approval-header-bar {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding: 11px 14px 0;
+    font-size: 13px;
+    font-weight: 600;
+    color: rgb(15, 118, 110);
+  }
+  .mole-approval-header-bar img {
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+  }
+  .mole-approval-standalone .mole-approval-card {
+    margin: 8px 14px 14px;
+    padding: 0;
+    background: none;
+    border: none;
+    box-shadow: none;
+    border-radius: 0;
+  }
+  .mole-approval-standalone.settled {
+    opacity: 0.65;
+    animation: none;
+    border-color: var(--ec-border);
+    background: var(--ec-bg-soft);
+  }
+  .mole-approval-standalone.settled .mole-approval-header-bar {
+    color: var(--ec-text-muted);
+  }
+  @keyframes mole-approval-fadein {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .mole-approval-card {
+    padding: 10px 12px;
+    border-radius: 10px;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.9), rgba(245, 250, 255, 0.7));
+    border: 1px solid rgba(13, 148, 136, 0.18);
+    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.06);
+  }
+  .mole-approval-message {
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--ec-text);
+    margin-bottom: 10px;
+    word-break: break-word;
+  }
+  .mole-approval-actions {
+    display: flex;
+    gap: 8px;
+  }
+  .mole-approval-btn {
+    padding: 6px 16px;
+    border-radius: 6px;
+    border: none;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 500;
+    transition: opacity 0.15s;
+    line-height: 1.4;
+  }
+  .mole-approval-btn:hover { opacity: 0.85; }
+  .mole-approval-btn.approve {
+    background: var(--ec-success);
+    color: #fff;
+  }
+  .mole-approval-btn.reject {
+    background: var(--ec-danger-soft);
+    color: var(--ec-danger);
+  }
+  .mole-approval-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    pointer-events: none;
+  }
+  .mole-approval-reject-input {
+    margin-top: 8px;
+    display: none;
+    gap: 6px;
+    align-items: center;
+  }
+  .mole-approval-reject-input.open {
+    display: flex;
+  }
+  .mole-approval-reject-input input {
+    flex: 1;
+    padding: 5px 8px;
+    border: 1px solid var(--ec-border);
+    border-radius: 6px;
+    font-size: 12px;
+    outline: none;
+    background: rgba(255, 255, 255, 0.9);
+    color: var(--ec-text);
+    line-height: 1.4;
+  }
+  .mole-approval-reject-input input:focus {
+    border-color: var(--ec-primary);
+    box-shadow: 0 0 0 2px rgba(0, 113, 227, 0.1);
+  }
+  .mole-approval-card.settled {
+    opacity: 0.7;
+  }
+  .mole-approval-result {
+    font-size: 12px;
+    margin-top: 6px;
+    color: var(--ec-text-muted);
   }
   .mole-screenshot-img-wrap {
     position: relative;
@@ -5198,6 +5323,106 @@ export const initFloatBall = async () => {
     }
   };
 
+  // ---- 确认卡片处理 ----
+
+  /** 渲染确认卡片（直接展示在结果区，不折叠在工具调用里） */
+  const handleApprovalRequest = (requestId: string, message: string) => {
+    if (!requestId || !message) return;
+
+    // 如果面板未打开，自动展开
+    if (!isOpen) {
+      isOpen = true;
+      panel.classList.add('show');
+      trigger.classList.add('open');
+    }
+
+    // 在 resultEl 中直接追加独立确认卡片
+    const wrapper = document.createElement('div');
+    wrapper.className = 'mole-approval-standalone';
+    wrapper.innerHTML = `
+      <div class="mole-approval-header-bar">
+        <img src="${LOGO_REQUEST_CONFIRMATION}" />
+        <span>需要你的确认</span>
+      </div>
+      <div class="mole-approval-card" data-request-id="${requestId}">
+        <div class="mole-approval-message">${escapeHtml(message)}</div>
+        <div class="mole-approval-actions">
+          <button class="mole-approval-btn approve">批准</button>
+          <button class="mole-approval-btn reject">拒绝</button>
+        </div>
+        <div class="mole-approval-reject-input">
+          <input class="mole-approval-reject-text" placeholder="拒绝理由（可选）" />
+          <button class="mole-approval-reject-confirm mole-approval-btn reject">确认拒绝</button>
+        </div>
+      </div>
+    `;
+    resultEl.appendChild(wrapper);
+    showResult();
+
+    // 胶囊提示
+    showPillNotice('等待确认', 'info');
+
+    resultEl.scrollTop = resultEl.scrollHeight;
+    saveSnapshot();
+  };
+
+  /** 禁用确认卡片并显示结果 */
+  const disableApprovalCard = (card: HTMLElement, approved: boolean) => {
+    card.classList.add('settled');
+    // 禁用所有按钮
+    card.querySelectorAll('button').forEach(btn => {
+      (btn as HTMLButtonElement).disabled = true;
+    });
+    // 隐藏拒绝输入框
+    const rejectInput = card.querySelector('.mole-approval-reject-input') as HTMLElement;
+    if (rejectInput) rejectInput.classList.remove('open');
+
+    // 添加结果提示
+    const resultText = document.createElement('div');
+    resultText.className = 'mole-approval-result';
+    resultText.textContent = approved ? '✓ 已批准' : '✗ 已拒绝';
+    card.appendChild(resultText);
+
+    // 更新独立卡片外层状态
+    const standalone = card.closest('.mole-approval-standalone') as HTMLElement;
+    if (standalone) {
+      standalone.classList.add('settled');
+      const titleEl = standalone.querySelector('.mole-approval-header-bar span') as HTMLElement;
+      if (titleEl) titleEl.textContent = approved ? '已批准' : '已拒绝';
+    }
+
+    saveSnapshot();
+  };
+
+  /** 取消确认卡片 */
+  const handleApprovalCancel = (requestId: string) => {
+    if (!requestId) return;
+    const card = resultEl.querySelector(`.mole-approval-card[data-request-id="${requestId}"]`) as HTMLElement;
+    if (!card || card.classList.contains('settled')) return;
+
+    card.classList.add('settled');
+    card.querySelectorAll('button').forEach(btn => {
+      (btn as HTMLButtonElement).disabled = true;
+    });
+    const rejectInput = card.querySelector('.mole-approval-reject-input') as HTMLElement;
+    if (rejectInput) rejectInput.classList.remove('open');
+
+    const resultText = document.createElement('div');
+    resultText.className = 'mole-approval-result';
+    resultText.textContent = '已取消';
+    card.appendChild(resultText);
+
+    // 更新独立卡片外层状态
+    const standalone = card.closest('.mole-approval-standalone') as HTMLElement;
+    if (standalone) {
+      standalone.classList.add('settled');
+      const titleEl = standalone.querySelector('.mole-approval-header-bar span') as HTMLElement;
+      if (titleEl) titleEl.textContent = '已取消';
+    }
+
+    saveSnapshot();
+  };
+
   const directEventHandlers: Record<string, (content: string) => void> = {
     turn_started: handleTurnStartedEvent,
     turn_completed: handleTurnCompletedEvent,
@@ -5579,6 +5804,25 @@ export const initFloatBall = async () => {
   // 注册 AI 流式事件监听
   Channel.on('__ai_stream', handleAIStream);
 
+  // 注册确认请求/取消监听
+  Channel.on('__approval_request', (data: any) => {
+    handleApprovalRequest(data?.requestId, data?.message);
+  });
+  Channel.on('__approval_cancel', (data: any) => {
+    handleApprovalCancel(data?.requestId);
+  });
+
+  // 确认卡片附言输入框 Enter 键提交
+  resultEl.addEventListener('keydown', (e) => {
+    const target = e.target as HTMLElement;
+    if (e.key !== 'Enter' || !target.classList.contains('mole-approval-reject-text')) return;
+    e.preventDefault();
+    const card = target.closest('.mole-approval-card') as HTMLElement;
+    if (!card || card.classList.contains('settled')) return;
+    const confirmBtn = card.querySelector('.mole-approval-reject-confirm') as HTMLElement;
+    if (confirmBtn) confirmBtn.click();
+  });
+
   // 注册定时器触发事件监听：自动创建任务以接收后续的 AI 流式事件
   Channel.on('__ai_timer_trigger', (data: any) => {
     if (!data?.taskId || !data?.action) return;
@@ -5926,7 +6170,35 @@ export const initFloatBall = async () => {
       return;
     }
 
-    // 2. 调度状态面板 toggle
+    // 2. 确认卡片按钮
+    const approvalBtn = target.closest('.mole-approval-btn') as HTMLElement | null;
+    if (approvalBtn) {
+      const card = approvalBtn.closest('.mole-approval-card') as HTMLElement;
+      if (!card || card.classList.contains('settled')) return;
+      const requestId = card.getAttribute('data-request-id');
+      if (!requestId) return;
+
+      if (approvalBtn.classList.contains('approve')) {
+        // 批准
+        Channel.send('__approval_response', { requestId, approved: true });
+        disableApprovalCard(card, true);
+      } else if (approvalBtn.classList.contains('reject') && !approvalBtn.classList.contains('mole-approval-reject-confirm')) {
+        // 点击拒绝 → 展开附言输入框
+        const rejectInput = card.querySelector('.mole-approval-reject-input') as HTMLElement;
+        if (rejectInput) rejectInput.classList.add('open');
+        const textInput = card.querySelector('.mole-approval-reject-text') as HTMLInputElement;
+        if (textInput) textInput.focus();
+      } else if (approvalBtn.classList.contains('mole-approval-reject-confirm')) {
+        // 确认拒绝（附言输入后）
+        const textInput = card.querySelector('.mole-approval-reject-text') as HTMLInputElement;
+        const userMessage = textInput?.value?.trim() || '';
+        Channel.send('__approval_response', { requestId, approved: false, userMessage });
+        disableApprovalCard(card, false);
+      }
+      return;
+    }
+
+    // 3. 调度状态面板 toggle
     const agentStateTitle = target.closest('.mole-agent-state-title') as HTMLElement | null;
     if (agentStateTitle) {
       const panel = agentStateTitle.closest('.mole-agent-state-panel');

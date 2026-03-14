@@ -131,6 +131,7 @@ export type AIStreamEventType =
   | 'context_compacted'
   | 'turn_item_started'
   | 'turn_item_completed'
+  | 'approval_request'
   | 'queue_updated';
 
 /** 从 background 推送到 content 的流式事件 */

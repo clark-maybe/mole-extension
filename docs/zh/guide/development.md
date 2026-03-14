@@ -66,7 +66,7 @@ src/
 │   ├── search-parser.ts   # 搜索引擎解析
 │   ├── page-parser.ts     # 网页内容解析
 │   └── form-workflow.ts   # 表单工作流
-├── functions/             # 工具函数（35+ 内置工具）
+├── functions/             # 工具函数（36+ 内置工具）
 │   ├── registry.ts        # 工具注册表（内置 + 动态）
 │   ├── types.ts           # 工具类型定义
 │   ├── cdp-input.ts       # CDP 可信输入事件
