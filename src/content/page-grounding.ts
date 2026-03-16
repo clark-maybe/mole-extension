@@ -35,6 +35,30 @@ interface PageAssertParams {
   assertions?: PageAssertionItem[];
 }
 
+/** 缓存的元素信息，避免在 filter/score/build 三阶段重复调用昂贵 DOM API */
+interface CachedElementInfo {
+  rect: DOMRect;
+  visible: boolean;
+  inViewport: boolean;
+  clickable: boolean;
+  editable: boolean;
+  disabled: boolean;
+  text: string;
+  label: string;
+  surroundingText: string;
+}
+
+/** 需要跳过的无意义标签集合 */
+const SKIP_TAGS = new Set([
+  'script', 'style', 'meta', 'link', 'br', 'hr', 'noscript',
+  'template', 'iframe', 'object', 'embed', 'head', 'title',
+  'col', 'colgroup', 'source', 'track', 'wbr', 'path', 'defs',
+  'clippath', 'lineargradient', 'radialgradient', 'stop', 'symbol', 'use',
+]);
+
+/** 节点遍历上限，避免超大 DOM 页面卡死 */
+const MAX_NODES = 8000;
+
 export const HANDLE_PREFIX = `ec-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
 let handleSeq = 0;
 export const elementHandleMap = new Map<string, Element>();
@@ -71,22 +95,28 @@ const escapeCssValue = (value: string): string => {
   return String(value).replace(/(["\\#.:\[\]\s>+~()])/g, '\\$1');
 };
 
-export const isElementVisible = (el: Element): boolean => {
+/**
+ * 判断元素是否可见
+ * @param el 目标元素
+ * @param rect 可选，预先获取的 DOMRect，避免重复调用 getBoundingClientRect
+ * @param style 可选，预先获取的 CSSStyleDeclaration，避免重复调用 getComputedStyle
+ */
+export const isElementVisible = (el: Element, rect?: DOMRect, style?: CSSStyleDeclaration): boolean => {
   const htmlEl = el as HTMLElement;
-  const rect = htmlEl.getBoundingClientRect();
-  if (rect.width <= 0 || rect.height <= 0) return false;
-  const style = window.getComputedStyle(htmlEl);
-  if (style.display === 'none' || style.visibility === 'hidden') return false;
-  if (Number(style.opacity) === 0) return false;
+  const r = rect || htmlEl.getBoundingClientRect();
+  if (r.width <= 0 || r.height <= 0) return false;
+  const s = style || window.getComputedStyle(htmlEl);
+  if (s.display === 'none' || s.visibility === 'hidden') return false;
+  if (Number(s.opacity) === 0) return false;
   return true;
 };
 
-const isInViewport = (el: Element): boolean => {
-  const rect = (el as HTMLElement).getBoundingClientRect();
-  return rect.bottom >= 0
-    && rect.right >= 0
-    && rect.top <= window.innerHeight
-    && rect.left <= window.innerWidth;
+const isInViewport = (el: Element, rect?: DOMRect): boolean => {
+  const r = rect || (el as HTMLElement).getBoundingClientRect();
+  return r.bottom >= 0
+    && r.right >= 0
+    && r.top <= window.innerHeight
+    && r.left <= window.innerWidth;
 };
 
 const isElementDisabled = (el: Element): boolean => {
@@ -104,7 +134,12 @@ export const isElementEditable = (el: Element): boolean => {
   return (el as HTMLElement).isContentEditable;
 };
 
-export const isElementClickable = (el: Element): boolean => {
+/**
+ * 判断元素是否可点击
+ * @param el 目标元素
+ * @param style 可选，预先获取的 CSSStyleDeclaration，避免重复调用 getComputedStyle
+ */
+export const isElementClickable = (el: Element, style?: CSSStyleDeclaration): boolean => {
   const htmlEl = el as HTMLElement;
   const tag = el.tagName.toLowerCase();
   if (tag === 'a' && (el as HTMLAnchorElement).href) return true;
@@ -116,8 +151,9 @@ export const isElementClickable = (el: Element): boolean => {
   const role = (el.getAttribute('role') || '').toLowerCase();
   if (['button', 'link', 'tab', 'menuitem', 'checkbox', 'radio', 'option'].includes(role)) return true;
   if (htmlEl.hasAttribute('onclick')) return true;
-  const style = window.getComputedStyle(htmlEl);
-  return style.cursor === 'pointer';
+  // 只在前面都没命中时才 fallback 到 getComputedStyle（最昂贵的检查）
+  const s = style || window.getComputedStyle(htmlEl);
+  return s.cursor === 'pointer';
 };
 
 const getElementText = (el: Element): string => {
@@ -165,6 +201,33 @@ const getScopeText = (scopeSelector?: string): string => {
   if (!scopeRoot) return '';
   const htmlRoot = scopeRoot as HTMLElement;
   return normalizeText(htmlRoot.innerText || scopeRoot.textContent || '');
+};
+
+/**
+ * 获取元素的缓存信息，首次调用时计算所有字段并存入缓存，后续直接返回
+ * 将 getBoundingClientRect、getComputedStyle、getElementText 等昂贵调用合并为一次
+ */
+const getElementInfo = (el: Element, cache: Map<Element, CachedElementInfo>): CachedElementInfo => {
+  const cached = cache.get(el);
+  if (cached) return cached;
+
+  const htmlEl = el as HTMLElement;
+  const rect = htmlEl.getBoundingClientRect();
+  const style = window.getComputedStyle(htmlEl);
+  const visible = isElementVisible(el, rect, style);
+  const inViewport = isInViewport(el, rect);
+  const clickable = isElementClickable(el, style);
+  const editable = isElementEditable(el);
+  const disabled = isElementDisabled(el);
+  const text = getElementText(el);
+  const label = getElementLabel(el);
+  const surroundingText = getSurroundingText(el);
+
+  const info: CachedElementInfo = {
+    rect, visible, inViewport, clickable, editable, disabled, text, label, surroundingText,
+  };
+  cache.set(el, info);
+  return info;
 };
 
 export const getOrCreateElementHandle = (el: Element): string => {
@@ -222,19 +285,58 @@ const buildSelectorCandidates = (el: Element): string[] => {
   return Array.from(new Set(selectors)).slice(0, 2);
 };
 
-const buildElementDescriptor = (el: Element, score: number = 0, matchReasons?: string[]) => {
+/**
+ * 构建元素描述符
+ * @param cache 可选，元素信息缓存，传入时复用缓存数据避免重复 DOM 查询
+ */
+const buildElementDescriptor = (el: Element, score: number = 0, matchReasons?: string[], cache?: Map<Element, CachedElementInfo>) => {
   const htmlEl = el as HTMLElement;
-  const rect = htmlEl.getBoundingClientRect();
   const handleId = getOrCreateElementHandle(el);
   htmlEl.dataset.moleHandle = handleId;
   const role = el.getAttribute('role') || undefined;
-  const label = getElementLabel(el);
-  const text = getElementText(el);
   const placeholder = el.getAttribute('placeholder') || undefined;
   const href = el instanceof HTMLAnchorElement ? el.href || undefined : undefined;
   const value = el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement || el instanceof HTMLSelectElement
     ? clipText(el.value || '', 120)
     : undefined;
+
+  // 有缓存时复用缓存数据，避免重复调用昂贵 DOM API
+  if (cache) {
+    const info = getElementInfo(el, cache);
+    return {
+      element_id: handleId,
+      tag: el.tagName.toLowerCase(),
+      role,
+      type: el.getAttribute('type') || undefined,
+      text: info.text || undefined,
+      label: info.label || undefined,
+      placeholder,
+      aria_label: el.getAttribute('aria-label') || undefined,
+      name: el.getAttribute('name') || undefined,
+      href,
+      value,
+      clickable: info.clickable,
+      editable: info.editable,
+      disabled: info.disabled,
+      visible: info.visible,
+      in_viewport: info.inViewport,
+      selector_candidates: buildSelectorCandidates(el),
+      surrounding_text: info.surroundingText || undefined,
+      rect: {
+        x: Math.round(info.rect.x),
+        y: Math.round(info.rect.y),
+        width: Math.round(info.rect.width),
+        height: Math.round(info.rect.height),
+      },
+      score,
+      match_reasons: matchReasons && matchReasons.length > 0 ? matchReasons : undefined,
+    };
+  }
+
+  // 无缓存时走原始路径（向后兼容 buildActionInfo 等外部调用）
+  const rect = htmlEl.getBoundingClientRect();
+  const label = getElementLabel(el);
+  const text = getElementText(el);
 
   return {
     element_id: handleId,
@@ -271,24 +373,34 @@ const getScopeRoot = (scopeSelector?: string): Element | null => {
   return document.querySelector(scopeSelector);
 };
 
-const scoreElementAgainstQuery = (el: Element, query: string): { score: number; reasons: string[] } => {
+/**
+ * 对元素进行 query 匹配评分
+ * @param cache 可选，元素信息缓存，传入时复用缓存的 text/label 等数据
+ */
+const scoreElementAgainstQuery = (el: Element, query: string, cache?: Map<Element, CachedElementInfo>): { score: number; reasons: string[] } => {
   const normalizedQuery = normalizeText(query).toLowerCase();
   if (!normalizedQuery) return { score: 0, reasons: [] };
 
+  // 有缓存时使用缓存数据，否则实时计算
+  const info = cache ? getElementInfo(el, cache) : null;
+
   const tokens = normalizedQuery.split(/\s+/).filter(Boolean);
   const fields: Array<[string, string]> = [
-    ['text', getElementText(el)],
-    ['label', getElementLabel(el)],
+    ['text', info ? info.text : getElementText(el)],
+    ['label', info ? info.label : getElementLabel(el)],
     ['placeholder', el.getAttribute('placeholder') || ''],
     ['aria_label', el.getAttribute('aria-label') || ''],
     ['name', el.getAttribute('name') || ''],
     ['href', el instanceof HTMLAnchorElement ? el.href || '' : ''],
-    ['surrounding_text', getSurroundingText(el)],
+    ['surrounding_text', info ? info.surroundingText : getSurroundingText(el)],
   ];
 
   let score = 0;
   const reasons: string[] = [];
-  for (const [fieldName, rawFieldValue] of fields) {
+
+  // 先检查 text 和 label 两个主要字段
+  for (let i = 0; i < fields.length; i++) {
+    const [fieldName, rawFieldValue] = fields[i];
     const fieldValue = normalizeText(rawFieldValue).toLowerCase();
     if (!fieldValue) continue;
     if (fieldValue === normalizedQuery) {
@@ -305,12 +417,26 @@ const scoreElementAgainstQuery = (el: Element, query: string): { score: number; 
         score += fieldName === 'text' || fieldName === 'label' ? 3 : 2;
       }
     }
+
+    // 优化 5：检查完 text 和 label 后，如果 score 仍为 0 且元素既不可点击也不可编辑，提前退出
+    if (i === 1 && score === 0) {
+      const clickable = info ? info.clickable : isElementClickable(el);
+      const editable = info ? info.editable : isElementEditable(el);
+      if (!clickable && !editable) {
+        return { score: 0, reasons: [] };
+      }
+    }
   }
 
-  if (isElementClickable(el)) score += 3;
-  if (isElementEditable(el)) score += 3;
-  if (isElementVisible(el)) score += 2;
-  if (isInViewport(el)) score += 2;
+  const clickable = info ? info.clickable : isElementClickable(el);
+  const editable = info ? info.editable : isElementEditable(el);
+  const visible = info ? info.visible : isElementVisible(el);
+  const inViewport = info ? info.inViewport : isInViewport(el);
+
+  if (clickable) score += 3;
+  if (editable) score += 3;
+  if (visible) score += 2;
+  if (inViewport) score += 2;
   return { score, reasons: Array.from(new Set(reasons)).slice(0, 4) };
 };
 
@@ -326,18 +452,45 @@ const collectSnapshotElements = (params: PageSnapshotParams) => {
     return { success: false, error: `未找到 scope_selector: ${params.scope_selector}` };
   }
 
-  const nodes = selector === '*' ? Array.from(scopeRoot.querySelectorAll('*')) : Array.from(scopeRoot.querySelectorAll(selector));
+  // 创建本次快照的元素信息缓存，函数返回后自动回收
+  const cache = new Map<Element, CachedElementInfo>();
+
+  let nodes = Array.from(scopeRoot.querySelectorAll(selector));
+
+  // 优化 1：提前剪枝——过滤掉无意义标签和 SVG 内部元素
+  if (selector === '*') {
+    nodes = nodes.filter((el) => {
+      const tag = el.tagName.toLowerCase();
+      if (SKIP_TAGS.has(tag)) return false;
+      // SVG 内部的 path/rect/circle 等不是用户可交互元素，只保留 svg 根元素
+      if (tag !== 'svg' && el.closest('svg')) return false;
+      return true;
+    });
+  }
+
+  // 优化 2：节点数上限保护
+  if (nodes.length > MAX_NODES) {
+    nodes.length = MAX_NODES;
+  }
+
   const scored = nodes
-    .filter((el) => includeHidden || isElementVisible(el))
-    .filter((el) => !onlyViewport || isInViewport(el))
+    .filter((el) => {
+      // 优化 3：使用缓存的 visible 和 inViewport 判断
+      const info = getElementInfo(el, cache);
+      if (!includeHidden && !info.visible) return false;
+      if (onlyViewport && !info.inViewport) return false;
+      return true;
+    })
     .map((el) => {
-      const match = scoreElementAgainstQuery(el, query);
+      const match = scoreElementAgainstQuery(el, query, cache);
       let baseScore = match.score;
       if (!query) {
-        if (isElementClickable(el)) baseScore += 6;
-        if (isElementEditable(el)) baseScore += 6;
-        if (isInViewport(el)) baseScore += 4;
-        if (isElementVisible(el)) baseScore += 3;
+        // 使用缓存数据避免重复 DOM 查询
+        const info = getElementInfo(el, cache);
+        if (info.clickable) baseScore += 6;
+        if (info.editable) baseScore += 6;
+        if (info.inViewport) baseScore += 4;
+        if (info.visible) baseScore += 3;
       }
       return {
         el,
@@ -349,7 +502,7 @@ const collectSnapshotElements = (params: PageSnapshotParams) => {
     .sort((left, right) => right.score - left.score)
     .slice(0, limit);
 
-  const items = scored.map((item) => buildElementDescriptor(item.el, item.score, item.reasons));
+  const items = scored.map((item) => buildElementDescriptor(item.el, item.score, item.reasons, cache));
   return {
     success: true,
     data: {
@@ -360,7 +513,7 @@ const collectSnapshotElements = (params: PageSnapshotParams) => {
       total_candidates: items.length,
       elements: items,
       message: query
-        ? `已找到 ${items.length} 个与“${clipText(query, 24)}”相关的候选元素`
+        ? `已找到 ${items.length} 个与"${clipText(query, 24)}"相关的候选元素`
         : `已生成页面语义快照（${items.length} 个候选元素）`,
     },
   };
