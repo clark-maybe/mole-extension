@@ -7,6 +7,7 @@
 import type { FunctionDefinition, ToolExecutionContext } from './types';
 import { ArtifactStore } from '../lib/artifact-store';
 import { CDPSessionManager } from '../lib/cdp-session';
+import Channel from '../lib/channel';
 import { sendToTabWithRetry } from './tab-message';
 import { sleep, waitForTabComplete } from './tab-utils';
 
@@ -167,6 +168,20 @@ export const screenshotFunction: FunctionDefinition = {
       await waitUntilTabReady(targetTabId, normalizedWaitMs, signal);
       await sleep(260, signal);
 
+      // 截图前临时隐藏悬浮球，避免遮挡页面内容
+      let floatBallHidden = false;
+      try {
+        await new Promise<void>((resolve) => {
+          Channel.sendToTab(targetTabId!, '__screenshot_hide', {}, () => {
+            floatBallHidden = true;
+            resolve();
+          });
+          // 100ms 超时：content script 可能不在（如 chrome:// 页面）
+          setTimeout(resolve, 100);
+        });
+        if (floatBallHidden) await sleep(80);
+      } catch { /* 忽略 */ }
+
       let base64Data: string;
       let screenshotMode = '可见区域';
 
@@ -271,6 +286,11 @@ export const screenshotFunction: FunctionDefinition = {
     } catch (err: any) {
       return { success: false, error: err.message || '截图失败' };
     } finally {
+      // 恢复悬浮球显示
+      if (floatBallHidden && targetTabId) {
+        try { Channel.sendToTab(targetTabId, '__screenshot_show', {}); } catch { /* 忽略 */ }
+      }
+
       if (createdTempTab && close_after_capture && targetTabId) {
         try {
           await chrome.tabs.remove(targetTabId);

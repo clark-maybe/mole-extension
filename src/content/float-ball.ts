@@ -3047,6 +3047,16 @@ export const initFloatBall = async () => {
     handleApprovalCancel(data?.requestId);
   });
 
+  // 截图时临时隐藏/恢复悬浮球，避免遮挡页面内容
+  Channel.on('__screenshot_hide', (_data: any, _sender, sendResponse) => {
+    host.style.display = 'none';
+    sendResponse?.({ ok: true });
+    return true;
+  });
+  Channel.on('__screenshot_show', () => {
+    host.style.display = '';
+  });
+
   // 确认卡片附言输入框 Enter 键提交
   resultEl.addEventListener('keydown', (e) => {
     const target = e.target as HTMLElement;
