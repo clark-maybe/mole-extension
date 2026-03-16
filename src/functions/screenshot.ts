@@ -128,8 +128,11 @@ export const screenshotFunction: FunctionDefinition = {
     let createdTempTab = false;
     const signal = context?.signal;
 
+    // 校验 clip 参数有效性（宽高必须 > 0）
+    const validClip = clip && clip.width > 0 && clip.height > 0 ? clip : undefined;
+
     // 判断是否需要走 CDP 路径
-    const useCDP = Boolean(clip || full_page || element_id);
+    const useCDP = Boolean(validClip || full_page || element_id);
 
     try {
       const [currentActiveTab] = await chrome.tabs.query({ active: true, currentWindow: true });
@@ -137,7 +140,7 @@ export const screenshotFunction: FunctionDefinition = {
 
       let targetTab: chrome.tabs.Tab | undefined;
 
-      if (typeof tab_id === 'number' && Number.isFinite(tab_id)) {
+      if (typeof tab_id === 'number' && tab_id > 0) {
         targetTab = await chrome.tabs.get(tab_id);
       } else if (typeof context?.tabId === 'number' && context.tabId > 0) {
         targetTab = await chrome.tabs.get(context.tabId);
@@ -177,7 +180,7 @@ export const screenshotFunction: FunctionDefinition = {
         }
 
         // element_id → 查询元素 rect → 转为 clip
-        let resolvedClip = clip;
+        let resolvedClip = validClip;
         if (element_id && !resolvedClip) {
           const rect = await resolveElementRect(targetTabId, element_id, signal);
           if (!rect) {

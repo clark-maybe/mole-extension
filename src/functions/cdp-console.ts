@@ -72,7 +72,7 @@ export const cdpConsoleFunction: FunctionDefinition = {
 
     // 确定目标 tabId
     let tabId: number;
-    if (typeof tab_id === 'number' && Number.isFinite(tab_id)) {
+    if (typeof tab_id === 'number' && tab_id > 0) {
       tabId = tab_id;
     } else if (typeof context?.tabId === 'number' && context.tabId > 0) {
       tabId = context.tabId;

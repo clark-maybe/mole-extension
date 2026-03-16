@@ -72,7 +72,7 @@ export const pageSkeletonFunction: FunctionDefinition = {
     // 确定目标 tabId（优先级：params.tab_id > context.tabId > 当前活动标签页）
     const { tab_id } = params;
     let tabId: number;
-    if (typeof tab_id === 'number' && Number.isFinite(tab_id)) {
+    if (typeof tab_id === 'number' && tab_id > 0) {
       tabId = tab_id;
     } else if (typeof context?.tabId === 'number' && context.tabId > 0) {
       tabId = context.tabId;
