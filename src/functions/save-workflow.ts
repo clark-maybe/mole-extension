@@ -1,5 +1,6 @@
 import type { FunctionDefinition, FunctionResult } from './types';
 import { upsertUserWorkflow } from './site-workflow-registry';
+import { getBuiltinFunction } from './registry';
 
 // 保存用户确认的工作流
 export const saveWorkflowFunction: FunctionDefinition = {
@@ -33,6 +34,20 @@ export const saveWorkflowFunction: FunctionDefinition = {
 
     if (!workflow.name || !workflow.plan) {
       return { success: false, error: '缺少必要的 workflow 字段（name、plan）' };
+    }
+
+    // 校验 plan.steps 中每个 action 是否为合法的内置工具名称
+    const steps = workflow.plan?.steps;
+    if (Array.isArray(steps)) {
+      for (let i = 0; i < steps.length; i++) {
+        const action = steps[i]?.action;
+        if (!action || !getBuiltinFunction(action)) {
+          return {
+            success: false,
+            error: `步骤 ${i + 1} 的 action "${action || '(空)'}" 不是合法的内置工具名称`,
+          };
+        }
+      }
     }
 
     const spec = {

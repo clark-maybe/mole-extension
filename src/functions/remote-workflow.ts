@@ -216,6 +216,49 @@ const resolveConditionBoolean = (raw: unknown): boolean => {
   return Boolean(raw);
 };
 
+/** plan 校验错误信息 */
+interface PlanValidationError {
+  stepIndex: number;
+  action: string;
+  message: string;
+}
+
+/**
+ * 校验远端 plan，返回具体的 step 级别错误列表
+ * 用于在 normalizeRemotePlan 返回 null 时提供详细诊断信息
+ */
+const validateRemotePlan = (raw: unknown): PlanValidationError[] => {
+  const errors: PlanValidationError[] = [];
+  if (!raw || typeof raw !== 'object') {
+    errors.push({ stepIndex: -1, action: '', message: 'plan 不是有效对象' });
+    return errors;
+  }
+  const source = raw as Record<string, unknown>;
+  const rawSteps = source.steps;
+  if (!Array.isArray(rawSteps) || rawSteps.length === 0) {
+    errors.push({ stepIndex: -1, action: '', message: 'plan.steps 不存在或为空数组' });
+    return errors;
+  }
+  if (rawSteps.length > 60) {
+    errors.push({ stepIndex: -1, action: '', message: `plan.steps 长度 ${rawSteps.length} 超过上限 60` });
+    return errors;
+  }
+  for (let i = 0; i < rawSteps.length; i++) {
+    const step = rawSteps[i];
+    if (!step || typeof step !== 'object') {
+      errors.push({ stepIndex: i, action: '', message: `步骤 ${i + 1} 不是有效对象` });
+      continue;
+    }
+    const action = String((step as Record<string, unknown>).action || '').trim();
+    if (!action) {
+      errors.push({ stepIndex: i, action: '', message: `步骤 ${i + 1} 缺少 action 字段` });
+    } else if (!getBuiltinFunction(action)) {
+      errors.push({ stepIndex: i, action, message: `步骤 ${i + 1} 的 action "${action}" 不是已注册的内置工具` });
+    }
+  }
+  return errors;
+};
+
 const normalizeRemotePlan = (raw: unknown): RemoteWorkflowPlan | null => {
   if (!raw || typeof raw !== 'object') return null;
   const source = raw as Record<string, unknown>;
@@ -538,9 +581,14 @@ export const executeDebugRemotePlan = async (
   const workflow = String(workflowRaw || 'unnamed').trim();
   const plan = normalizeRemotePlan(planRaw);
   if (!plan) {
+    // 使用 validateRemotePlan 获取具体的 step 级别错误信息
+    const validationErrors = validateRemotePlan(planRaw);
+    const errorDetails = validationErrors.length > 0
+      ? validationErrors.map((e) => e.message).join('；')
+      : '未知原因';
     return {
       success: false,
-      error: `plan JSON 非法：需要包含 steps 数组，且 action 必须是已注册的内置工具名称`,
+      error: `plan JSON 非法：${errorDetails}`,
     };
   }
   const params = paramsRaw && typeof paramsRaw === 'object' && !Array.isArray(paramsRaw)
