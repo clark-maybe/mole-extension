@@ -135,6 +135,9 @@ export const screenshotFunction: FunctionDefinition = {
     // 判断是否需要走 CDP 路径
     const useCDP = Boolean(validClip || full_page || element_id);
 
+    // 截图前临时隐藏悬浮球的状态标记（在 try 外声明，finally 中使用）
+    let floatBallHidden = false;
+
     try {
       const [currentActiveTab] = await chrome.tabs.query({ active: true, currentWindow: true });
       originalTabId = currentActiveTab?.id;
@@ -169,7 +172,6 @@ export const screenshotFunction: FunctionDefinition = {
       await sleep(260, signal);
 
       // 截图前临时隐藏悬浮球，避免遮挡页面内容
-      let floatBallHidden = false;
       try {
         await new Promise<void>((resolve) => {
           Channel.sendToTab(targetTabId!, '__screenshot_hide', {}, () => {
