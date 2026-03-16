@@ -133,6 +133,23 @@ Mole supports a **"show once, learn forever"** workflow recording mode. Instead 
 
 Recording persists across page navigations within the same tab. If the page redirects during your demonstration, Mole automatically records the navigation step and continues capturing on the new page.
 
+## Task Recovery
+
+If a task is interrupted due to Service Worker restart, network error, or LLM API timeout, Mole saves the execution context as a checkpoint. When the failure occurs:
+
+- The floating ball shows an error message with a **Retry** button
+- Clicking "Retry" resumes execution from the last checkpoint — no need to start over
+- The AI receives the full context of previous tool calls and results, and continues from where it left off
+
+Recoverable error types include: Service Worker restart, LLM API errors, user cancellation, and tool execution failures.
+
+## Human-in-the-Loop
+
+Mole supports two types of human interaction during task execution:
+
+- **Confirmation** (`request_confirmation`) — Before irreversible actions (form submission, payment, deletion), the AI pauses and asks for user approval
+- **Question** (`ask_user`) — When the AI encounters multiple options or needs missing information, it presents a question card with preset options and/or a free text input field. The user's answer is fed back into the loop, and execution continues
+
 ## Automatic Context Compression
 
 When conversation context grows too long, Mole automatically compresses historical context while preserving key information, ensuring continued operation within the LLM's context window limits. This prevents long multi-step tasks from failing due to context overflow.
