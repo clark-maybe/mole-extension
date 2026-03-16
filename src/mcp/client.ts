@@ -10,6 +10,9 @@ export class MCPClient {
   /** 传输层实例 */
   private transport: InMemoryTransport;
 
+  /** 工具列表缓存（首次调用 isParallel 时填充） */
+  private toolsCache: MCPTool[] | null = null;
+
   constructor(transport: InMemoryTransport) {
     this.transport = transport;
   }
@@ -42,5 +45,19 @@ export class MCPClient {
       _meta: context,
       signal: options?.signal,
     }, { signal: options?.signal });
+  }
+
+  /**
+   * 查询工具是否支持并行执行
+   * 内部缓存 listTools 结果，避免重复请求
+   * @param toolName 工具名称
+   * @returns 是否支持并行，默认 false
+   */
+  async isParallel(toolName: string): Promise<boolean> {
+    if (!this.toolsCache) {
+      this.toolsCache = await this.listTools();
+    }
+    const tool = this.toolsCache.find((t) => t.name === toolName);
+    return tool?.supportsParallel ?? false;
   }
 }

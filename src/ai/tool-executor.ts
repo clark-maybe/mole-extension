@@ -27,8 +27,53 @@ export const SPAWN_SUBTASK_SCHEMA: ToolSchema = {
   },
 };
 
+/** 执行组类型：并行组或串行组 */
+interface ExecutionGroup {
+  type: 'parallel' | 'serial';
+  calls: OutputFunctionCallItem[];
+}
+
+/**
+ * 按 supportsParallel 标记将 calls 数组分组
+ * 连续的 parallel 工具收集为一个并行组，serial 工具各自独立成组
+ */
+const buildExecutionGroups = async (calls: OutputFunctionCallItem[]): Promise<ExecutionGroup[]> => {
+  const groups: ExecutionGroup[] = [];
+  let currentParallelGroup: OutputFunctionCallItem[] = [];
+
+  const flushParallelGroup = () => {
+    if (currentParallelGroup.length > 0) {
+      groups.push({ type: 'parallel', calls: [...currentParallelGroup] });
+      currentParallelGroup = [];
+    }
+  };
+
+  for (const call of calls) {
+    // spawn_subtask 始终串行
+    if (call.name === 'spawn_subtask') {
+      flushParallelGroup();
+      groups.push({ type: 'serial', calls: [call] });
+      continue;
+    }
+
+    const parallel = await mcpClient.isParallel(call.name);
+    if (parallel) {
+      currentParallelGroup.push(call);
+    } else {
+      flushParallelGroup();
+      groups.push({ type: 'serial', calls: [call] });
+    }
+  }
+
+  // 收尾：清空剩余的并行组
+  flushParallelGroup();
+
+  return groups;
+};
+
 /**
  * 执行一批工具调用
+ * 支持并行分流：连续的 supportsParallel 工具用 Promise.all 并发执行
  */
 export const executeToolCalls = async (
   calls: OutputFunctionCallItem[],
@@ -39,20 +84,11 @@ export const executeToolCalls = async (
 ): Promise<InputItem[]> => {
   const results: InputItem[] = [];
 
-  for (const call of calls) {
-    if (signal?.aborted) break;
-
+  /** 执行单个工具调用（不含 emit function_call，由调用方控制） */
+  const executeSingleTool = async (
+    call: OutputFunctionCallItem,
+  ): Promise<{ call: OutputFunctionCallItem; output: string }> => {
     const params = safeParseArgs(call.arguments);
-
-    emit({
-      type: 'function_call',
-      content: JSON.stringify({
-        name: call.name,
-        call_id: call.call_id,
-        arguments: call.arguments,
-      }),
-    });
-
     let output: string;
 
     if (call.name === 'spawn_subtask' && runSubtask) {
@@ -96,20 +132,89 @@ export const executeToolCalls = async (
       }
     }
 
+    // 从 output 中提取 success/error 供 UI 层展示
+    let resultSuccess = true;
+    let resultMessage = '';
+    let resultCancelled = false;
+    try {
+      const parsed = JSON.parse(output);
+      resultSuccess = parsed.success !== false;
+      resultMessage = parsed.error || parsed.data?.summary || '';
+      resultCancelled = signal?.aborted === true && !resultSuccess;
+    } catch {
+      // output 解析失败，保持默认值
+    }
+
+    // 工具执行完成后立即 emit 结果（并行组内按完成顺序 emit）
     emit({
       type: 'function_result',
       content: JSON.stringify({
         name: call.name,
-        call_id: call.call_id,
-        output,
+        callId: call.call_id,
+        success: resultSuccess,
+        message: resultMessage,
+        cancelled: resultCancelled,
       }),
     });
 
-    results.push({
-      type: 'function_call_output' as const,
-      call_id: call.call_id,
-      output,
-    });
+    return { call, output };
+  };
+
+  // 构建执行分组
+  const groups = await buildExecutionGroups(calls);
+
+  for (const group of groups) {
+    if (signal?.aborted) break;
+
+    if (group.type === 'serial' || group.calls.length === 1) {
+      // 串行执行（包括只有 1 个工具的"并行组"退化为串行）
+      for (const call of group.calls) {
+        if (signal?.aborted) break;
+
+        emit({
+          type: 'function_call',
+          content: JSON.stringify({
+            name: call.name,
+            callId: call.call_id,
+            arguments: call.arguments,
+          }),
+        });
+
+        const { output } = await executeSingleTool(call);
+
+        results.push({
+          type: 'function_call_output' as const,
+          call_id: call.call_id,
+          output,
+        });
+      }
+    } else {
+      // 并行执行：先 emit 所有 function_call 事件，再并发执行
+      for (const call of group.calls) {
+        emit({
+          type: 'function_call',
+          content: JSON.stringify({
+            name: call.name,
+            callId: call.call_id,
+            arguments: call.arguments,
+          }),
+        });
+      }
+
+      // Promise.all 并发执行，按完成顺序 emit function_result
+      const groupResults = await Promise.all(
+        group.calls.map((call) => executeSingleTool(call)),
+      );
+
+      // 按原始 calls 顺序 push 到 results（保持与输入顺序一致）
+      for (const { call, output } of groupResults) {
+        results.push({
+          type: 'function_call_output' as const,
+          call_id: call.call_id,
+          output,
+        });
+      }
+    }
   }
 
   return results;
