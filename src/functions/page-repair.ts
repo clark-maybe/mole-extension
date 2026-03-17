@@ -5,7 +5,7 @@
 
 import type { FunctionDefinition, ToolExecutionContext, FunctionResult } from './types';
 import { pageSnapshotFunction } from './page-snapshot';
-import { pageActionFunction } from './page-action';
+import { cdpInputFunction } from './cdp-input';
 import { pageViewerFunction } from './page-viewer';
 import {
   applySiteExperienceBoost,
@@ -286,7 +286,7 @@ export const pageRepairFunction: FunctionDefinition = {
     const earlyViewport = await maybeReturnIfEnough('viewport_snapshot');
     if (earlyViewport) return earlyViewport;
 
-    const scrollDownResult = await pageActionFunction.execute({
+    const scrollDownResult = await cdpInputFunction.execute({
       action: 'scroll',
       direction: 'down',
       amount: scrollAmount,
@@ -326,7 +326,7 @@ export const pageRepairFunction: FunctionDefinition = {
     const afterDown = await maybeReturnIfEnough('scroll_down_then_snapshot');
     if (afterDown) return afterDown;
 
-    const scrollUpResult = await pageActionFunction.execute({
+    const scrollUpResult = await cdpInputFunction.execute({
       action: 'scroll',
       direction: 'up',
       amount: Math.max(200, Math.floor(scrollAmount * 0.75)),

@@ -74,7 +74,7 @@ Mole can operate across multiple browser tabs within a single task — for examp
 All page-operating tools support an optional `tab_id` parameter. The AI follows this flow:
 
 1. **Open a new tab** — `tab_navigate(action='open', url='...')` returns the new tab's `tab_id`
-2. **Operate on the target tab** — Pass `tab_id` to any tool: `page_snapshot(tab_id=123)`, `page_action(tab_id=123, ...)`, `extract_data(tab_id=123, ...)`
+2. **Operate on the target tab** — Pass `tab_id` to any tool: `page_snapshot(tab_id=123)`, `cdp_input(tab_id=123, ...)`, `extract_data(tab_id=123, ...)`
 3. **Clean up** — `tab_navigate(action='close', tab_id=123)` when done
 
 ### Key Rules

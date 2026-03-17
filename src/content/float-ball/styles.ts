@@ -1758,7 +1758,7 @@ export const getStyles = () => `
     font-size: 13px;
     line-height: 1.5;
     color: var(--ec-text);
-    margin-bottom: 10px;
+    margin-bottom: 30px;
     word-break: break-word;
   }
   .mole-approval-actions {
@@ -1783,6 +1783,11 @@ export const getStyles = () => `
   .mole-approval-btn.reject {
     background: var(--ec-danger-soft);
     color: var(--ec-danger);
+  }
+  .mole-approval-btn.trust-all {
+    background: var(--ec-bg-soft);
+    color: var(--ec-text-secondary);
+    font-size: 11px;
   }
   .mole-approval-btn:disabled {
     opacity: 0.5;

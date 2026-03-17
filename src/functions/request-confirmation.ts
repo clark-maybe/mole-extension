@@ -63,6 +63,7 @@ export const requestConfirmationFunction: FunctionDefinition = {
           data: {
             approved: !!data.approved,
             userMessage: data.userMessage || undefined,
+            trustAll: !!data.trustAll,
           },
         });
       };

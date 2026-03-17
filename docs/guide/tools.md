@@ -18,9 +18,9 @@ MoleClaw includes 37+ built-in tools covering all aspects of browser automation.
 
 | Tool | Description |
 |------|-------------|
-| `page_action` | Execute page interaction operations with two targeting modes: element_id (from page_snapshot, preferred) and CSS selector. Supports click, fill, scroll, scroll into view, hover, keypress, wait for element, get element info, etc. |
-| `dom_manipulate` | Direct DOM manipulation: query elements, modify attributes, insert/remove nodes, etc. |
-| `js_execute` | Execute custom JavaScript code in the page context for complex page interactions |
+| `cdp_input` | Page interaction operations via CDP (trusted events). Supports click, double click, right click, hover, drag, type, key press, scroll, fill, clear, select, click by text, scroll into view, focus, wait for element/text/navigation, get element info. Two targeting modes: element_id (from page_snapshot, preferred) and CSS selector. |
+| `cdp_dom` | Cross-origin DOM operations via CDP: query elements, modify attributes, insert/remove nodes, read/write HTML, get precise box model, etc. |
+| `cdp_frame` | Cross-iframe operations via CDP: list all page frames, execute JS in a specific frame (`expression` parameter), get iframe text snapshot. Solves cross-origin iframe issues |
 
 ## Navigation & Tabs
 
@@ -98,17 +98,9 @@ Connected to Chrome DevTools Protocol via the `chrome.debugger` API, providing b
 |------|-------------|
 | `cdp_dom` | Cross-origin DOM operations (DOM domain): query/modify DOM nodes via CDP, ignoring same-origin policy. Supports CSS selector queries, HTML read/write, attribute operations, precise element box model (margin/border/padding/content), and node removal |
 
-### Page Storage
-
-| Tool | Description |
-|------|-------------|
-| `cdp_storage` | Page storage operations (DOMStorage domain): read/write the target page's localStorage and sessionStorage without content scripts. Useful for reading login tokens, modifying cache configs, and clearing storage data |
-
-### Style Operations
-
-| Tool | Description |
-|------|-------------|
-| `cdp_css` | CSS style inspection and modification (CSS domain): get computed styles and matching CSS rules, modify inline styles, dynamically add CSS rules, read/write complete stylesheets. Useful for style diagnostics, dynamic CSS injection, and design token extraction |
+::: tip
+Page storage operations (`storage_` prefix actions) and CSS style operations (`css_` prefix actions) are now integrated into `cdp_dom` as unified actions.
+:::
 
 ### Visual Highlighting
 
@@ -131,10 +123,9 @@ CDP tools require the `debugger` permission. A debugger notification bar will ap
 When the AI needs to operate on a page, it selects tools in this priority order:
 
 1. **`site_workflow`** — Preferred: use predefined workflows when available for the current page, fast and reliable
-2. **`page_snapshot`** + `page_action(element_id=...)` — Snapshot to locate elements, then operate precisely by element_id
-3. **`page_action(selector=...)`** — CSS selector-based operations when element_id is unavailable
-4. **`cdp_input`** — When anti-bot detection blocks regular clicks, use CDP to send trusted events
-5. **`dom_manipulate`** — Direct DOM manipulation as a last resort
+2. **`page_snapshot`** + `cdp_input(element_id=...)` — Snapshot to locate elements, then operate precisely by element_id
+3. **`cdp_input(selector=...)`** — CSS selector-based operations when element_id is unavailable
+4. **`cdp_dom`** — DOM read/write, CSS styles, and page storage operations
 
 ::: tip
 You don't need to manually choose tools — just describe your needs in natural language, and the AI will automatically select the best tool combination for the task.

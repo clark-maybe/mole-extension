@@ -27,12 +27,12 @@
             "saveAs": "nav_result"
           },
           {
-            "action": "page_action",
+            "action": "cdp_input",
             "note": "等待商品列表容器出现",
             "params": { "action": "wait_for_element", "selector": "[data-sku],#J_goodsList", "timeout_ms": 12000 }
           },
           {
-            "action": "dom_manipulate",
+            "action": "cdp_dom",
             "note": "采集商品卡片原始节点",
             "params": { "action": "query", "selector": "[data-sku]", "limit": "{{max_results}}" },
             "saveAs": "items"
@@ -66,12 +66,12 @@
             "saveAs": "nav_result"
           },
           {
-            "action": "page_action",
+            "action": "cdp_input",
             "note": "等待结果区出现",
             "params": { "action": "wait_for_element", "selector": "#content_left", "timeout_ms": 10000 }
           },
           {
-            "action": "dom_manipulate",
+            "action": "cdp_dom",
             "note": "采集搜索结果原始节点",
             "params": { "action": "query", "selector": "#content_left .c-container", "limit": "{{max_results}}" },
             "saveAs": "items"
@@ -111,31 +111,33 @@
             "saveAs": "nav_result"
           },
           {
-            "action": "page_action",
+            "action": "cdp_input",
             "note": "等待会话列表出现（左侧列表）",
             "params": { "action": "wait_for_element", "selector": "ul[role=\"group\"] li[role=\"listitem\"] .friend-content", "timeout_ms": 12000 },
             "retry": { "maxAttempts": 2, "delayMs": 600, "backoffFactor": 1.5 }
           },
           {
-            "action": "js_execute",
+            "action": "cdp_frame",
             "note": "注入接管状态提示",
             "when": "{{show_takeover_badge}}",
             "params": {
+              "action": "evaluate",
               "code": "return (() => {\n  const badgeId = 'mole-takeover-badge';\n  const text = '{{takeover_badge_text}}' || 'Mole 接管中';\n  let badge = document.getElementById(badgeId);\n  if (!badge) {\n    badge = document.createElement('div');\n    badge.id = badgeId;\n    badge.style.position = 'fixed';\n    badge.style.right = '20px';\n    badge.style.bottom = '20px';\n    badge.style.zIndex = '2147483647';\n    badge.style.padding = '10px 12px';\n    badge.style.borderRadius = '999px';\n    badge.style.background = 'rgba(22, 163, 74, 0.9)';\n    badge.style.color = '#fff';\n    badge.style.fontSize = '12px';\n    badge.style.fontWeight = '600';\n    badge.style.boxShadow = '0 10px 30px rgba(0,0,0,0.22)';\n    badge.style.pointerEvents = 'none';\n    document.body.appendChild(badge);\n  }\n  badge.textContent = text;\n  badge.setAttribute('data-updated-at', String(Date.now()));\n  return { badgeId, text, pageUrl: location.href, pageTitle: document.title };\n})();"
             },
             "onError": "continue"
           },
           {
-            "action": "js_execute",
+            "action": "cdp_frame",
             "note": "根据 target_name / conversation_index 选择要接管的会话",
             "params": {
+              "action": "evaluate",
               "code": "return (() => {\n  const toText = (value) => (value || '').replace(/\\s+/g, ' ').trim();\n  const listItems = Array.from(document.querySelectorAll('ul[role=\"group\"] li[role=\"listitem\"]'));\n  const targetName = toText('{{target_name}}');\n  const targetIndexRaw = Number('{{conversation_index}}');\n  const hasTargetIndex = Number.isFinite(targetIndexRaw) && targetIndexRaw >= 0;\n  const conversations = listItems.map((li, index) => {\n    const card = li.querySelector('.friend-content') || li;\n    const name = toText((card.querySelector('.name-text') || card.querySelector('.name-box'))?.textContent || '');\n    const company = toText(card.querySelector('.name-box span:nth-child(2)')?.textContent || '');\n    const role = toText(card.querySelector('.name-box span:nth-child(4)')?.textContent || '');\n    const lastMsg = toText(card.querySelector('.last-msg-text')?.textContent || '');\n    const isSelected = card.classList.contains('selected') || li.querySelector('.friend-content.selected') != null;\n    return { index, name, company, role, lastMsg, selected: isSelected };\n  });\n  const activeIndex = conversations.findIndex((item) => item.selected);\n  let targetIndex = activeIndex >= 0 ? activeIndex : (conversations.length > 0 ? 0 : -1);\n  if (targetName) {\n    const byName = conversations.findIndex((item) => toText(item.name).includes(targetName));\n    if (byName >= 0) targetIndex = byName;\n  } else if (hasTargetIndex && targetIndexRaw < conversations.length) {\n    targetIndex = Math.floor(targetIndexRaw);\n  }\n  const targetSelector = targetIndex >= 0 ? ('ul[role=\"group\"] li[role=\"listitem\"]:nth-child(' + String(targetIndex + 1) + ') .friend-content') : '';\n  return { pageUrl: location.href, pageTitle: document.title, listReady: conversations.length > 0, conversationCount: conversations.length, activeIndex, targetIndex, targetSelector, shouldSwitchConversation: targetIndex >= 0 && targetIndex !== activeIndex, conversations };\n})();"
             },
             "saveAs": "conversation_meta",
             "retry": { "maxAttempts": 2, "delayMs": 500, "backoffFactor": 1.5 }
           },
           {
-            "action": "page_action",
+            "action": "cdp_input",
             "note": "切换到目标会话",
             "when": "{{steps.conversation_meta.shouldSwitchConversation}}",
             "params": { "action": "click", "selector": "{{steps.conversation_meta.targetSelector}}" },
@@ -143,29 +145,30 @@
             "onError": "continue"
           },
           {
-            "action": "page_action",
+            "action": "cdp_input",
             "note": "等待右侧消息区域稳定",
             "params": { "action": "wait_for_element", "selector": "[class*=\"chat-content\"],[class*=\"message-list\"],[class*=\"dialogue\"],[class*=\"conversation-content\"]", "timeout_ms": 8000 },
             "onError": "continue"
           },
           {
-            "action": "js_execute",
+            "action": "cdp_frame",
             "note": "采集当前会话最近消息",
             "params": {
+              "action": "evaluate",
               "code": "return (() => {\n  const toText = (value) => (value || '').replace(/\\s+/g, ' ').trim();\n  const panel = document.querySelector('[class*=\"chat-content\"],[class*=\"message-list\"],[class*=\"dialogue\"],[class*=\"conversation-content\"]');\n  const root = panel || document.body;\n  const messageNodes = Array.from(root.querySelectorAll('[class*=\"message\"] [class*=\"text\"],[class*=\"message\"],[class*=\"msg\"]'));\n  const recentMessages = messageNodes.map((node) => toText(node.textContent || '')).filter(Boolean).slice(-20);\n  const inputNode = document.querySelector('textarea,[contenteditable=\"true\"],div[role=\"textbox\"],input[type=\"text\"]');\n  const activeNameNode = document.querySelector('ul[role=\"group\"] li[role=\"listitem\"] .friend-content.selected .name-text');\n  const autoSendRaw = '{{auto_send}}';\n  const replyTextRaw = '{{reply_text}}';\n  const shouldAutoSend = /^(true|1|yes)$/i.test(String(autoSendRaw)) && toText(replyTextRaw).length > 0;\n  return { pageUrl: location.href, pageTitle: document.title, activeConversationName: toText(activeNameNode?.textContent || ''), recentMessages, replyBoxSelector: inputNode ? 'textarea,[contenteditable=\"true\"],div[role=\"textbox\"],input[type=\"text\"]' : '', canReply: Boolean(inputNode), shouldAutoSend, replyText: toText(replyTextRaw) };\n})();"
             },
             "saveAs": "extracted",
             "retry": { "maxAttempts": 2, "delayMs": 500, "backoffFactor": 1.5 }
           },
           {
-            "action": "page_action",
+            "action": "cdp_input",
             "note": "可选：自动填写回复",
             "when": "{{steps.extracted.shouldAutoSend}}",
             "params": { "action": "fill", "selector": "{{steps.extracted.replyBoxSelector}}", "value": "{{steps.extracted.replyText}}" },
             "onError": "continue"
           },
           {
-            "action": "page_action",
+            "action": "cdp_input",
             "note": "可选：自动发送回复",
             "when": "{{steps.extracted.shouldAutoSend}}",
             "params": { "action": "press_key", "selector": "{{steps.extracted.replyBoxSelector}}", "key": "Enter" },
@@ -201,15 +204,16 @@
             "saveAs": "nav_result"
           },
           {
-            "action": "page_action",
+            "action": "cdp_input",
             "note": "等待商品卡片出现",
             "params": { "action": "wait_for_element", "selector": "a[id^='item_id_']", "timeout_ms": 15000 },
             "retry": { "maxAttempts": 2, "delayMs": 1000, "backoffFactor": 1.5 }
           },
           {
-            "action": "js_execute",
+            "action": "cdp_frame",
             "note": "采集商品列表结构化数据",
             "params": {
+              "action": "evaluate",
               "code": "return (() => {\n  const maxResults = Number('{{max_results}}') || 20;\n  const items = Array.from(document.querySelectorAll('a[id^=\"item_id_\"]')).slice(0, maxResults);\n  return items.map((el, idx) => {\n    const id = (el.id || '').replace('item_id_', '');\n    const titleEl = el.querySelector('[class*=\"title--\"]');\n    const title = (titleEl?.textContent || '').replace(/\\s+/g, ' ').trim();\n    const priceInt = (el.querySelector('[class*=\"priceInt--\"]')?.textContent || '').trim();\n    const priceFloat = (el.querySelector('[class*=\"priceFloat--\"]')?.textContent || '').trim();\n    const price = '¥' + priceInt + priceFloat;\n    const sales = (el.querySelector('[class*=\"realSales--\"]')?.textContent || '').trim();\n    const img = (el.querySelector('img[class*=\"mainPic--\"]') || el.querySelector('img'))?.src || '';\n    const shopName = (el.querySelector('[class*=\"shopNameText--\"]')?.textContent || '').trim();\n    const shopTag = (el.querySelector('[class*=\"shopTagText--\"]')?.textContent || '').trim();\n    const locationSpans = el.querySelectorAll('[class*=\"procity--\"] span');\n    const location = Array.from(locationSpans).map(s => (s.textContent || '').trim()).filter(Boolean).join(' ');\n    const tagSpans = el.querySelectorAll('[class*=\"subIconWrapper--\"] span');\n    const tags = Array.from(tagSpans).map(s => (s.textContent || '').trim()).filter(Boolean);\n    const href = el.href || '';\n    return { index: idx + 1, id, title, price, sales, location, shopName, shopTag, tags, img, url: href };\n  });\n})();"
             },
             "saveAs": "items"
@@ -243,15 +247,16 @@
             "saveAs": "nav_result"
           },
           {
-            "action": "page_action",
+            "action": "cdp_input",
             "note": "等待商品标题区域加载",
             "params": { "action": "wait_for_element", "selector": "span[class*='mainTitle--'],[class*='MainTitle--'],h1,.tb-main-title", "timeout_ms": 15000 },
             "retry": { "maxAttempts": 2, "delayMs": 1500, "backoffFactor": 1.5 }
           },
           {
-            "action": "js_execute",
+            "action": "cdp_frame",
             "note": "采集商品详情结构化数据（标题、价格、SKU、图片、规格参数、问大家、店铺）",
             "params": {
+              "action": "evaluate",
               "code": "return (() => {\n  const t = (el) => (el?.textContent || '').replace(/\\s+/g, ' ').trim();\n  const titleEl = document.querySelector('span[class*=\"mainTitle--\"]');\n  const title = titleEl?.getAttribute('title') || t(titleEl) || t(document.querySelector('h1, .tb-main-title'));\n  const currentPriceEl = document.querySelector('[class*=\"highlightPrice--\"] [class*=\"text--\"]');\n  const currentPrice = t(currentPriceEl);\n  const currentPriceLabel = t(document.querySelector('[class*=\"highlightPrice--\"] [class*=\"title--\"]'));\n  const originalPriceEls = document.querySelectorAll('[class*=\"subPrice--\"] [class*=\"text--\"]');\n  const originalPrice = Array.from(originalPriceEls).map(el => t(el)).filter(v => /\\d/.test(v)).join('');\n  const promoLabel = t(document.querySelector('[class*=\"bottomLabel--\"] [class*=\"text--\"]'));\n  const skuSections = document.querySelectorAll('[class*=\"skuItem--\"]');\n  const skus = Array.from(skuSections).map(section => {\n    const label = t(section.querySelector('[class*=\"ItemLabel--\"] span'));\n    const values = Array.from(section.querySelectorAll('[class*=\"valueItem--\"][data-vid]')).map(item => {\n      const text = item.querySelector('[class*=\"valueItemText--\"]')?.getAttribute('title') || t(item.querySelector('[class*=\"valueItemText--\"]'));\n      const selected = /isSelected--/.test(item.className);\n      const disabled = item.getAttribute('data-disabled') === 'true';\n      const imgEl = item.querySelector('img[class*=\"valueItemImg--\"]');\n      const img = imgEl?.src || '';\n      const hasRealImg = img && !img.includes('tps-2-2.png');\n      return { text, selected, disabled, img: hasRealImg ? img : undefined };\n    });\n    return { label, options: values };\n  });\n  const galleryImgs = document.querySelectorAll('[class*=\"PicGallery\"] img, [class*=\"gallery\"] img, [class*=\"thumbnail\"] img, .tb-gallery img');\n  const seen = new Set();\n  const images = Array.from(galleryImgs).map(img => {\n    let src = img.getAttribute('data-src') || img.src || '';\n    src = src.replace(/^\\/\\//, 'https://');\n    if (!src || seen.has(src) || src.includes('tps-2-2.png')) return null;\n    seen.add(src);\n    return src;\n  }).filter(Boolean);\n  const qaTitle = t(document.querySelector('[class*=\"askAnswerTitle--\"]'));\n  const qaCountMatch = qaTitle.match(/(\\d+)/);\n  const qaCount = qaCountMatch ? Number(qaCountMatch[1]) : 0;\n  const qaItems = Array.from(document.querySelectorAll('[class*=\"askAnswerItem--\"]')).map(item => {\n    const qEl = item.querySelector('[class*=\"question--\"]');\n    const aEl = item.querySelector('[class*=\"answer--\"]');\n    const question = qEl?.getAttribute('title') || t(qEl);\n    const answer = aEl?.getAttribute('title') || t(aEl);\n    return { question, answer };\n  }).filter(item => item.question || item.answer);\n  const specItems = Array.from(document.querySelectorAll('[class*=\"generalParamsInfoItem--\"]')).map(item => {\n    const keyEl = item.querySelector('[class*=\"generalParamsInfoItemTitle--\"]');\n    const valEl = item.querySelector('[class*=\"generalParamsInfoItemSubTitle--\"]');\n    const key = keyEl?.getAttribute('title') || t(keyEl);\n    const value = valEl?.getAttribute('title') || t(valEl);\n    return { key, value };\n  }).filter(item => item.key);\n  const shopNameEl = document.querySelector('[class*=\"shopName\"], [class*=\"ShopHeader\"] a, .tb-shop-name a');\n  const shopName = t(shopNameEl);\n  return {\n    title,\n    currentPrice: currentPrice ? '¥' + currentPrice : '',\n    currentPriceLabel,\n    originalPrice: originalPrice ? '¥' + originalPrice : '',\n    promoLabel,\n    skus,\n    images,\n    imageCount: images.length,\n    specs: specItems,\n    specCount: specItems.length,\n    qa: { total: qaCount, items: qaItems, fetchedCount: qaItems.length },\n    shopName,\n    url: location.href\n  };\n})();"
             },
             "saveAs": "detail"
@@ -283,15 +288,16 @@
             "saveAs": "nav_result"
           },
           {
-            "action": "page_action",
+            "action": "cdp_input",
             "note": "等待热榜列表加载",
             "params": { "action": "wait_for_element", "selector": "li.child-item", "timeout_ms": 15000 },
             "retry": { "maxAttempts": 2, "delayMs": 1500, "backoffFactor": 1.5 }
           },
           {
-            "action": "js_execute",
+            "action": "cdp_frame",
             "note": "采集热榜 Top 100 条目",
             "params": {
+              "action": "evaluate",
               "code": "return (() => {\n  const items = Array.from(document.querySelectorAll('li.child-item')).slice(0, 100);\n  return items.map((li, idx) => {\n    const rankEl = li.querySelector('.left-item span');\n    const rank = rankEl ? parseInt(rankEl.textContent || '', 10) || (idx + 1) : (idx + 1);\n    const linkEl = li.querySelector('.center-item .medium-txt a');\n    const title = (linkEl?.textContent || '').trim();\n    const url = linkEl?.href || '';\n    const smallTxt = (li.querySelector('.center-item .small-txt')?.textContent || '').trim();\n    const parts = smallTxt.split('\\u2027').map(s => s.trim());\n    const source = parts[0] || '';\n    const heat = parts[1] || '';\n    const iconEl = li.querySelector('.right-item img');\n    const icon = iconEl?.src || '';\n    return { rank, title, url, source, heat, icon };\n  });\n})();"
             },
             "saveAs": "items"

@@ -89,9 +89,9 @@ export const buildSystemPrompt = (tools: ToolSchema[], hasSubtask: boolean): str
 1. site_workflow — 首选：当前页面有匹配的预定义工作流时，优先使用，速度快且可靠
 2. page_skeleton — 整体感知：先获取页面骨架了解布局和区域划分（200-500 tokens），再决定下一步
 3. page_snapshot(query=...) — 精确定位：基于骨架树信息定位具体操作元素
-4. page_action(element_id=...) — 基于 element_id 精确操作（优先）
-5. page_action(selector=...) — 基于 CSS selector 操作（element_id 失效时退回）
-6. dom_manipulate — 最后手段：直接 CSS selector
+4. cdp_input(element_id=...) — 基于 element_id 精确操作（优先）
+5. cdp_input(selector=...) — 基于 CSS selector 操作（element_id 失效时退回）
+6. cdp_dom — DOM 读写/样式/存储操作
 
 ### 验证时机
 - 关键操作（提交表单、付款、删除）后：用 page_assert 验证
@@ -108,15 +108,17 @@ export const buildSystemPrompt = (tools: ToolSchema[], hasSubtask: boolean): str
 当你即将执行可能产生不可逆影响的操作时，先用 request_confirmation 工具请求用户确认：
 
 **需要确认的场景：**
-- 提交表单、发送消息、下单付款
+- 下单付款、转账汇款
 - 删除内容、修改账户设置
-- 代替用户发表评论或评价
+- 代替用户发表公开评论或评价
 - 任何你不确定用户是否真正想执行的操作
 
 **不需要确认的场景：**
 - 查看、搜索、截图等只读操作
-- 用户明确指示要执行的简单操作（如"帮我点击那个按钮"）
-- 中间步骤（只在最终的关键操作前确认）
+- 用户明确指示要执行的操作（如"帮我点击那个按钮"、"帮我发送"）
+- 用户明确要求的多步任务中的中间步骤和重复步骤（如"帮我聊几轮"中的每次发送）
+- 填写表单、发送消息——当用户已经明确要求你这样做时
+- 搜索提交
 
 用户拒绝后，根据用户附言调整方案。不要在拒绝后重复请求相同的确认。
 
@@ -197,7 +199,7 @@ export const buildSubtaskPrompt = (): string => {
 - 不要展开到其他话题
 
 ## 工具使用
-和主任务相同的工具使用原则。优先使用 site_workflow，其次 page_skeleton 了解结构，再 page_snapshot 定位，再 page_action 操作。
+和主任务相同的工具使用原则。优先使用 site_workflow，其次 page_skeleton 了解结构，再 page_snapshot 定位，再 cdp_input 操作。
 
 ## 回复
 直接给出子任务的结果，供主任务汇总使用。中文回复。`;

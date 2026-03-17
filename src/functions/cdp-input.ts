@@ -2,6 +2,7 @@
  * CDP 输入工具
  * 通过 chrome.debugger (Chrome DevTools Protocol) 发送可信鼠标/键盘事件
  * 事件在浏览器进程层面注入，绕过 isTrusted 检测
+ * 同时集成表单操作、元素定位、等待操作等页面交互能力
  */
 
 import type { FunctionDefinition, FunctionResult, ToolExecutionContext } from './types';
@@ -102,6 +103,56 @@ const resolveTargetCoords = async (
     return { success: true, x: Math.round(params.x), y: Math.round(params.y) };
   }
   return { success: false, error: '需要提供 element_id 或 (x, y) 坐标' };
+};
+
+/**
+ * 在页面目标元素上执行 JS 代码的辅助函数
+ * 支持 selector（直接 querySelector）和 element_id（先获取坐标再 elementFromPoint）两种定位
+ * jsTemplate 中使用 __el__ 引用目标元素，需要返回一个对象
+ */
+const evaluateOnElement = async (
+  tabId: number,
+  params: { element_id?: string; selector?: string },
+  jsTemplate: string,
+  signal?: AbortSignal,
+): Promise<FunctionResult> => {
+  // 确保 debugger 已 attach
+  const attachResult = await CDPSessionManager.attach(tabId);
+  if (!attachResult.success) return { success: false, error: attachResult.error };
+
+  let expression: string;
+  if (params.selector) {
+    // selector 模式：直接用 querySelector
+    expression = `(function() {
+      const __el__ = document.querySelector(${JSON.stringify(params.selector)});
+      if (!__el__) return { success: false, error: '未找到匹配选择器的元素: ${params.selector.replace(/'/g, "\\'")}' };
+      ${jsTemplate}
+    })()`;
+  } else if (params.element_id) {
+    // element_id 模式：先获取坐标，再用 elementFromPoint
+    const rect = await resolveElementRect(tabId, params.element_id, signal);
+    if (!rect.success) return { success: false, error: rect.error };
+    expression = `(function() {
+      const __el__ = document.elementFromPoint(${rect.cx}, ${rect.cy});
+      if (!__el__) return { success: false, error: '坐标 (${rect.cx}, ${rect.cy}) 处未找到元素' };
+      ${jsTemplate}
+    })()`;
+  } else {
+    return { success: false, error: '需要提供 element_id 或 selector' };
+  }
+
+  const result = await CDPSessionManager.sendCommand(tabId, 'Runtime.evaluate', {
+    expression,
+    returnByValue: true,
+    awaitPromise: false,
+  });
+
+  if (!result.success) return { success: false, error: result.error };
+  const value = result.result?.result?.value;
+  if (value && typeof value === 'object' && value.success === false) {
+    return { success: false, error: value.error };
+  }
+  return { success: true, data: value };
 };
 
 // ============ 动作实现 ============
@@ -307,16 +358,609 @@ const performScroll = async (
   };
 };
 
+/** 使用 JS scrollTo/scrollBy 实现滚动（方向/目标模式） */
+const performScrollJS = async (
+  tabId: number,
+  opts: { direction?: string; amount?: number; scroll_to?: string },
+): Promise<FunctionResult> => {
+  const attachResult = await CDPSessionManager.attach(tabId);
+  if (!attachResult.success) return { success: false, error: attachResult.error };
+
+  let expression: string;
+  if (opts.scroll_to === 'top') {
+    expression = `(function() { window.scrollTo({ top: 0, behavior: 'instant' }); return { success: true, message: '已滚动到页面顶部' }; })()`;
+  } else if (opts.scroll_to === 'bottom') {
+    expression = `(function() { window.scrollTo({ top: document.documentElement.scrollHeight, behavior: 'instant' }); return { success: true, message: '已滚动到页面底部' }; })()`;
+  } else if (opts.direction) {
+    const amount = Math.max(1, Math.floor(Number(opts.amount) || 500));
+    let scrollX = 0;
+    let scrollY = 0;
+    switch (opts.direction) {
+      case 'up': scrollY = -amount; break;
+      case 'down': scrollY = amount; break;
+      case 'left': scrollX = -amount; break;
+      case 'right': scrollX = amount; break;
+    }
+    expression = `(function() { window.scrollBy({ left: ${scrollX}, top: ${scrollY}, behavior: 'instant' }); return { success: true, message: '已滚动 ${opts.direction} ${amount}px' }; })()`;
+  } else {
+    return { success: false, error: '需要提供 direction 或 scroll_to' };
+  }
+
+  const result = await CDPSessionManager.sendCommand(tabId, 'Runtime.evaluate', {
+    expression,
+    returnByValue: true,
+    awaitPromise: false,
+  });
+
+  if (!result.success) return { success: false, error: result.error };
+  const value = result.result?.result?.value;
+  return { success: true, data: value };
+};
+
+/** 填写表单元素值（setNativeInputValue 方式，兼容 React 受控组件） */
+const performFill = async (
+  tabId: number,
+  params: { element_id?: string; selector?: string; value: string },
+  signal?: AbortSignal,
+): Promise<FunctionResult> => {
+  const value = params.value;
+  // 将 value 安全注入 JS 代码
+  const valueJson = JSON.stringify(value);
+  const jsTemplate = `
+    try {
+      const tagName = __el__.tagName.toLowerCase();
+      if (__el__.isContentEditable) {
+        __el__.focus();
+        __el__.textContent = ${valueJson};
+        __el__.dispatchEvent(new Event('input', { bubbles: true }));
+        return { success: true, message: '已填写 contentEditable 元素' };
+      }
+      if (tagName === 'input' || tagName === 'textarea') {
+        __el__.focus();
+        var nativeSet = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value');
+        if (!nativeSet || !nativeSet.set) {
+          nativeSet = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, 'value');
+        }
+        if (nativeSet && nativeSet.set) {
+          nativeSet.set.call(__el__, ${valueJson});
+        } else {
+          __el__.value = ${valueJson};
+        }
+        __el__.dispatchEvent(new Event('input', { bubbles: true }));
+        __el__.dispatchEvent(new Event('change', { bubbles: true }));
+        return { success: true, message: '已填写 ' + tagName + ' 元素' };
+      }
+      return { success: false, error: '不支持填写的元素类型: ' + tagName };
+    } catch (e) {
+      return { success: false, error: '填写失败: ' + e.message };
+    }
+  `;
+  return evaluateOnElement(tabId, params, jsTemplate, signal);
+};
+
+/** 清空表单元素值 */
+const performClear = async (
+  tabId: number,
+  params: { element_id?: string; selector?: string },
+  signal?: AbortSignal,
+): Promise<FunctionResult> => {
+  const jsTemplate = `
+    try {
+      const tagName = __el__.tagName.toLowerCase();
+      if (__el__.isContentEditable) {
+        __el__.focus();
+        __el__.textContent = '';
+        __el__.dispatchEvent(new Event('input', { bubbles: true }));
+        return { success: true, message: '已清空 contentEditable 元素' };
+      }
+      if (tagName === 'select') {
+        __el__.selectedIndex = -1;
+        __el__.dispatchEvent(new Event('change', { bubbles: true }));
+        return { success: true, message: '已清空 select 元素' };
+      }
+      if (tagName === 'input' || tagName === 'textarea') {
+        __el__.focus();
+        var nativeSet = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value');
+        if (!nativeSet || !nativeSet.set) {
+          nativeSet = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, 'value');
+        }
+        if (nativeSet && nativeSet.set) {
+          nativeSet.set.call(__el__, '');
+        } else {
+          __el__.value = '';
+        }
+        __el__.dispatchEvent(new Event('input', { bubbles: true }));
+        __el__.dispatchEvent(new Event('change', { bubbles: true }));
+        return { success: true, message: '已清空 ' + tagName + ' 元素' };
+      }
+      return { success: false, error: '不支持清空的元素类型: ' + tagName };
+    } catch (e) {
+      return { success: false, error: '清空失败: ' + e.message };
+    }
+  `;
+  return evaluateOnElement(tabId, params, jsTemplate, signal);
+};
+
+/** 选择下拉选项 */
+const performSelect = async (
+  tabId: number,
+  params: { element_id?: string; selector?: string; value: string },
+  signal?: AbortSignal,
+): Promise<FunctionResult> => {
+  const valueJson = JSON.stringify(params.value);
+  const jsTemplate = `
+    try {
+      var selectEl = __el__;
+      if (selectEl.tagName.toLowerCase() !== 'select') {
+        selectEl = __el__.querySelector('select');
+        if (!selectEl) return { success: false, error: '目标元素不是 select 且内部也未找到 select' };
+      }
+      var options = Array.from(selectEl.options);
+      var targetValue = ${valueJson};
+      var matched = options.find(function(o) { return o.value === targetValue; })
+        || options.find(function(o) { return o.textContent.trim() === targetValue; })
+        || options.find(function(o) { return o.textContent.includes(targetValue); });
+      if (!matched) {
+        var available = options.map(function(o) { return o.value + '(' + o.textContent.trim() + ')'; }).join(', ');
+        return { success: false, error: '未找到匹配的选项: ' + targetValue + '。可用选项: ' + available };
+      }
+      selectEl.value = matched.value;
+      selectEl.dispatchEvent(new Event('change', { bubbles: true }));
+      return { success: true, message: '已选择: ' + matched.textContent.trim(), selectedValue: matched.value };
+    } catch (e) {
+      return { success: false, error: '选择失败: ' + e.message };
+    }
+  `;
+  return evaluateOnElement(tabId, params, jsTemplate, signal);
+};
+
+/** 按文本内容点击元素：在页面中遍历 DOM 找到包含指定文本的可点击元素，获取坐标后用 CDP 点击 */
+const performClickText = async (
+  tabId: number,
+  text: string,
+  matchMode: string,
+  signal?: AbortSignal,
+): Promise<FunctionResult> => {
+  const attachResult = await CDPSessionManager.attach(tabId);
+  if (!attachResult.success) return { success: false, error: attachResult.error };
+
+  const textJson = JSON.stringify(text);
+  const isExact = matchMode === 'exact';
+
+  // 在页面中搜索匹配文本的可点击元素，返回其中心坐标
+  const findExpression = `(function() {
+    var targetText = ${textJson};
+    var isExact = ${isExact};
+    var clickable = ['A', 'BUTTON', 'INPUT', 'SELECT', 'TEXTAREA', 'LABEL', 'SUMMARY', 'DETAILS'];
+    var isClickable = function(el) {
+      if (!el || el.nodeType !== 1) return false;
+      if (clickable.indexOf(el.tagName) >= 0) return true;
+      if (el.getAttribute('role') === 'button' || el.getAttribute('role') === 'link' || el.getAttribute('role') === 'tab' || el.getAttribute('role') === 'menuitem') return true;
+      if (el.onclick || el.getAttribute('onclick')) return true;
+      var cs = window.getComputedStyle(el);
+      if (cs.cursor === 'pointer') return true;
+      return false;
+    };
+    var findClickableAncestor = function(node) {
+      var el = node.nodeType === 3 ? node.parentElement : node;
+      while (el && el !== document.body) {
+        if (isClickable(el)) return el;
+        el = el.parentElement;
+      }
+      return null;
+    };
+    var walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, null, false);
+    var candidates = [];
+    while (walker.nextNode()) {
+      var textNode = walker.currentNode;
+      var nodeText = textNode.textContent || '';
+      var matched = isExact ? nodeText.trim() === targetText : nodeText.includes(targetText);
+      if (!matched) continue;
+      var clickEl = findClickableAncestor(textNode);
+      if (!clickEl) continue;
+      var rect = clickEl.getBoundingClientRect();
+      if (rect.width === 0 || rect.height === 0) continue;
+      var visible = rect.top < window.innerHeight && rect.bottom > 0 && rect.left < window.innerWidth && rect.right > 0;
+      if (!visible) continue;
+      candidates.push({
+        cx: Math.round(rect.left + rect.width / 2),
+        cy: Math.round(rect.top + rect.height / 2),
+        text: clickEl.textContent ? clickEl.textContent.trim().substring(0, 80) : '',
+        tag: clickEl.tagName.toLowerCase(),
+      });
+    }
+    if (candidates.length === 0) {
+      return { success: false, error: '未找到包含文本 "' + targetText + '" 的可点击元素' };
+    }
+    return { success: true, element: candidates[0] };
+  })()`;
+
+  const findResult = await CDPSessionManager.sendCommand(tabId, 'Runtime.evaluate', {
+    expression: findExpression,
+    returnByValue: true,
+    awaitPromise: false,
+  });
+
+  if (!findResult.success) return { success: false, error: findResult.error };
+  const findValue = findResult.result?.result?.value;
+  if (!findValue || findValue.success === false) {
+    return { success: false, error: findValue?.error || '查找文本元素失败' };
+  }
+
+  const { cx, cy } = findValue.element;
+  // 用 CDP 可信点击
+  const clickResult = await performClick(tabId, cx, cy, 'left', 1, signal);
+  if (!clickResult.success) return clickResult;
+
+  return {
+    success: true,
+    data: {
+      ...findValue.element,
+      message: `CDP 点击文本 "${text}" → (${cx}, ${cy}) [${findValue.element.tag}]`,
+    },
+  };
+};
+
+/** 滚动元素到可视区域 */
+const performScrollIntoView = async (
+  tabId: number,
+  params: { element_id?: string; selector?: string },
+  signal?: AbortSignal,
+): Promise<FunctionResult> => {
+  const jsTemplate = `
+    try {
+      __el__.scrollIntoView({ block: 'center', inline: 'center', behavior: 'instant' });
+      return { success: true, message: '已滚动元素到可视区域' };
+    } catch (e) {
+      return { success: false, error: '滚动失败: ' + e.message };
+    }
+  `;
+  return evaluateOnElement(tabId, params, jsTemplate, signal);
+};
+
+/** 聚焦元素 */
+const performFocus = async (
+  tabId: number,
+  params: { element_id?: string; selector?: string },
+  signal?: AbortSignal,
+): Promise<FunctionResult> => {
+  const jsTemplate = `
+    try {
+      __el__.focus();
+      return { success: true, message: '已聚焦元素: ' + __el__.tagName.toLowerCase() };
+    } catch (e) {
+      return { success: false, error: '聚焦失败: ' + e.message };
+    }
+  `;
+  return evaluateOnElement(tabId, params, jsTemplate, signal);
+};
+
+/** 等待元素出现（轮询） */
+const performWaitForElement = async (
+  tabId: number,
+  selector: string,
+  timeoutMs: number,
+  visible: boolean,
+  signal?: AbortSignal,
+): Promise<FunctionResult> => {
+  const attachResult = await CDPSessionManager.attach(tabId);
+  if (!attachResult.success) return { success: false, error: attachResult.error };
+
+  const normalizedTimeout = Math.max(200, Math.floor(Number(timeoutMs) || 5000));
+  const selectorJson = JSON.stringify(selector);
+  const startedAt = Date.now();
+
+  while (Date.now() - startedAt < normalizedTimeout) {
+    if (signal?.aborted) return { success: false, error: '已取消' };
+
+    const checkExpression = `(function() {
+      var el = document.querySelector(${selectorJson});
+      if (!el) return { found: false };
+      if (${visible}) {
+        var rect = el.getBoundingClientRect();
+        var cs = window.getComputedStyle(el);
+        if (rect.width === 0 && rect.height === 0) return { found: false };
+        if (cs.display === 'none' || cs.visibility === 'hidden' || cs.opacity === '0') return { found: false };
+      }
+      return { found: true, tag: el.tagName.toLowerCase(), text: (el.textContent || '').trim().substring(0, 60) };
+    })()`;
+
+    const result = await CDPSessionManager.sendCommand(tabId, 'Runtime.evaluate', {
+      expression: checkExpression,
+      returnByValue: true,
+      awaitPromise: false,
+    });
+
+    if (result.success) {
+      const value = result.result?.result?.value;
+      if (value?.found) {
+        return {
+          success: true,
+          data: {
+            message: `元素已找到: ${selector}`,
+            tag: value.tag,
+            text: value.text,
+            elapsed_ms: Date.now() - startedAt,
+          },
+        };
+      }
+    }
+
+    await sleep(300, signal);
+  }
+
+  return { success: false, error: `等待元素超时（${normalizedTimeout}ms）: ${selector}` };
+};
+
+/** 等待页面中出现指定文本（轮询） */
+const performWaitText = async (
+  tabId: number,
+  text: string,
+  matchMode: string,
+  timeoutMs: number,
+  signal?: AbortSignal,
+): Promise<FunctionResult> => {
+  const attachResult = await CDPSessionManager.attach(tabId);
+  if (!attachResult.success) return { success: false, error: attachResult.error };
+
+  const normalizedTimeout = Math.max(200, Math.floor(Number(timeoutMs) || 5000));
+  const textJson = JSON.stringify(text);
+  const isExact = matchMode === 'exact';
+  const startedAt = Date.now();
+
+  while (Date.now() - startedAt < normalizedTimeout) {
+    if (signal?.aborted) return { success: false, error: '已取消' };
+
+    const checkExpression = `(function() {
+      var bodyText = document.body ? document.body.innerText : '';
+      var target = ${textJson};
+      var matched = ${isExact} ? bodyText.trim() === target : bodyText.includes(target);
+      return { matched: matched };
+    })()`;
+
+    const result = await CDPSessionManager.sendCommand(tabId, 'Runtime.evaluate', {
+      expression: checkExpression,
+      returnByValue: true,
+      awaitPromise: false,
+    });
+
+    if (result.success) {
+      const value = result.result?.result?.value;
+      if (value?.matched) {
+        return {
+          success: true,
+          data: {
+            message: `已找到文本: "${text}"`,
+            elapsed_ms: Date.now() - startedAt,
+          },
+        };
+      }
+    }
+
+    await sleep(300, signal);
+  }
+
+  return { success: false, error: `等待文本超时（${normalizedTimeout}ms）: "${text}"` };
+};
+
+/** 等待页面导航稳定（从 page-action.ts 搬迁） */
+interface WaitNavigationOptions {
+  timeoutMs: number;
+  stableMs: number;
+  requireUrlChange: boolean;
+  expectedUrlContains?: string;
+  expectedUrlRegex?: string;
+}
+
+const waitForTabNavigationStable = async (
+  tabId: number,
+  options: WaitNavigationOptions,
+  signal?: AbortSignal,
+): Promise<Record<string, unknown>> => {
+  const timeoutMs = Math.max(200, Math.floor(Number(options.timeoutMs) || 10_000));
+  const stableMs = Math.max(200, Math.floor(Number(options.stableMs) || 1_200));
+  const requireUrlChange = options.requireUrlChange !== false;
+  const expectedUrlContains = String(options.expectedUrlContains || '').trim();
+  const expectedUrlRegexText = String(options.expectedUrlRegex || '').trim();
+  const expectedUrlRegex = expectedUrlRegexText
+    ? (() => {
+      try {
+        return new RegExp(expectedUrlRegexText);
+      } catch {
+        return null;
+      }
+    })()
+    : null;
+
+  const urlMatched = (url: string): boolean => {
+    if (!url) return false;
+    if (expectedUrlContains && url.includes(expectedUrlContains)) return true;
+    if (expectedUrlRegex && expectedUrlRegex.test(url)) return true;
+    return false;
+  };
+
+  const initialTab = await chrome.tabs.get(tabId);
+  const fromUrl = initialTab.url || initialTab.pendingUrl || '';
+  let currentUrl = fromUrl;
+  let currentStatus = initialTab.status || 'complete';
+  let sawUrlChange = false;
+  let sawLoading = currentStatus === 'loading';
+  let expectedMatched = urlMatched(currentUrl);
+  let lastActivityAt = Date.now();
+  const startedAt = Date.now();
+
+  const applyTabSnapshot = (tab?: chrome.tabs.Tab | null): void => {
+    if (!tab) return;
+    const nextUrl = tab.url || tab.pendingUrl || '';
+    const nextStatus = tab.status || currentStatus;
+    const now = Date.now();
+    if (nextUrl && nextUrl !== currentUrl) {
+      currentUrl = nextUrl;
+      sawUrlChange = true;
+      lastActivityAt = now;
+    } else if (!currentUrl && nextUrl) {
+      currentUrl = nextUrl;
+    }
+    if (urlMatched(nextUrl)) expectedMatched = true;
+    if (nextStatus !== currentStatus) {
+      currentStatus = nextStatus;
+      lastActivityAt = now;
+    } else {
+      currentStatus = nextStatus;
+    }
+    if (nextStatus === 'loading') {
+      sawLoading = true;
+      lastActivityAt = now;
+    }
+  };
+
+  return await new Promise<Record<string, unknown>>((resolve, reject) => {
+    let settled = false;
+    let timeoutHandle: ReturnType<typeof setTimeout> | null = null;
+    let pollHandle: ReturnType<typeof setInterval> | null = null;
+
+    const cleanup = () => {
+      if (settled) return;
+      settled = true;
+      if (timeoutHandle) clearTimeout(timeoutHandle);
+      if (pollHandle) clearInterval(pollHandle);
+      chrome.tabs.onUpdated.removeListener(handleUpdated);
+      signal?.removeEventListener('abort', handleAbort);
+    };
+
+    const done = (payload: { success: true; data: Record<string, unknown> } | { success: false; error: string }) => {
+      if (settled) return;
+      cleanup();
+      if (payload.success) {
+        resolve(payload.data);
+      } else {
+        reject(new Error(payload.error));
+      }
+    };
+
+    const maybeResolve = () => {
+      const now = Date.now();
+      const hasTrigger = requireUrlChange
+        ? (sawUrlChange || sawLoading || expectedMatched)
+        : true;
+      if (!hasTrigger) return;
+      if (currentStatus !== 'complete') return;
+      if (now - lastActivityAt < stableMs) return;
+      done({
+        success: true,
+        data: {
+          message: '页面导航已稳定',
+          from_url: fromUrl,
+          to_url: currentUrl,
+          elapsed_ms: now - startedAt,
+          require_url_change: requireUrlChange,
+          url_changed: sawUrlChange,
+          saw_loading: sawLoading,
+          expected_url_matched: expectedMatched,
+        },
+      });
+    };
+
+    const handleUpdated = (updatedTabId: number, _changeInfo: chrome.tabs.TabChangeInfo, tab: chrome.tabs.Tab) => {
+      if (updatedTabId !== tabId) return;
+      applyTabSnapshot(tab);
+      maybeResolve();
+    };
+
+    const handleAbort = () => {
+      done({
+        success: false,
+        error: 'aborted',
+      });
+    };
+
+    chrome.tabs.onUpdated.addListener(handleUpdated);
+    signal?.addEventListener('abort', handleAbort, { once: true });
+
+    timeoutHandle = setTimeout(() => {
+      done({
+        success: false,
+        error: `等待页面导航稳定超时（${timeoutMs}ms）`,
+      });
+    }, timeoutMs);
+
+    pollHandle = setInterval(() => {
+      void chrome.tabs.get(tabId)
+        .then((tab) => {
+          applyTabSnapshot(tab);
+          maybeResolve();
+        })
+        .catch(() => {
+          done({
+            success: false,
+            error: `目标标签页不可用: ${tabId}`,
+          });
+        });
+    }, 180);
+
+    maybeResolve();
+  });
+};
+
+/** 获取元素信息 */
+const performGetInfo = async (
+  tabId: number,
+  params: { element_id?: string; selector?: string },
+  signal?: AbortSignal,
+): Promise<FunctionResult> => {
+  const jsTemplate = `
+    try {
+      var rect = __el__.getBoundingClientRect();
+      var cs = window.getComputedStyle(__el__);
+      var visible = rect.width > 0 && rect.height > 0 && cs.display !== 'none' && cs.visibility !== 'hidden' && cs.opacity !== '0';
+      return {
+        success: true,
+        info: {
+          tagName: __el__.tagName.toLowerCase(),
+          id: __el__.id || '',
+          classes: Array.from(__el__.classList).join(' '),
+          text: (__el__.textContent || '').trim().substring(0, 200),
+          value: __el__.value !== undefined ? String(__el__.value) : '',
+          type: __el__.type || '',
+          disabled: !!__el__.disabled,
+          checked: !!__el__.checked,
+          href: __el__.href || '',
+          src: __el__.src || '',
+          placeholder: __el__.placeholder || '',
+          rect: {
+            x: Math.round(rect.x),
+            y: Math.round(rect.y),
+            width: Math.round(rect.width),
+            height: Math.round(rect.height),
+          },
+          visible: visible,
+        },
+      };
+    } catch (e) {
+      return { success: false, error: '获取元素信息失败: ' + e.message };
+    }
+  `;
+  const result = await evaluateOnElement(tabId, params, jsTemplate, signal);
+  if (!result.success) return result;
+  // evaluateOnElement 返回的 data 是 { success: true, info: {...} }
+  if (result.data?.info) {
+    return { success: true, data: result.data.info };
+  }
+  return result;
+};
+
 // ============ 工具定义 ============
 
 export const cdpInputFunction: FunctionDefinition = {
   name: 'cdp_input',
   description: [
-    '通过 Chrome DevTools Protocol 发送可信鼠标/键盘事件（绕过 isTrusted 检测）。',
-    '适用场景：普通 page_action 点击无效（被反爬拦截）、需要拖拽操作（滑块验证）、需要精确坐标操作。',
-    '定位方式：优先传 element_id（来自 page_snapshot），也可直接传 x/y 坐标。',
-    '支持动作：click / double_click / right_click / hover / drag / type / key_press / scroll。',
-    '注意：首次使用时会 attach debugger，页面顶部会出现调试提示条。',
+    '在用户当前浏览的页面上执行交互操作。这是操作页面的主要工具。',
+    '点击：click/double_click/right_click/click_text（按可见文本点击）。',
+    '输入：fill（填写表单）/clear（清空）/select（下拉选择）/type（逐字符输入）/key_press（按键）/focus（聚焦）。',
+    '滚动：scroll/scroll_into_view。',
+    '等待：wait_for_element/wait_text/wait_navigation。',
+    '其他：hover/drag/get_info。',
+    '定位方式：element_id（来自 page_snapshot，优先）或 selector（CSS 选择器）或 x/y 坐标。',
   ].join(' '),
   supportsParallel: false,
   parameters: {
@@ -324,12 +968,20 @@ export const cdpInputFunction: FunctionDefinition = {
     properties: {
       action: {
         type: 'string',
-        enum: ['click', 'double_click', 'right_click', 'hover', 'drag', 'type', 'key_press', 'scroll'],
-        description: '输入动作类型',
+        enum: [
+          'click', 'double_click', 'right_click', 'hover', 'drag', 'type', 'key_press', 'scroll',
+          'fill', 'clear', 'select', 'click_text', 'scroll_into_view', 'focus',
+          'wait_for_element', 'wait_text', 'wait_navigation', 'get_info',
+        ],
+        description: '操作类型',
       },
       element_id: {
         type: 'string',
-        description: 'page_snapshot 返回的元素句柄。click/double_click/right_click/hover/drag(起点)/scroll 可用，优先于 x/y 坐标',
+        description: 'page_snapshot 返回的元素句柄。用于定位目标元素，优先于 selector 和 x/y 坐标',
+      },
+      selector: {
+        type: 'string',
+        description: 'CSS 选择器。fill/clear/select/focus/scroll_into_view/get_info/wait_for_element/click_text 可用',
       },
       x: {
         type: 'number',
@@ -349,7 +1001,11 @@ export const cdpInputFunction: FunctionDefinition = {
       },
       text: {
         type: 'string',
-        description: 'type 动作要输入的文本',
+        description: 'type 动作要输入的文本，或 click_text/wait_text 的匹配文本',
+      },
+      value: {
+        type: 'string',
+        description: 'fill/select 的目标值',
       },
       key: {
         type: 'string',
@@ -360,6 +1016,11 @@ export const cdpInputFunction: FunctionDefinition = {
         items: { type: 'string' },
         description: 'key_press 的修饰键，可选 ctrl/shift/alt/meta',
       },
+      match_mode: {
+        type: 'string',
+        enum: ['contains', 'exact'],
+        description: 'click_text/wait_text 文本匹配模式，默认 contains',
+      },
       delta_x: {
         type: 'number',
         description: 'scroll 水平滚动量（像素），正数向右。默认 0',
@@ -368,9 +1029,47 @@ export const cdpInputFunction: FunctionDefinition = {
         type: 'number',
         description: 'scroll 垂直滚动量（像素），正数向下。默认 120',
       },
+      direction: {
+        type: 'string',
+        enum: ['up', 'down', 'left', 'right'],
+        description: 'scroll 滚动方向（与 scroll_to 二选一，不需要坐标）',
+      },
+      scroll_to: {
+        type: 'string',
+        enum: ['top', 'bottom'],
+        description: 'scroll 滚动目标 top/bottom（不需要坐标）',
+      },
+      amount: {
+        type: 'number',
+        description: 'scroll 滚动像素量（与 direction 配合使用），默认 500',
+      },
       interval_ms: {
         type: 'number',
         description: 'type 动作的字符间隔毫秒数，默认 30，范围 0-200',
+      },
+      timeout_ms: {
+        type: 'number',
+        description: '等待超时毫秒数（wait_for_element/wait_text 默认 5000，wait_navigation 默认 10000）',
+      },
+      visible: {
+        type: 'boolean',
+        description: 'wait_for_element 是否要求元素可见，默认 true',
+      },
+      stable_ms: {
+        type: 'number',
+        description: 'wait_navigation 导航稳定时长，默认 1200ms',
+      },
+      require_url_change: {
+        type: 'boolean',
+        description: 'wait_navigation 是否要求 URL 变化，默认 true',
+      },
+      url_contains: {
+        type: 'string',
+        description: 'wait_navigation URL 包含匹配',
+      },
+      url_regex: {
+        type: 'string',
+        description: 'wait_navigation URL 正则匹配（字符串形式）',
       },
       tab_id: {
         type: 'number',
@@ -382,18 +1081,25 @@ export const cdpInputFunction: FunctionDefinition = {
   validate: (params: {
     action?: string;
     element_id?: string;
+    selector?: string;
     x?: number;
     y?: number;
     to_x?: number;
     to_y?: number;
     text?: string;
+    value?: string;
     key?: string;
+    direction?: string;
+    scroll_to?: string;
   }) => {
     if (!params?.action) return '缺少 action';
-    const needCoords = ['click', 'double_click', 'right_click', 'hover', 'scroll'];
+
+    // 需要坐标的原始鼠标操作（不包含 scroll，scroll 有多种模式）
+    const needCoords = ['click', 'double_click', 'right_click', 'hover'];
     if (needCoords.includes(params.action) && !params.element_id && (typeof params.x !== 'number' || typeof params.y !== 'number')) {
       return `${params.action} 需要提供 element_id 或 (x, y) 坐标`;
     }
+
     if (params.action === 'drag') {
       if (!params.element_id && (typeof params.x !== 'number' || typeof params.y !== 'number')) {
         return 'drag 需要提供起点 element_id 或 (x, y)';
@@ -402,28 +1108,79 @@ export const cdpInputFunction: FunctionDefinition = {
         return 'drag 需要提供终点 (to_x, to_y)';
       }
     }
+
     if (params.action === 'type' && !params.text) {
       return 'type 需要提供 text';
     }
+
     if (params.action === 'key_press' && !params.key) {
       return 'key_press 需要提供 key';
     }
+
+    // scroll 支持三种模式：坐标+delta / direction / scroll_to
+    if (params.action === 'scroll') {
+      const hasCoords = params.element_id || (typeof params.x === 'number' && typeof params.y === 'number');
+      const hasDirection = !!params.direction;
+      const hasScrollTo = !!params.scroll_to;
+      if (!hasCoords && !hasDirection && !hasScrollTo) {
+        return 'scroll 需要 element_id/(x,y) 坐标 或 direction 或 scroll_to';
+      }
+    }
+
+    // fill/select 需要定位器 + value
+    if (params.action === 'fill' || params.action === 'select') {
+      if (!params.element_id && !params.selector) {
+        return `${params.action} 需要提供 element_id 或 selector`;
+      }
+      if (typeof params.value !== 'string') {
+        return `${params.action} 需要提供 value（字符串）`;
+      }
+    }
+
+    // clear/focus/scroll_into_view/get_info 需要定位器
+    const needLocator = ['clear', 'focus', 'scroll_into_view', 'get_info'];
+    if (needLocator.includes(params.action) && !params.element_id && !params.selector) {
+      return `${params.action} 需要提供 element_id 或 selector`;
+    }
+
+    // click_text/wait_text 需要 text
+    if ((params.action === 'click_text' || params.action === 'wait_text') && !params.text) {
+      return `${params.action} 需要提供 text`;
+    }
+
+    // wait_for_element 需要 selector
+    if (params.action === 'wait_for_element' && !params.selector) {
+      return 'wait_for_element 需要提供 selector';
+    }
+
     return null;
   },
   execute: async (
     params: {
       action: string;
       element_id?: string;
+      selector?: string;
       x?: number;
       y?: number;
       to_x?: number;
       to_y?: number;
       text?: string;
+      value?: string;
       key?: string;
       modifiers?: string[];
+      match_mode?: string;
       delta_x?: number;
       delta_y?: number;
+      direction?: string;
+      scroll_to?: string;
+      amount?: number;
       interval_ms?: number;
+      timeout_ms?: number;
+      visible?: boolean;
+      stable_ms?: number;
+      require_url_change?: boolean;
+      url_contains?: string;
+      url_regex?: string;
       tab_id?: number;
     },
     context?: ToolExecutionContext,
@@ -443,9 +1200,12 @@ export const cdpInputFunction: FunctionDefinition = {
       tabId = activeTabId;
     }
 
-    // 检查 CDP 可用性
-    if (!CDPSessionManager.isSupported()) {
-      return { success: false, error: 'chrome.debugger API 不可用' };
+    // wait_navigation 不需要 CDP debugger（使用 chrome.tabs.onUpdated）
+    // 其他操作需要检查 CDP 可用性
+    if (params.action !== 'wait_navigation') {
+      if (!CDPSessionManager.isSupported()) {
+        return { success: false, error: 'chrome.debugger API 不可用' };
+      }
     }
 
     const signal = context?.signal;
@@ -484,9 +1244,73 @@ export const cdpInputFunction: FunctionDefinition = {
       }
 
       case 'scroll': {
+        // 优先使用 direction/scroll_to 模式（JS 方式，不需要坐标）
+        if (params.direction || params.scroll_to) {
+          return performScrollJS(tabId, {
+            direction: params.direction,
+            amount: params.amount,
+            scroll_to: params.scroll_to,
+          });
+        }
+        // 传统 delta 模式（需要坐标）
         const coords = await resolveTargetCoords(tabId, params, signal);
         if (!coords.success) return { success: false, error: coords.error };
         return performScroll(tabId, coords.x, coords.y, params.delta_x ?? 0, params.delta_y ?? 120);
+      }
+
+      case 'fill': {
+        return performFill(tabId, { element_id: params.element_id, selector: params.selector, value: params.value! }, signal);
+      }
+
+      case 'clear': {
+        return performClear(tabId, { element_id: params.element_id, selector: params.selector }, signal);
+      }
+
+      case 'select': {
+        return performSelect(tabId, { element_id: params.element_id, selector: params.selector, value: params.value! }, signal);
+      }
+
+      case 'click_text': {
+        return performClickText(tabId, params.text!, params.match_mode || 'contains', signal);
+      }
+
+      case 'scroll_into_view': {
+        return performScrollIntoView(tabId, { element_id: params.element_id, selector: params.selector }, signal);
+      }
+
+      case 'focus': {
+        return performFocus(tabId, { element_id: params.element_id, selector: params.selector }, signal);
+      }
+
+      case 'wait_for_element': {
+        return performWaitForElement(tabId, params.selector!, params.timeout_ms ?? 5000, params.visible !== false, signal);
+      }
+
+      case 'wait_text': {
+        return performWaitText(tabId, params.text!, params.match_mode || 'contains', params.timeout_ms ?? 5000, signal);
+      }
+
+      case 'wait_navigation': {
+        try {
+          const data = await waitForTabNavigationStable(
+            tabId,
+            {
+              timeoutMs: params.timeout_ms ?? 10_000,
+              stableMs: params.stable_ms ?? 1_200,
+              requireUrlChange: params.require_url_change !== false,
+              expectedUrlContains: params.url_contains,
+              expectedUrlRegex: params.url_regex,
+            },
+            signal,
+          );
+          return { success: true, data };
+        } catch (err: any) {
+          return { success: false, error: err?.message || '等待页面导航稳定失败' };
+        }
+      }
+
+      case 'get_info': {
+        return performGetInfo(tabId, { element_id: params.element_id, selector: params.selector }, signal);
       }
 
       default:

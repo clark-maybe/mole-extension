@@ -24,7 +24,7 @@ import {
   INTERNAL_STATUS_HINT, INTERNAL_STATUS_LINE_HINT, INTERNAL_STATUS_SEGMENT_HINT,
 } from './float-ball/constants';
 import type { Side, RuntimeTextMode, RecentCompletedTaskItem, SavedPosition } from './float-ball/constants';
-import { FUNCTION_ICONS, FUNCTION_LABELS, LOGO_ASK_USER } from './float-ball/icons';
+import { FUNCTION_ICONS, FUNCTION_LABELS, LOGO_ASK_USER, LOGO_REQUEST_CONFIRMATION } from './float-ball/icons';
 import { getStyles } from './float-ball/styles';
 import { escapeHtml, markdownToHtml } from './float-ball/markdown';
 import {
@@ -2460,6 +2460,7 @@ export const initFloatBall = async () => {
         <div class="mole-approval-actions">
           <button class="mole-approval-btn approve">批准</button>
           <button class="mole-approval-btn reject">拒绝</button>
+          <button class="mole-approval-btn trust-all">本次不再询问</button>
         </div>
         <div class="mole-approval-reject-input">
           <input class="mole-approval-reject-text" placeholder="拒绝理由（可选）" />
@@ -3445,7 +3446,17 @@ export const initFloatBall = async () => {
       const requestId = card.getAttribute('data-request-id');
       if (!requestId) return;
 
-      if (approvalBtn.classList.contains('approve')) {
+      if (approvalBtn.classList.contains('trust-all')) {
+        // 本次不再询问：批准并通知后续自动通过
+        Channel.send('__approval_response', { requestId, approved: true, trustAll: true });
+        disableApprovalCard(card, true);
+        // 更新标题提示
+        const standalone = card.closest('.mole-approval-standalone') as HTMLElement;
+        if (standalone) {
+          const titleEl = standalone.querySelector('.mole-approval-header-bar span') as HTMLElement;
+          if (titleEl) titleEl.textContent = '已批准（本次不再询问）';
+        }
+      } else if (approvalBtn.classList.contains('approve')) {
         // 批准
         Channel.send('__approval_response', { requestId, approved: true });
         disableApprovalCard(card, true);

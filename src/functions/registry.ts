@@ -17,8 +17,6 @@ import { pageRepairFunction } from './page-repair';
 import { timerFunction } from './timer';
 import { fetchUrlFunction } from './fetch-url';
 import { tabNavigateFunction } from './tab-navigate';
-import { pageActionFunction } from './page-action';
-import { jsExecuteFunction } from './js-execute';
 import { clipboardOpsFunction } from './clipboard-ops';
 import { screenshotFunction } from './screenshot';
 import { selectionContextFunction } from './selection-context';
@@ -27,7 +25,6 @@ import { notificationFunction } from './notification';
 import { bookmarkOpsFunction } from './bookmark-ops';
 import { historySearchFunction } from './history-search';
 import { downloadFileFunction } from './download-file';
-import { domManipulateFunction } from './dom-manipulate';
 import { residentRuntimeFunction } from './resident-runtime';
 import { siteWorkflowFunction } from './site-workflow';
 import { cdpInputFunction } from './cdp-input';
@@ -38,8 +35,6 @@ import { cdpEmulationFunction } from './cdp-emulation';
 import { cdpConsoleFunction } from './cdp-console';
 import { cdpFetchFunction } from './cdp-fetch';
 import { cdpDomFunction } from './cdp-dom';
-import { cdpStorageFunction } from './cdp-storage';
-import { cdpCssFunction } from './cdp-css';
 import { cdpOverlayFunction } from './cdp-overlay';
 import { extractDataFunction } from './extract-data';
 import { dataPipelineFunction } from './data-pipeline';
@@ -94,8 +89,6 @@ const BUILTIN_FUNCTIONS: FunctionDefinition[] = [
   timerFunction,
   fetchUrlFunction,
   tabNavigateFunction,
-  pageActionFunction,
-  jsExecuteFunction,
   clipboardOpsFunction,
   screenshotFunction,
   selectionContextFunction,
@@ -104,7 +97,6 @@ const BUILTIN_FUNCTIONS: FunctionDefinition[] = [
   bookmarkOpsFunction,
   historySearchFunction,
   downloadFileFunction,
-  domManipulateFunction,
   residentRuntimeFunction,
   siteWorkflowFunction,
   cdpInputFunction,
@@ -115,8 +107,6 @@ const BUILTIN_FUNCTIONS: FunctionDefinition[] = [
   cdpConsoleFunction,
   cdpFetchFunction,
   cdpDomFunction,
-  cdpStorageFunction,
-  cdpCssFunction,
   cdpOverlayFunction,
   extractDataFunction,
   dataPipelineFunction,

@@ -1,7 +1,8 @@
 /**
- * CDP iframe 穿透工具
- * 通过 chrome.debugger 列出 frame 树、在指定 frame 中执行 JS
- * 解决跨域 iframe（如 reCAPTCHA、支付表单等）无法通过 content script 操作的问题
+ * CDP JS 执行工具（含 iframe 穿透）
+ * 通过 chrome.debugger 在页面中执行 JavaScript 代码
+ * 不传 frame_id 时在主 frame 执行（替代原 js_execute）
+ * 传 frame_id 时在指定 iframe 中执行（跨域穿透）
  */
 
 import type { FunctionDefinition, FunctionResult, ToolExecutionContext } from './types';
@@ -54,9 +55,24 @@ const flattenFrameTree = (
   return result;
 };
 
+/** 检测代码是否包含 return 语句，如果包含则包装为 IIFE */
+const wrapExpressionIfNeeded = (code: string): string => {
+  const trimmed = code.trim();
+  // 检测是否包含 return 语句（排除字符串内的 return）
+  if (/(?:^|\n)\s*return\s/m.test(trimmed)) {
+    return `(function() { ${trimmed} })()`;
+  }
+  return trimmed;
+};
+
 export const cdpFrameFunction: FunctionDefinition = {
   name: 'cdp_frame',
-  description: '跨 iframe 操作工具。列出页面所有 frame（主 frame + 子 iframe），在指定 frame 中执行 JavaScript，或获取 iframe 内的文本内容摘要。适用于操作跨域 iframe 内的元素（如验证码、支付表单等）。',
+  description: [
+    '在页面中执行 JavaScript 代码并返回结果。代码在页面上下文中运行，可访问 DOM 和全局变量。',
+    '支持 return 语句和 async/await。',
+    '传 frame_id 时可在指定 iframe 中执行（跨域穿透）。',
+    '其他操作：list=列出所有 frame，snapshot=获取 frame 文本内容。',
+  ].join(' '),
   supportsParallel: true,
   parameters: {
     type: 'object',
@@ -64,15 +80,19 @@ export const cdpFrameFunction: FunctionDefinition = {
       action: {
         type: 'string',
         enum: ['list', 'evaluate', 'snapshot'],
-        description: '操作类型：list=列出所有 frame, evaluate=在指定 frame 中执行 JS, snapshot=获取 frame 文本内容',
+        description: '操作类型：list=列出所有 frame, evaluate=执行 JS 代码（默认主 frame，传 frame_id 可指定 iframe）, snapshot=获取 frame 文本内容',
       },
       frame_id: {
         type: 'string',
-        description: 'frame ID（由 list 操作返回）。evaluate 和 snapshot 必填。',
+        description: 'frame ID（由 list 操作返回）。evaluate 不传时在主 frame 执行。snapshot 必填。',
       },
       expression: {
         type: 'string',
-        description: '要在 frame 中执行的 JavaScript 表达式（仅 evaluate）。',
+        description: '要执行的 JavaScript 代码。支持 return 语句（自动包装为 IIFE）。如 "return document.title" 或 "return document.querySelectorAll(\'a\').length"',
+      },
+      code: {
+        type: 'string',
+        description: 'expression 的别名，与 expression 等价。两者都传时优先 expression。',
       },
       max_length: {
         type: 'number',
@@ -93,8 +113,8 @@ export const cdpFrameFunction: FunctionDefinition = {
       return `不支持的 action: ${action}`;
     }
     if (action === 'evaluate') {
-      if (!params.frame_id) return 'evaluate 操作需要 frame_id 参数';
-      if (!params.expression) return 'evaluate 操作需要 expression 参数';
+      // expression 和 code 都可以，至少一个
+      if (!params.expression && !params.code) return 'evaluate 操作需要 expression 或 code 参数';
     }
     if (action === 'snapshot') {
       if (!params.frame_id) return 'snapshot 操作需要 frame_id 参数';
@@ -107,12 +127,15 @@ export const cdpFrameFunction: FunctionDefinition = {
       action: string;
       frame_id?: string;
       expression?: string;
+      code?: string;
       max_length?: number;
       tab_id?: number;
     },
     context?: ToolExecutionContext,
   ): Promise<FunctionResult> => {
-    const { action, frame_id, expression, max_length = 3000, tab_id } = params;
+    const { action, frame_id, max_length = 3000, tab_id } = params;
+    // expression 优先，code 作为别名
+    const rawExpression = params.expression || params.code || '';
 
     // 确定目标 tabId
     let tabId: number;
@@ -146,76 +169,106 @@ export const cdpFrameFunction: FunctionDefinition = {
       }
 
       case 'evaluate': {
-        // 先尝试用 frameContexts 映射获取 contextId
-        let contextId = CDPSessionManager.getFrameContextId(tabId, frame_id!);
+        // 自动检测 return 语句并包装为 IIFE
+        const finalExpression = wrapExpressionIfNeeded(rawExpression);
 
-        // 如果没有缓存的 contextId，尝试通过 Runtime.evaluate 配合 uniqueContextId
-        // 先确保 Runtime 域已启用（attach 会自动启用）
-        if (contextId === null) {
-          // 重新获取 frame 列表，验证 frame_id 是否有效
-          const treeResult = await CDPSessionManager.sendCommand(tabId, 'Page.getFrameTree');
-          if (!treeResult.success) {
-            return { success: false, error: `无法验证 frame: ${treeResult.error}` };
-          }
-          const frames = flattenFrameTree(treeResult.result?.frameTree);
-          const targetFrame = frames.find((f) => f.frame_id === frame_id);
-          if (!targetFrame) {
-            return { success: false, error: `未找到 frame_id: ${frame_id}` };
-          }
-
-          // 通过 Page.createIsolatedWorld 创建一个 isolated context 来获取 contextId
-          // 或直接用 Runtime.evaluate 在指定 frame 中执行
-          // 使用 Runtime.evaluate 搭配 contextId 更可靠
-          // 如果映射中没有，等待短暂时间再重试（context 可能还没有创建完毕）
-          await new Promise((r) => setTimeout(r, 200));
-          contextId = CDPSessionManager.getFrameContextId(tabId, frame_id!);
+        if (frame_id) {
+          // ——— 指定 frame 中执行（iframe 穿透） ———
+          let contextId = CDPSessionManager.getFrameContextId(tabId, frame_id);
 
           if (contextId === null) {
+            // 验证 frame_id 是否有效
+            const treeResult = await CDPSessionManager.sendCommand(tabId, 'Page.getFrameTree');
+            if (!treeResult.success) {
+              return { success: false, error: `无法验证 frame: ${treeResult.error}` };
+            }
+            const frames = flattenFrameTree(treeResult.result?.frameTree);
+            const targetFrame = frames.find((f) => f.frame_id === frame_id);
+            if (!targetFrame) {
+              return { success: false, error: `未找到 frame_id: ${frame_id}` };
+            }
+
+            // 等待短暂时间再重试（context 可能还没有创建完毕）
+            await new Promise((r) => setTimeout(r, 200));
+            contextId = CDPSessionManager.getFrameContextId(tabId, frame_id);
+
+            if (contextId === null) {
+              return {
+                success: false,
+                error: `无法获取 frame ${frame_id} 的执行上下文。可能是跨域 iframe 尚未加载完成，请稍后重试。`,
+              };
+            }
+          }
+
+          const evalResult = await CDPSessionManager.sendCommand(tabId, 'Runtime.evaluate', {
+            expression: finalExpression,
+            contextId,
+            returnByValue: true,
+            awaitPromise: true,
+            timeout: 10_000,
+          });
+
+          if (!evalResult.success) {
+            return { success: false, error: `JS 执行失败: ${evalResult.error}` };
+          }
+
+          const remoteResult = evalResult.result?.result;
+          if (remoteResult?.subtype === 'error') {
+            return { success: false, error: remoteResult.description || 'JS 执行出错' };
+          }
+
+          const exceptionDetails = evalResult.result?.exceptionDetails;
+          if (exceptionDetails) {
             return {
               success: false,
-              error: `无法获取 frame ${frame_id} 的执行上下文。可能是跨域 iframe 尚未加载完成，请稍后重试。`,
+              error: exceptionDetails.text || exceptionDetails.exception?.description || 'JS 执行异常',
             };
           }
-        }
 
-        const evalResult = await CDPSessionManager.sendCommand(tabId, 'Runtime.evaluate', {
-          expression: expression!,
-          contextId,
-          returnByValue: true,
-          awaitPromise: true,
-          timeout: 10_000,
-        });
-
-        if (!evalResult.success) {
-          return { success: false, error: `JS 执行失败: ${evalResult.error}` };
-        }
-
-        const remoteResult = evalResult.result?.result;
-        if (remoteResult?.subtype === 'error') {
           return {
-            success: false,
-            error: remoteResult.description || 'JS 执行出错',
+            success: true,
+            data: {
+              value: remoteResult?.value,
+              type: remoteResult?.type,
+              frame_id,
+              message: `在 frame ${frame_id} 中执行成功`,
+            },
+          };
+        } else {
+          // ——— 主 frame 执行（替代原 js_execute） ———
+          const evalResult = await CDPSessionManager.sendCommand(tabId, 'Runtime.evaluate', {
+            expression: finalExpression,
+            returnByValue: true,
+            awaitPromise: true,
+            timeout: 10_000,
+          });
+
+          if (!evalResult.success) {
+            return { success: false, error: `JS 执行失败: ${evalResult.error}` };
+          }
+
+          const remoteResult = evalResult.result?.result;
+          if (remoteResult?.subtype === 'error') {
+            return { success: false, error: remoteResult.description || 'JS 执行出错' };
+          }
+
+          const exceptionDetails = evalResult.result?.exceptionDetails;
+          if (exceptionDetails) {
+            return {
+              success: false,
+              error: exceptionDetails.text || exceptionDetails.exception?.description || 'JS 执行异常',
+            };
+          }
+
+          return {
+            success: true,
+            data: {
+              result: remoteResult?.value,
+              type: remoteResult?.type,
+              message: '在主 frame 中执行成功',
+            },
           };
         }
-
-        // 处理异常信息
-        const exceptionDetails = evalResult.result?.exceptionDetails;
-        if (exceptionDetails) {
-          return {
-            success: false,
-            error: exceptionDetails.text || exceptionDetails.exception?.description || 'JS 执行异常',
-          };
-        }
-
-        return {
-          success: true,
-          data: {
-            value: remoteResult?.value,
-            type: remoteResult?.type,
-            frame_id,
-            message: `在 frame ${frame_id} 中执行成功`,
-          },
-        };
       }
 
       case 'snapshot': {

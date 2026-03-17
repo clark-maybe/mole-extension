@@ -12,7 +12,7 @@ import { FUNCTION_LABELS } from './icons';
 export const replaceInternalToolTerms = (raw: string): string => {
   return raw
     .replace(/(page_snapshot|page_viewer|fetch_url)/gi, '查看页面内容')
-    .replace(/(page_action|js_execute|tab_navigate)/gi, '执行页面操作')
+    .replace(/(cdp_input|cdp_frame|tab_navigate)/gi, '执行页面操作')
     .replace(/page_assert/gi, '确认操作结果')
     .replace(/screenshot/gi, '截图查看')
     .replace(/retry_action/gi, '重试操作')
@@ -47,7 +47,7 @@ export const inferFriendlyRuntimeText = (raw: string, mode: RuntimeTextMode): st
   if (/(extract|提取|整理信息|汇总|归纳)/i.test(text)) {
     return choose('我正在提取关键信息并整理结果', '接下来我会提取关键信息并整理结果', '我已提取到关键信息', '信息还不够完整，我正在继续补齐', '暂时不需要你补充，我先整理信息');
   }
-  if (/(page_action|js_execute|执行页面操作|点击|输入|填写|导航|act|execute)/i.test(text)) {
+  if (/(cdp_input|cdp_frame|执行页面操作|点击|输入|填写|导航|act|execute)/i.test(text)) {
     return choose('我正在页面里执行关键操作', '接下来我会继续执行页面操作', '我已完成一个页面操作', '页面操作没有完全成功，我正在重试', '暂时不需要你补充，我先继续操作');
   }
   if (/(page_snapshot|page_viewer|fetch_url|查看页面|观察|定位|证据|线索|explore|observe)/i.test(text)) {
@@ -150,12 +150,12 @@ export const toLiveActionText = (toolName: string, summary?: string): string => 
     if (/等待/.test(text)) return '我正在等待页面状态稳定';
   }
 
-  if (toolName === 'page_action') return '我正在执行页面操作';
-  if (toolName === 'dom_manipulate') return '我正在定位页面上的目标元素';
+  if (toolName === 'cdp_input') return '我正在执行页面操作';
+  if (toolName === 'cdp_dom') return '我正在定位页面上的目标元素';
   if (toolName === 'page_viewer' || toolName === 'page_snapshot' || toolName === 'fetch_url') return '我正在查看页面内容';
   if (toolName === 'screenshot') return '我正在查看当前页面画面';
   if (toolName === 'tab_navigate') return '我正在切换页面继续处理';
-  if (toolName === 'js_execute') return '我正在执行页面内的辅助操作';
+  if (toolName === 'cdp_frame') return '我正在执行页面内的辅助操作';
   if (toolName === 'history_search') return '我正在查找相关信息';
   return '我正在继续处理';
 };
@@ -206,11 +206,11 @@ export const buildUserFacingActionSummary = (toolName: string, summary?: string,
     return `我已执行：${clipIntentText(cleanSummary, 42)}`;
   }
   if (toolName === 'page_snapshot' || toolName === 'page_viewer' || toolName === 'fetch_url') return '我已查看当前页面内容';
-  if (toolName === 'page_action') return '我已在页面上尝试执行关键操作';
-  if (toolName === 'dom_manipulate') return '我已查找页面上的相关元素';
+  if (toolName === 'cdp_input') return '我已在页面上尝试执行关键操作';
+  if (toolName === 'cdp_dom') return '我已查找页面上的相关元素';
   if (toolName === 'screenshot') return '我已记录当前页面画面';
   if (toolName === 'tab_navigate') return '我已切换到相关页面继续处理';
-  if (toolName === 'js_execute') return '我已执行页面内的辅助操作';
+  if (toolName === 'cdp_frame') return '我已执行页面内的辅助操作';
   if (toolName === 'history_search') return '我已搜索相关信息';
   if (toolName === 'download_file') return '我已尝试下载所需文件';
   if (toolName === 'clipboard_ops') return '我已处理剪贴板内容';

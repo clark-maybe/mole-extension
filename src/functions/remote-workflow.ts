@@ -6,6 +6,24 @@
 import type { FunctionResult, ToolExecutionContext } from './types';
 import { getBuiltinFunction, getBuiltinFunctionNames } from './registry';
 
+/** 旧工具名 → 新工具名映射（向后兼容已保存的用户工作流） */
+const LEGACY_TOOL_NAME_MAP: Record<string, string> = {
+  page_action: 'cdp_input',
+  js_execute: 'cdp_frame',
+  dom_manipulate: 'cdp_dom',
+  cdp_css: 'cdp_dom',
+  cdp_storage: 'cdp_dom',
+};
+
+/** 按名称查找内置工具，支持旧名称自动映射 */
+const resolveBuiltinFunction = (name: string) => {
+  const direct = getBuiltinFunction(name);
+  if (direct) return direct;
+  const mapped = LEGACY_TOOL_NAME_MAP[name];
+  if (mapped) return getBuiltinFunction(mapped);
+  return undefined;
+};
+
 /**
  * 获取所有支持的 plan action 名称
  * 使用函数而非顶层常量，避免循环依赖时模块初始化顺序问题
@@ -252,7 +270,7 @@ const validateRemotePlan = (raw: unknown): PlanValidationError[] => {
     const action = String((step as Record<string, unknown>).action || '').trim();
     if (!action) {
       errors.push({ stepIndex: i, action: '', message: `步骤 ${i + 1} 缺少 action 字段` });
-    } else if (!getBuiltinFunction(action)) {
+    } else if (!resolveBuiltinFunction(action)) {
       errors.push({ stepIndex: i, action, message: `步骤 ${i + 1} 的 action "${action}" 不是已注册的内置工具` });
     }
   }
@@ -271,7 +289,7 @@ const normalizeRemotePlan = (raw: unknown): RemoteWorkflowPlan | null => {
     if (!item || typeof item !== 'object') return null;
     const sourceStep = item as Record<string, unknown>;
     const action = String(sourceStep.action || '').trim();
-    if (!getBuiltinFunction(action)) return null;
+    if (!resolveBuiltinFunction(action)) return null;
     const params = sourceStep.params && typeof sourceStep.params === 'object' && !Array.isArray(sourceStep.params)
       ? sourceStep.params as Record<string, unknown>
       : {};
@@ -422,7 +440,7 @@ const runRemotePlan = async (
         continue;
       }
 
-      const runner = getBuiltinFunction(step.action);
+      const runner = resolveBuiltinFunction(step.action);
       if (!runner) {
         return { success: false, error: `unsupported plan action: ${step.action}` };
       }

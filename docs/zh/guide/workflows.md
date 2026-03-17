@@ -54,7 +54,7 @@ MoleClaw 默认包含以下预定义工作流：
         "saveAs": "nav_result"
       },
       {
-        "action": "page_action",
+        "action": "cdp_input",
         "note": "等待结果加载",
         "params": {
           "action": "wait_for_element",
@@ -63,7 +63,7 @@ MoleClaw 默认包含以下预定义工作流：
         }
       },
       {
-        "action": "dom_manipulate",
+        "action": "cdp_dom",
         "note": "采集结果数据",
         "params": {
           "action": "query",

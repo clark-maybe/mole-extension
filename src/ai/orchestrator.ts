@@ -27,7 +27,7 @@ import type {
 import { ArtifactStore } from '../lib/artifact-store';
 import { chatStream } from './llm-client';
 import { compactContext, getTextContent } from './context-manager';
-import { executeToolCalls, SPAWN_SUBTASK_SCHEMA } from './tool-executor';
+import { executeToolCalls, SPAWN_SUBTASK_SCHEMA, resetSensitiveAccessTrust } from './tool-executor';
 import { buildSystemPrompt, buildSubtaskPrompt } from './system-prompt';
 import { ensureToolRegistryReady, mcpClient } from '../functions/registry';
 import { mcpToolsToSchema } from '../mcp/adapters';
@@ -449,6 +449,9 @@ export const handleChat = async (
   previousContext?: InputItem[],
   options?: HandleChatOptions,
 ): Promise<InputItem[]> => {
+  // 新对话开始时重置敏感操作信任标记
+  resetSensitiveAccessTrust();
+
   const budget: LoopBudget = {
     ...DEFAULT_BUDGET,
     ...(options?.maxRounds != null ? { maxRounds: options.maxRounds } : {}),

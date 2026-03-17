@@ -6,6 +6,7 @@
 import type { InputItem, OutputFunctionCallItem, AIStreamEvent, ToolSchema, MessageInputItem } from './types';
 import { mcpClient } from '../functions/registry';
 import { truncateToolResult, getTextContent } from './context-manager';
+import { requestConfirmationFunction } from '../functions/request-confirmation';
 
 /** 子任务执行器类型（由 orchestrator 注入，实现递归） */
 export type SubtaskRunner = (goal: string, signal?: AbortSignal) => Promise<InputItem[]>;
@@ -75,6 +76,12 @@ const buildExecutionGroups = async (calls: OutputFunctionCallItem[]): Promise<Ex
  * 执行一批工具调用
  * 支持并行分流：连续的 supportsParallel 工具用 Promise.all 并发执行
  */
+/** 会话级敏感操作信任标记：用户选择"本次不再询问"后置为 true，持续到 SW 重启 */
+let sensitiveAccessTrusted = false;
+
+/** 重置敏感操作信任标记（新会话时调用） */
+export const resetSensitiveAccessTrust = () => { sensitiveAccessTrusted = false; };
+
 export const executeToolCalls = async (
   calls: OutputFunctionCallItem[],
   tabId: number | undefined,
@@ -84,12 +91,71 @@ export const executeToolCalls = async (
 ): Promise<InputItem[]> => {
   const results: InputItem[] = [];
 
+  /** 敏感操作检测：需要用户确认的工具+参数组合 */
+  const getSensitiveApprovalMessage = (name: string, params: Record<string, any>): string | null => {
+    const action = String(params.action || '');
+    if (name === 'cdp_dom') {
+      const label = params.storage_type === 'session' ? 'sessionStorage' : 'localStorage';
+      if (action === 'storage_get_items' || action === 'storage_get_item') {
+        return `AI 正在请求读取页面的 ${label} 数据`;
+      }
+      if (action === 'storage_set_item') {
+        return `AI 正在请求写入页面 ${label}（key: ${params.key || '?'}）`;
+      }
+      if (action === 'storage_remove_item') {
+        return `AI 正在请求删除页面 ${label} 中的 "${params.key || '?'}"`;
+      }
+      if (action === 'storage_clear') {
+        return `AI 正在请求清空页面的 ${label}`;
+      }
+    }
+    if (name === 'cdp_network') {
+      if (action === 'get_cookies') return 'AI 正在请求读取页面 Cookie';
+      if (action === 'set_cookie') return `AI 正在请求设置 Cookie "${params.name || ''}"`;
+      if (action === 'delete_cookie') return `AI 正在请求删除 Cookie "${params.name || ''}"`;
+    }
+    return null;
+  };
+
   /** 执行单个工具调用（不含 emit function_call，由调用方控制） */
   const executeSingleTool = async (
     call: OutputFunctionCallItem,
   ): Promise<{ call: OutputFunctionCallItem; output: string }> => {
     const params = safeParseArgs(call.arguments);
     let output: string;
+
+    // ── 敏感操作拦截：自动请求用户确认 ──
+    const approvalMessage = getSensitiveApprovalMessage(call.name, params);
+    if (approvalMessage && !sensitiveAccessTrusted) {
+      const approvalResult = await requestConfirmationFunction.execute(
+        { message: approvalMessage },
+        { tabId, signal },
+      );
+      const approved = approvalResult.success && approvalResult.data?.approved;
+      // 用户选择"本次不再询问"时，后续自动跳过确认
+      if (approved && approvalResult.data?.trustAll) {
+        sensitiveAccessTrusted = true;
+      }
+      if (!approved) {
+        output = JSON.stringify({
+          success: false,
+          error: approvalResult.data?.userMessage || '用户拒绝了敏感数据访问请求',
+        });
+
+        emit({
+          type: 'function_result',
+          content: JSON.stringify({
+            name: call.name,
+            callId: call.call_id,
+            success: false,
+            message: '用户拒绝',
+            cancelled: false,
+          }),
+        });
+
+        return { call, output };
+      }
+    }
 
     if (call.name === 'spawn_subtask' && runSubtask) {
       // 子任务递归

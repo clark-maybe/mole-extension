@@ -110,16 +110,14 @@ Keep this managed block so 'openspec update' can refresh the instructions.
 
 - `registry.ts` - 函数注册表，管理所有内置工具 + 动态扩展工具
 - `types.ts` - `FunctionDefinition` 和 `FunctionResult` 类型
-- `cdp-input.ts` - CDP 可信输入事件（鼠标/键盘）
+- `cdp-input.ts` - 页面交互操作（点击/输入/滚动/填写/等待/拖拽等 18 种 action，CDP 可信事件）
+- `cdp-dom.ts` - DOM 读写/CSS 样式/页面存储（query/get_text/set_html/add_class/css_*/storage_* 等 34 种 action）
+- `cdp-frame.ts` - JS 执行（主 frame + iframe 穿透，支持 return 语句和 async/await）
 - `cdp-dialog.ts` - CDP 对话框处理（alert/confirm/prompt）
-- `cdp-frame.ts` - CDP iframe 穿透（跨域 frame 操作）
 - `cdp-network.ts` - CDP 网络监听 + Cookie 管理
 - `cdp-emulation.ts` - CDP 设备/环境模拟
 - `cdp-console.ts` - CDP 控制台消息捕获
 - `cdp-fetch.ts` - CDP 请求拦截与篡改（Fetch 域）
-- `cdp-dom.ts` - CDP 跨域 DOM 操作（DOM 域）
-- `cdp-storage.ts` - CDP 页面存储操作（DOMStorage 域）
-- `cdp-css.ts` - CDP CSS 样式操作（CSS 域）
 - `cdp-overlay.ts` - CDP 视觉高亮标注（Overlay 域）
 - `extract-data.ts` - 结构化数据提取（auto/table/list/repeat/schema 五种模式）
 - `data-pipeline.ts` - 数据管道（缓冲区管理 + 转换 + JSON/CSV/Markdown/TSV 导出）
@@ -130,7 +128,7 @@ Keep this managed block so 'openspec update' can refresh the instructions.
 - `tab-utils.ts` - Tab 工具函数（等待加载、隐藏 tab 操作等）
 
 **跨标签页操作说明：**
-所有需要操作页面的工具（page_viewer、page_snapshot、page_skeleton、page_action、dom_manipulate、cdp_input、extract_data、site_workflow 以及 13 个 CDP 工具）均支持可选的 `tab_id` 参数。tabId 解析优先级：`params.tab_id` > `context.tabId`（编排器注入） > 当前活动标签页。AI 通过 `tab_navigate(action='open')` 获取新 tab 的 `tab_id`，然后在后续工具调用中传入该 id 即可操作目标标签页。
+所有需要操作页面的工具（page_viewer、page_snapshot、page_skeleton、cdp_input、cdp_dom、cdp_frame、extract_data、site_workflow 以及其他 CDP 工具）均支持可选的 `tab_id` 参数。tabId 解析优先级：`params.tab_id` > `context.tabId`（编排器注入） > 当前活动标签页。AI 通过 `tab_navigate(action='open')` 获取新 tab 的 `tab_id`，然后在后续工具调用中传入该 id 即可操作目标标签页。
 
 #### CDP 会话管理器 (`src/lib/cdp-session.ts`)
 

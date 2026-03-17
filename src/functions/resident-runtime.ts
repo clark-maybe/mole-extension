@@ -247,19 +247,19 @@ const executePostAction = async (job: ResidentJob, replyText: string): Promise<F
   const tabId = job.tabId;
 
   try {
-    // 动态引入 page-action 来执行填充和发送
-    const { pageActionFunction } = await import('./page-action');
+    // 动态引入 cdp-input 来执行填充和发送
+    const { cdpInputFunction } = await import('./cdp-input');
 
     // fill
-    const fillResult = await pageActionFunction.execute(
+    const fillResult = await cdpInputFunction.execute(
       { action: 'fill', selector, value: replyText },
       { tabId } as ToolExecutionContext,
     );
     if (!fillResult.success) return fillResult;
 
-    // press key to send
-    const pressResult = await pageActionFunction.execute(
-      { action: 'press_key', selector, key: key || 'Enter' },
+    // key_press to send（cdp_input 中按键操作为 key_press）
+    const pressResult = await cdpInputFunction.execute(
+      { action: 'key_press', selector, key: key || 'Enter' },
       { tabId } as ToolExecutionContext,
     );
     return pressResult;

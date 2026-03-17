@@ -54,7 +54,7 @@ Each workflow is a JSON object with the following fields:
         "saveAs": "nav_result"
       },
       {
-        "action": "page_action",
+        "action": "cdp_input",
         "note": "Wait for results to load",
         "params": {
           "action": "wait_for_element",
@@ -63,7 +63,7 @@ Each workflow is a JSON object with the following fields:
         }
       },
       {
-        "action": "dom_manipulate",
+        "action": "cdp_dom",
         "note": "Collect result data",
         "params": {
           "action": "query",
