@@ -5,11 +5,12 @@
 }
 
 body {
-  width: 320px;
-  min-height: 280px;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  width: 300px;
+  min-height: 260px;
+  font-family: -apple-system, "SF Pro Display", "SF Pro Text", "Helvetica Neue", "PingFang SC", sans-serif;
   -webkit-font-smoothing: antialiased;
-  background: #050507;
+  background: #f5f5f7;
+  color: #1d1d1f;
 }
 
 #root {
@@ -19,23 +20,13 @@ body {
 
 button {
   font-family: inherit;
+  transition: opacity 0.15s;
 }
 
 button:hover {
-  opacity: 0.9;
+  opacity: 0.85;
 }
 
 button:active {
-  opacity: 0.8;
-}
-
-/* 输入框 placeholder 样式 */
-input::placeholder {
-  color: #4b5563;
-  font-family: 'Inter', sans-serif;
-}
-
-/* 光标闪烁动画 */
-@keyframes blink {
-  50% { opacity: 0; }
+  opacity: 0.7;
 }

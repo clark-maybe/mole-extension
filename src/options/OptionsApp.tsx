@@ -62,9 +62,9 @@ function OptionsLayout() {
       token={{
         sider: {
           colorMenuBackground: '#ffffff',
-          colorBgMenuItemSelected: 'rgba(0, 0, 0, 0.06)',
+          colorBgMenuItemSelected: 'rgba(0, 0, 0, 0.04)',
           colorTextMenuSelected: '#1d1d1f',
-          colorTextMenu: '#424245',
+          colorTextMenu: '#86868b',
           colorTextMenuActive: '#1d1d1f',
         },
       }}

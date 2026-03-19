@@ -71,8 +71,8 @@ function App() {
             <span style={styles.statusLabel}>LLM</span>
             <span style={{
               ...styles.statusBadge,
-              backgroundColor: llmStatus?.configured ? 'rgba(34,197,94,0.15)' : 'rgba(239,68,68,0.15)',
-              color: llmStatus?.configured ? '#22c55e' : '#ef4444',
+              backgroundColor: llmStatus?.configured ? 'rgba(34,197,94,0.1)' : 'rgba(239,68,68,0.1)',
+              color: llmStatus?.configured ? '#34a853' : '#d93025',
             }}>
               {llmStatus === null ? '...' : llmStatus.configured ? '已配置' : '未配置'}
             </span>
@@ -83,7 +83,7 @@ function App() {
               <p style={styles.statusDetail}>{llmStatus.model || '未指定模型'}</p>
             </>
           ) : (
-            <p style={styles.statusDetail}>请在 Options 页面配置 API</p>
+            <p style={styles.statusDetail}>请在设置页面配置 API</p>
           )}
         </div>
 
@@ -109,13 +109,10 @@ function App() {
 
 const styles: Record<string, React.CSSProperties> = {
   container: {
-    width: '320px',
-    minHeight: '280px',
+    width: '300px',
+    minHeight: '260px',
     display: 'flex',
     flexDirection: 'column',
-    backgroundColor: '#050507',
-    color: '#e5e7eb',
-    fontFamily: "'JetBrains Mono', 'Menlo', monospace",
     padding: '20px',
     boxSizing: 'border-box',
   },
@@ -123,77 +120,75 @@ const styles: Record<string, React.CSSProperties> = {
     display: 'flex',
     alignItems: 'center',
     gap: '12px',
-    marginBottom: '20px',
+    marginBottom: '16px',
   },
   logo: {
-    width: '48px',
-    height: '48px',
-    borderRadius: '10px',
+    width: '40px',
+    height: '40px',
   },
   title: {
-    fontSize: '18px',
-    fontWeight: 700,
+    fontSize: '16px',
+    fontWeight: 600,
     margin: 0,
-    color: '#f9fafb',
+    color: '#1d1d1f',
   },
   version: {
     fontSize: '11px',
-    color: '#6b7280',
+    color: '#86868b',
     margin: '2px 0 0 0',
   },
   statusArea: {
     display: 'flex',
     flexDirection: 'column',
-    gap: '10px',
+    gap: '8px',
     flex: 1,
   },
   statusCard: {
-    backgroundColor: 'rgba(255,255,255,0.03)',
-    borderRadius: '8px',
-    padding: '12px',
-    border: '1px solid rgba(255,255,255,0.06)',
+    backgroundColor: '#ffffff',
+    borderRadius: '10px',
+    padding: '12px 14px',
+    border: '1px solid #e8e8ed',
   },
   statusRow: {
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: '6px',
+    marginBottom: '4px',
   },
   statusLabel: {
-    fontSize: '12px',
+    fontSize: '13px',
     fontWeight: 600,
-    color: '#d1d5db',
+    color: '#1d1d1f',
   },
   statusBadge: {
-    fontSize: '10px',
-    fontWeight: 600,
+    fontSize: '11px',
+    fontWeight: 500,
     padding: '2px 8px',
     borderRadius: '999px',
   },
   statusCount: {
     fontSize: '14px',
-    fontWeight: 700,
-    color: '#3b82f6',
+    fontWeight: 600,
+    color: '#1d1d1f',
   },
   statusDetail: {
     fontSize: '11px',
-    color: '#6b7280',
+    color: '#86868b',
     margin: '2px 0 0 0',
     overflow: 'hidden',
     textOverflow: 'ellipsis',
     whiteSpace: 'nowrap' as const,
   },
   optionsBtn: {
-    marginTop: '16px',
-    padding: '10px',
+    marginTop: '12px',
+    padding: '9px',
     borderRadius: '8px',
-    border: '1px solid rgba(59,130,246,0.3)',
-    backgroundColor: 'rgba(59,130,246,0.1)',
-    color: '#60a5fa',
-    fontSize: '12px',
-    fontWeight: 600,
+    border: '1px solid #d2d2d7',
+    backgroundColor: '#ffffff',
+    color: '#1d1d1f',
+    fontSize: '13px',
+    fontWeight: 500,
     cursor: 'pointer',
-    fontFamily: "'JetBrains Mono', monospace",
   },
 };
 

@@ -6,17 +6,10 @@
 
 import { useEffect, useState } from 'react';
 import { Button, Card, Form, Input, Modal, Typography, App } from 'antd';
-import { RocketOutlined, CheckCircleOutlined } from '@ant-design/icons';
+import { CheckCircleOutlined } from '@ant-design/icons';
 import { getAISettings, saveAISettings } from '../../ai/llm-client';
 
 const { Title, Text, Paragraph } = Typography;
-
-/** 推荐模型列表 */
-const RECOMMENDED_MODELS = [
-  { name: 'gpt-5.4', desc: '最新旗舰模型，推荐使用' },
-  { name: 'gpt-5.2', desc: '高性价比，适合日常使用' },
-  { name: 'gpt-5.1', desc: '稳定可靠，资源占用低' },
-];
 
 /** 检查设置是否已配置（至少有 endpoint 和 apiKey） */
 const isConfigured = (s: { endpoint?: string; apiKey?: string }): boolean =>
@@ -148,27 +141,20 @@ export function LLMSettingsPage() {
         width={520}
         centered
         styles={{
-          body: { padding: '32px 28px 24px' },
+          body: { padding: '36px 32px 28px' },
         }}
       >
         <div style={{ textAlign: 'center', marginBottom: 28 }}>
-          <div style={{
-            width: 56,
-            height: 56,
-            borderRadius: 16,
-            background: '#f5f5f7',
-            display: 'inline-flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            marginBottom: 16,
-          }}>
-            <RocketOutlined style={{ fontSize: 26, color: '#1d1d1f' }} />
-          </div>
-          <Title level={4} style={{ marginBottom: 4 }}>欢迎使用 Mole</Title>
-          <Paragraph type="secondary" style={{ fontSize: 14, marginBottom: 0 }}>
+          <img
+            src={chrome.runtime?.getURL?.('logo.png') || '/logo.png'}
+            alt="Mole"
+            style={{ width: 64, height: 64, marginBottom: 12 }}
+          />
+          <Title level={4} style={{ marginBottom: 4, fontWeight: 600 }}>欢迎使用 Mole</Title>
+          <Paragraph type="secondary" style={{ fontSize: 14, marginBottom: 0, lineHeight: 1.6 }}>
             只需三步，即可让 AI 助手在你的浏览器中工作。
             <br />
-            配置完成后，在任意网页按 <Text keyboard>⌘M</Text> 唤起 Mole。
+            配置完成后，在任意网页按 <Text keyboard>⌘ M</Text> 唤起 Mole。
           </Paragraph>
         </div>
 
@@ -200,40 +186,13 @@ export function LLMSettingsPage() {
             <Input placeholder="gpt-5.4" />
           </Form.Item>
 
-          {/* 推荐模型提示 */}
-          <div style={{
-            background: '#f5f5f7',
-            borderRadius: 10,
-            padding: '12px 16px',
-            marginBottom: 24,
-          }}>
-            <Text type="secondary" style={{ fontSize: 12, display: 'block', marginBottom: 6 }}>
-              推荐模型
-            </Text>
-            {RECOMMENDED_MODELS.map((m) => (
-              <div
-                key={m.name}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 8,
-                  padding: '4px 0',
-                  fontSize: 13,
-                }}
-              >
-                <Text strong style={{ fontFamily: 'monospace', fontSize: 12 }}>{m.name}</Text>
-                <Text type="secondary" style={{ fontSize: 12 }}>{m.desc}</Text>
-              </div>
-            ))}
-          </div>
-
           <Button
             type="primary"
             block
             loading={saving}
             icon={<CheckCircleOutlined />}
             onClick={() => void handleSetupSave()}
-            style={{ height: 42, fontWeight: 500 }}
+            style={{ height: 40, fontWeight: 500, borderRadius: 8 }}
           >
             开始使用 Mole
           </Button>
