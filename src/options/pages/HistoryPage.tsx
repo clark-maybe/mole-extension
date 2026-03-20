@@ -10,8 +10,9 @@ import type { ColumnsType } from 'antd/es/table';
 import dayjs from 'dayjs';
 import { SESSION_HISTORY_STORAGE_KEY } from '../../session-history/constants';
 import type { SessionHistoryRecord } from '../../session-history/types';
+import { OptionsPageLayout, OptionsSectionCard } from '../components/PageLayout';
 
-const { Title, Text } = Typography;
+const { Text } = Typography;
 
 /** 格式化耗时（毫秒 → 可读文本） */
 const formatDuration = (ms?: number): string => {
@@ -148,9 +149,9 @@ export function HistoryPage() {
     ];
 
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 16, padding: '8px 0' }}>
+      <div className="options-detail-stack">
         {/* 基本信息 */}
-        <Card size="small" title="基本信息" style={{ boxShadow: 'none', border: '1px solid rgba(34,56,89,0.1)' }}>
+        <Card size="small" title="基本信息" className="options-nested-card">
           <Space direction="vertical" size="small" style={{ width: '100%' }}>
             <Space wrap>
               <Tag color={STATUS_COLOR[record.status] || 'default'}>
@@ -178,7 +179,7 @@ export function HistoryPage() {
 
         {/* 工具调用链 */}
         {record.toolCallChain.length > 0 ? (
-          <Card size="small" title="工具调用链" style={{ boxShadow: 'none', border: '1px solid rgba(34,56,89,0.1)' }}>
+          <Card size="small" title="工具调用链" className="options-nested-card">
             <Timeline
               items={record.toolCallChain.map((step) => {
                 const stepDuration = (step.startedAt && step.endedAt)
@@ -209,17 +210,8 @@ export function HistoryPage() {
 
         {/* AI 回复 */}
         {record.assistantReply ? (
-          <Card size="small" title="AI 回复" style={{ boxShadow: 'none', border: '1px solid rgba(34,56,89,0.1)' }}>
-            <pre style={{
-              margin: 0,
-              maxHeight: 420,
-              overflow: 'auto',
-              whiteSpace: 'pre-wrap',
-              wordBreak: 'break-word',
-              fontFamily: '"SF Mono", "JetBrains Mono", "Menlo", monospace',
-              fontSize: 12,
-              lineHeight: 1.55,
-            }}>
+          <Card size="small" title="AI 回复" className="options-nested-card">
+            <pre className="options-code-block">
               {record.assistantReply}
             </pre>
           </Card>
@@ -227,7 +219,7 @@ export function HistoryPage() {
 
         {/* 调度日志 */}
         {record.agentTransitions.length > 0 ? (
-          <Card size="small" title="调度日志" style={{ boxShadow: 'none', border: '1px solid rgba(34,56,89,0.1)' }}>
+          <Card size="small" title="调度日志" className="options-nested-card">
             <Table
               rowKey={(_, idx) => String(idx)}
               columns={transitionColumns}
@@ -245,12 +237,7 @@ export function HistoryPage() {
             showIcon
             message={record.failureCode ? `错误码：${record.failureCode}` : '错误'}
             description={record.lastError ? (
-              <pre style={{
-                margin: 0,
-                whiteSpace: 'pre-wrap',
-                wordBreak: 'break-word',
-                fontSize: 12,
-              }}>
+              <pre className="options-error-pre">
                 {record.lastError}
               </pre>
             ) : undefined}
@@ -261,39 +248,59 @@ export function HistoryPage() {
   };
 
   return (
-    <>
-      <Title level={4} style={{ marginTop: 0, marginBottom: 20 }}>历史记录</Title>
-      <Card
-        style={{ marginBottom: 16, boxShadow: 'none' }}
+    <OptionsPageLayout
+      eyebrow="Observability"
+      title="会话历史与调度日志"
+      description="历史记录页最适合做成‘总览 + 表格 + 详情卡片’结构。这样一方面更像你截图里的配置后台，另一方面也方便后续继续扩展筛选、状态统计和错误定位。"
+      extra={
+        <Space>
+          <Button icon={<ReloadOutlined />} onClick={() => void loadData()}>刷新</Button>
+          <Popconfirm
+            title="确定清空全部历史记录吗？此操作不可撤销。"
+            onConfirm={() => void handleClearAll()}
+            okText="确定"
+            cancelText="取消"
+          >
+            <Button danger icon={<DeleteOutlined />} disabled={records.length === 0}>清空全部</Button>
+          </Popconfirm>
+        </Space>
+      }
+      metrics={[
+        {
+          label: '记录总数',
+          value: records.length,
+          hint: '展开行可查看详细工具链与 AI 回复',
+          accent: 'blue',
+        },
+        {
+          label: '失败会话',
+          value: records.filter((record) => record.status === 'error').length,
+          hint: '用于快速发现执行异常',
+          accent: records.some((record) => record.status === 'error') ? 'red' : 'green',
+        },
+        {
+          label: '最近更新',
+          value: records[0]?.updatedAt ? dayjs(records[0].updatedAt).format('HH:mm') : '-',
+          hint: records[0]?.updatedAt ? dayjs(records[0].updatedAt).format('YYYY-MM-DD') : '暂无会话数据',
+          accent: 'neutral',
+        },
+      ]}
+    >
+      <OptionsSectionCard
+        title="会话列表"
+        description={`共 ${records.length} 条记录。展开行查看会话详情、工具调用链与调度日志。`}
       >
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Text type="secondary">共 {records.length} 条记录。展开行查看详情。</Text>
-          <Space>
-            <Button icon={<ReloadOutlined />} onClick={() => void loadData()}>刷新</Button>
-            <Popconfirm
-              title="确定清空全部历史记录吗？此操作不可撤销。"
-              onConfirm={() => void handleClearAll()}
-              okText="确定"
-              cancelText="取消"
-            >
-              <Button danger icon={<DeleteOutlined />} disabled={records.length === 0}>清空全部</Button>
-            </Popconfirm>
-          </Space>
-        </div>
-      </Card>
-
-      <Card style={{ boxShadow: 'none' }}>
         <Table
           rowKey="sessionId"
           columns={columns}
           dataSource={records}
           loading={loading}
           pagination={{ pageSize: 20, showSizeChanger: false }}
-          size="middle"
+          size="small"
           expandable={{ expandedRowRender }}
           locale={{ emptyText: '暂无记录' }}
         />
-      </Card>
-    </>
+      </OptionsSectionCard>
+    </OptionsPageLayout>
   );
 }

@@ -4,11 +4,12 @@
  */
 
 import { useCallback, useEffect, useState } from 'react';
-import { Alert, Button, Card, Input, Modal, Space, Switch, Table, Tag, Typography, App, Popconfirm } from 'antd';
+import { Alert, Button, Input, Modal, Space, Switch, Table, Tag, Typography, App, Popconfirm } from 'antd';
 import { PlusOutlined, ImportOutlined, ExportOutlined, ReloadOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
+import { OptionsPageLayout, OptionsSectionCard } from '../components/PageLayout';
 
-const { Title, Text } = Typography;
+const { Text } = Typography;
 
 /** Workflow 定义（与 registry 中格式一致） */
 interface WorkflowItem {
@@ -325,12 +326,11 @@ export function WorkflowsPage() {
 
   return (
     <>
-      <Title level={4} style={{ marginTop: 0, marginBottom: 20 }}>Workflow 管理</Title>
-      <Card
-        style={{ marginBottom: 16, boxShadow: 'none' }}
-      >
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Text type="secondary">管理站点工作流。勾选后可批量导出。</Text>
+      <OptionsPageLayout
+        eyebrow="Automation"
+        title="站点工作流管理"
+        description="这一页适合做成标准后台表格页：上方放标题和操作区，下方放概览卡片与数据表。这样既贴近你截图里的风格，也方便后面继续扩展筛选、分组和状态统计。"
+        extra={
           <Space>
             <Button type="primary" icon={<PlusOutlined />} onClick={() => openEditor(null)}>新建</Button>
             <Button icon={<ImportOutlined />} onClick={handleImport}>导入</Button>
@@ -339,24 +339,47 @@ export function WorkflowsPage() {
             </Button>
             <Button icon={<ReloadOutlined />} onClick={() => void loadData()}>刷新</Button>
           </Space>
-        </div>
-      </Card>
-
-      <Card style={{ boxShadow: 'none' }}>
-        <Table
-          rowKey="name"
-          columns={columns}
-          dataSource={workflows}
-          loading={loading}
-          pagination={false}
-          size="middle"
-          rowSelection={{
-            selectedRowKeys,
-            onChange: (keys) => setSelectedRowKeys(keys as string[]),
-          }}
-          locale={{ emptyText: '暂无 Workflow' }}
-        />
-      </Card>
+        }
+        metrics={[
+          {
+            label: '工作流总数',
+            value: workflows.length,
+            hint: workflows.length > 0 ? '包含用户自定义与远端同步配置' : '还没有可用工作流',
+            accent: 'blue',
+          },
+          {
+            label: '启用数量',
+            value: workflows.filter((wf) => wf.enabled).length,
+            hint: '关闭后不会参与站点执行',
+            accent: 'green',
+          },
+          {
+            label: '当前已选择',
+            value: selectedRowKeys.length,
+            hint: '可用于批量导出',
+            accent: selectedRowKeys.length > 0 ? 'orange' : 'neutral',
+          },
+        ]}
+      >
+        <OptionsSectionCard
+          title="工作流列表"
+          description="管理站点工作流。勾选后可批量导出，也可以直接通过 JSON 编辑器增删改配置。"
+        >
+          <Table
+            rowKey="name"
+            columns={columns}
+            dataSource={workflows}
+            loading={loading}
+            pagination={false}
+            size="small"
+            rowSelection={{
+              selectedRowKeys,
+              onChange: (keys) => setSelectedRowKeys(keys as string[]),
+            }}
+            locale={{ emptyText: '暂无 Workflow' }}
+          />
+        </OptionsSectionCard>
+      </OptionsPageLayout>
 
       <Modal
         title={editingName ? `编辑: ${editingName}` : '新建 Workflow'}

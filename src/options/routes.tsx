@@ -10,27 +10,40 @@ import {
   StopOutlined,
   HistoryOutlined,
 } from '@ant-design/icons';
-import type { MenuProps } from 'antd';
 
 export interface RouteItem {
   key: string;
   label: string;
   icon: React.ReactNode;
+  description: string;
 }
 
 export const routes: RouteItem[] = [
-  { key: 'settings', label: 'LLM 设置', icon: <SettingOutlined /> },
-  { key: 'workflows', label: 'Workflows', icon: <ThunderboltOutlined /> },
-  { key: 'blocklist', label: '域名管理', icon: <StopOutlined /> },
-  { key: 'history', label: '历史记录', icon: <HistoryOutlined /> },
+  {
+    key: 'settings',
+    label: '模型设置',
+    icon: <SettingOutlined />,
+    description: '配置 API 连接、模型名称与浏览器侧默认行为。',
+  },
+  {
+    key: 'workflows',
+    label: '工作流',
+    icon: <ThunderboltOutlined />,
+    description: '管理本地站点工作流，支持导入、导出与 JSON 编辑。',
+  },
+  {
+    key: 'blocklist',
+    label: '域名管理',
+    icon: <StopOutlined />,
+    description: '维护被禁用的站点列表，控制悬浮球是否出现。',
+  },
+  {
+    key: 'history',
+    label: '历史记录',
+    icon: <HistoryOutlined />,
+    description: '查看会话执行结果、工具调用链与调度日志。',
+  },
 ];
-
-/** 从 routes 生成 AntD Menu items */
-export const menuItems: MenuProps['items'] = routes.map((r) => ({
-  key: r.key,
-  icon: r.icon,
-  label: r.label,
-}));
 
 const DEFAULT_KEY = 'settings';
 

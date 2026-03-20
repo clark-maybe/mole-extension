@@ -1,76 +1,91 @@
 /**
  * Options 页面根组件
- * 使用 @ant-design/pro-layout 的 ProLayout 实现标准 AntD Pro 侧栏布局
+ * 居中 Card 布局：浅灰背景 + 白色面板（左侧菜单 + 右侧内容）
  */
 
 import { ConfigProvider, App } from 'antd';
-import ProLayout from '@ant-design/pro-layout';
-import {
-  SettingOutlined,
-  ThunderboltOutlined,
-  StopOutlined,
-  HistoryOutlined,
-} from '@ant-design/icons';
 import { moleTheme } from './theme';
-import { useHashRoute } from './routes';
+import { routes, useHashRoute } from './routes';
 import { LLMSettingsPage } from './pages/LLMSettingsPage';
 import { WorkflowsPage } from './pages/WorkflowsPage';
 import { BlocklistPage } from './pages/BlocklistPage';
 import { HistoryPage } from './pages/HistoryPage';
 
-/** ProLayout 的 route 配置（仅作为菜单数据源） */
-const routeConfig = {
-  path: '/',
-  routes: [
-    { path: '/settings', name: 'LLM 设置', icon: <SettingOutlined /> },
-    { path: '/workflows', name: 'Workflows', icon: <ThunderboltOutlined /> },
-    { path: '/blocklist', name: '域名管理', icon: <StopOutlined /> },
-    { path: '/history', name: '历史记录', icon: <HistoryOutlined /> },
-  ],
-};
-
-/** 路径 → 页面组件映射 */
+/** 路由 key → 页面组件映射 */
 const PAGE_MAP: Record<string, React.ComponentType> = {
-  '/settings': LLMSettingsPage,
-  '/workflows': WorkflowsPage,
-  '/blocklist': BlocklistPage,
-  '/history': HistoryPage,
+  settings: LLMSettingsPage,
+  workflows: WorkflowsPage,
+  blocklist: BlocklistPage,
+  history: HistoryPage,
 };
 
 function OptionsLayout() {
   const [activeKey, setActiveKey] = useHashRoute();
-  const pathname = '/' + activeKey;
-  const PageComponent = PAGE_MAP[pathname] || LLMSettingsPage;
+  const PageComponent = PAGE_MAP[activeKey] || LLMSettingsPage;
+  const activeRoute = routes.find((route) => route.key === activeKey) || routes[0];
 
   return (
-    <ProLayout
-      title="Mole"
-      logo="logo.png"
-      layout="side"
-      fixSiderbar
-      siderWidth={220}
-      route={routeConfig}
-      location={{ pathname }}
-      menuItemRender={(item, dom) => (
-        <div onClick={() => setActiveKey((item.path || '/settings').replace(/^\//, ''))}>
-          {dom}
+    <div className="options-page">
+      <div className="options-panel">
+        {/* 左侧菜单 */}
+        <nav className="options-menu">
+          <div className="options-menu-header">
+            <div className="options-menu-brand">
+              <img
+                src={chrome.runtime?.getURL?.('logo.png') || 'logo.png'}
+                alt="Mole"
+                className="options-menu-logo"
+              />
+              <div>
+                <span className="options-menu-title">Mole</span>
+                <span className="options-menu-subtitle">Extension Console</span>
+              </div>
+            </div>
+            <div className="options-menu-pill">设置中心</div>
+          </div>
+
+          <div className="options-menu-section-title">系统配置</div>
+
+          <div className="options-menu-items">
+            {routes.map((route) => (
+              <button
+                key={route.key}
+                type="button"
+                className={`options-menu-item${activeKey === route.key ? ' active' : ''}`}
+                onClick={() => setActiveKey(route.key)}
+              >
+                <span className="options-menu-icon">{route.icon}</span>
+                <span className="options-menu-label">{route.label}</span>
+              </button>
+            ))}
+          </div>
+
+          <div className="options-menu-footer">
+            <div className="options-menu-footer-label">当前页面</div>
+            <div className="options-menu-footer-title">{activeRoute.label}</div>
+            <div className="options-menu-footer-desc">{activeRoute.description}</div>
+          </div>
+        </nav>
+
+        {/* 右侧内容 */}
+        <div className="options-body">
+          <div className="options-body-topbar">
+            <div>
+              <div className="options-body-breadcrumb">Mole Console / 设置</div>
+              <div className="options-body-heading">{activeRoute.label}</div>
+            </div>
+            <div className="options-body-status">
+              <span className="options-body-status-dot" />
+              本地扩展设置
+            </div>
+          </div>
+
+          <div className="options-body-content">
+            <PageComponent />
+          </div>
         </div>
-      )}
-      headerRender={false}
-      footerRender={false}
-      onMenuHeaderClick={() => setActiveKey('settings')}
-      token={{
-        sider: {
-          colorMenuBackground: '#ffffff',
-          colorBgMenuItemSelected: 'rgba(0, 0, 0, 0.04)',
-          colorTextMenuSelected: '#1d1d1f',
-          colorTextMenu: '#86868b',
-          colorTextMenuActive: '#1d1d1f',
-        },
-      }}
-    >
-      <PageComponent />
-    </ProLayout>
+      </div>
+    </div>
   );
 }
 

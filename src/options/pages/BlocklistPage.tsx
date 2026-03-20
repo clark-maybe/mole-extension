@@ -4,11 +4,12 @@
  */
 
 import { useCallback, useEffect, useState } from 'react';
-import { Button, Card, Space, Table, Typography, App, Popconfirm } from 'antd';
+import { Button, Space, Table, Typography, App, Popconfirm } from 'antd';
 import { ReloadOutlined, DeleteOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
+import { OptionsPageLayout, OptionsSectionCard } from '../components/PageLayout';
 
-const { Title, Text } = Typography;
+const { Text } = Typography;
 
 const DISABLED_DOMAINS_KEY = 'mole_disabled_domains_v1';
 
@@ -95,40 +96,58 @@ export function BlocklistPage() {
   ];
 
   return (
-    <>
-      <Title level={4} style={{ marginTop: 0, marginBottom: 20 }}>域名管理</Title>
-      <Card
-        style={{ marginBottom: 16, boxShadow: 'none' }}
+    <OptionsPageLayout
+      eyebrow="Site Control"
+      title="域名黑名单"
+      description="这里管理被临时关闭悬浮球的站点。整体样式改造成更统一的后台管理风格后，这类表格页只需要关注数据和动作，不需要重复写页面骨架。"
+      extra={
+        <Space>
+          <Button icon={<ReloadOutlined />} onClick={() => void loadData()}>刷新</Button>
+          <Popconfirm
+            title="确定清空全部已禁用的域名吗？"
+            onConfirm={() => void handleClearAll()}
+            okText="确定"
+            cancelText="取消"
+          >
+            <Button danger icon={<DeleteOutlined />} disabled={domains.length === 0}>清空全部</Button>
+          </Popconfirm>
+        </Space>
+      }
+      metrics={[
+        {
+          label: '禁用域名数',
+          value: domains.length,
+          hint: domains.length > 0 ? '删除后会在下次访问时恢复悬浮球' : '当前没有被屏蔽的站点',
+          accent: domains.length > 0 ? 'orange' : 'green',
+        },
+        {
+          label: '存储位置',
+          value: '本地',
+          hint: '数据保存在 chrome.storage.local',
+          accent: 'blue',
+        },
+        {
+          label: '恢复方式',
+          value: '按域名',
+          hint: '支持单条删除或一键清空',
+          accent: 'neutral',
+        },
+      ]}
+    >
+      <OptionsSectionCard
+        title="域名列表"
+        description="以下域名的悬浮球已被禁用。删除某个域名后，该域名的悬浮球将在下次访问时恢复。"
       >
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Text type="secondary">
-            以下域名的悬浮球已被禁用。删除某个域名后，该域名的悬浮球将在下次访问时恢复。
-          </Text>
-          <Space>
-            <Button icon={<ReloadOutlined />} onClick={() => void loadData()}>刷新</Button>
-            <Popconfirm
-              title="确定清空全部已禁用的域名吗？"
-              onConfirm={() => void handleClearAll()}
-              okText="确定"
-              cancelText="取消"
-            >
-              <Button danger icon={<DeleteOutlined />} disabled={domains.length === 0}>清空全部</Button>
-            </Popconfirm>
-          </Space>
-        </div>
-      </Card>
-
-      <Card style={{ boxShadow: 'none' }}>
         <Table
           rowKey={(domain) => domain}
           columns={columns}
           dataSource={domains}
           loading={loading}
           pagination={false}
-          size="middle"
+          size="small"
           locale={{ emptyText: '暂无被禁用的域名' }}
         />
-      </Card>
-    </>
+      </OptionsSectionCard>
+    </OptionsPageLayout>
   );
 }
