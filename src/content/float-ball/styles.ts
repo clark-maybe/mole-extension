@@ -13,24 +13,24 @@ import {
 export const getStyles = () => `
   :host {
     all: initial;
-    --ec-surface: rgba(255, 255, 255, 0.88);
-    --ec-surface-strong: rgba(255, 255, 255, 0.96);
-    --ec-surface-soft: rgba(255, 255, 255, 0.8);
-    --ec-border: rgba(15, 23, 42, 0.09);
-    --ec-border-soft: rgba(15, 23, 42, 0.05);
-    --ec-text: #1d1d1f;
-    --ec-text-muted: #6e6e73;
-    --ec-primary: #0071e3;
-    --ec-primary-strong: #0066cc;
-    --ec-primary-soft: rgba(0, 113, 227, 0.1);
-    --ec-success: #248a3d;
-    --ec-success-soft: rgba(36, 138, 61, 0.1);
-    --ec-danger: #d70015;
-    --ec-danger-soft: rgba(215, 0, 21, 0.1);
-    --ec-focus-ring: 0 0 0 3px rgba(0, 113, 227, 0.16);
-    --ec-shadow: 0 22px 56px rgba(15, 23, 42, 0.14), 0 8px 20px rgba(15, 23, 42, 0.08);
-    --ec-pill-shadow: 0 8px 24px rgba(15, 23, 42, 0.14), inset 0 1px 0 rgba(255, 255, 255, 0.84);
-    --ec-card-shadow: 0 8px 18px rgba(15, 23, 42, 0.1);
+    --ec-surface: rgba(255, 255, 255, 0.84);
+    --ec-surface-strong: rgba(255, 255, 255, 0.95);
+    --ec-surface-soft: rgba(255, 255, 255, 0.76);
+    --ec-border: rgba(219, 227, 238, 0.92);
+    --ec-border-soft: rgba(219, 227, 238, 0.74);
+    --ec-text: #172033;
+    --ec-text-muted: #667085;
+    --ec-primary: #1677ff;
+    --ec-primary-strong: #0f6adf;
+    --ec-primary-soft: rgba(22, 119, 255, 0.1);
+    --ec-success: #039855;
+    --ec-success-soft: rgba(18, 183, 106, 0.12);
+    --ec-danger: #d92d20;
+    --ec-danger-soft: rgba(239, 68, 68, 0.1);
+    --ec-focus-ring: 0 0 0 4px rgba(22, 119, 255, 0.14);
+    --ec-shadow: 0 24px 68px rgba(15, 23, 42, 0.16), 0 10px 28px rgba(15, 23, 42, 0.08);
+    --ec-pill-shadow: 0 12px 30px rgba(15, 23, 42, 0.14), inset 0 1px 0 rgba(255, 255, 255, 0.84);
+    --ec-card-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
   }
 
   * {
@@ -64,10 +64,10 @@ export const getStyles = () => `
     padding: 0 12px 0 9px;
     border-radius: 999px;
     border: 1px solid var(--ec-border);
-    background: linear-gradient(180deg, var(--ec-surface-strong) 0%, var(--ec-surface) 100%);
+    background: linear-gradient(180deg, rgba(248, 251, 255, 0.96) 0%, var(--ec-surface) 100%);
     box-shadow: var(--ec-pill-shadow);
-    backdrop-filter: blur(22px) saturate(180%);
-    -webkit-backdrop-filter: blur(22px) saturate(180%);
+    backdrop-filter: blur(24px) saturate(170%);
+    -webkit-backdrop-filter: blur(24px) saturate(170%);
     cursor: pointer;
     display: flex;
     align-items: center;
@@ -97,7 +97,7 @@ export const getStyles = () => `
     position: absolute;
     inset: -1px;
     border-radius: inherit;
-    background: radial-gradient(circle at 86% 50%, rgba(0, 113, 227, 0.12), rgba(0, 113, 227, 0));
+    background: radial-gradient(circle at 86% 50%, rgba(22, 119, 255, 0.16), rgba(22, 119, 255, 0));
     opacity: 0;
     transition: opacity 0.3s ease;
     pointer-events: none;
@@ -124,7 +124,7 @@ export const getStyles = () => `
   }
 
   .mole-trigger.side-left .mole-pill::after {
-    background: radial-gradient(circle at 14% 50%, rgba(0, 113, 227, 0.12), rgba(0, 113, 227, 0));
+    background: radial-gradient(circle at 14% 50%, rgba(22, 119, 255, 0.16), rgba(22, 119, 255, 0));
   }
 
   .mole-trigger.task-running .mole-pill,
@@ -138,13 +138,13 @@ export const getStyles = () => `
   .mole-trigger.side-right.hovering:not(.task-running):not(.task-done):not(.task-error):not(.announce) .mole-pill,
   .mole-trigger.side-right.active:not(.task-running):not(.task-done):not(.task-error):not(.announce) .mole-pill {
     transform: translateX(${PILL_WIDTH - PILL_COMPACT_WIDTH}px);
-    box-shadow: 0 14px 32px rgba(15, 23, 42, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.92);
+    box-shadow: 0 16px 34px rgba(15, 23, 42, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.9);
   }
 
   .mole-trigger.side-left.hovering:not(.task-running):not(.task-done):not(.task-error):not(.announce) .mole-pill,
   .mole-trigger.side-left.active:not(.task-running):not(.task-done):not(.task-error):not(.announce) .mole-pill {
     transform: translateX(-${PILL_WIDTH - PILL_COMPACT_WIDTH}px);
-    box-shadow: 0 14px 32px rgba(15, 23, 42, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.92);
+    box-shadow: 0 16px 34px rgba(15, 23, 42, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.9);
   }
 
   .mole-trigger.hovering .mole-pill::after,
@@ -163,7 +163,7 @@ export const getStyles = () => `
     z-index: 1;
     width: ${LOGO_SIZE}px;
     height: ${LOGO_SIZE}px;
-    border-radius: 5px;
+    border-radius: 8px;
     pointer-events: none;
     user-select: none;
     -webkit-user-drag: none;
@@ -177,7 +177,7 @@ export const getStyles = () => `
     display: flex;
     flex-direction: column;
     justify-content: center;
-    gap: 1px;
+    gap: 2px;
     flex: 1;
     overflow: hidden;
   }
@@ -323,8 +323,8 @@ export const getStyles = () => `
     height: 30px;
     border-radius: 50%;
     border: 1px solid var(--ec-border);
-    background: linear-gradient(180deg, var(--ec-surface-strong) 0%, var(--ec-surface) 100%);
-    box-shadow: 0 10px 22px rgba(15, 23, 42, 0.16);
+    background: linear-gradient(180deg, rgba(248, 251, 255, 0.96) 0%, var(--ec-surface) 100%);
+    box-shadow: 0 10px 22px rgba(15, 23, 42, 0.14);
     color: var(--ec-text);
     display: inline-flex;
     align-items: center;
@@ -385,8 +385,8 @@ export const getStyles = () => `
     height: 30px;
     border-radius: 50%;
     border: 1px solid var(--ec-border);
-    background: linear-gradient(180deg, var(--ec-surface-strong) 0%, var(--ec-surface) 100%);
-    box-shadow: 0 10px 22px rgba(15, 23, 42, 0.16);
+    background: linear-gradient(180deg, rgba(248, 251, 255, 0.96) 0%, var(--ec-surface) 100%);
+    box-shadow: 0 10px 22px rgba(15, 23, 42, 0.14);
     color: var(--ec-text);
     display: inline-flex;
     align-items: center;
@@ -557,10 +557,11 @@ export const getStyles = () => `
     height: 100vh;
     z-index: 2147483646;
     background:
-      radial-gradient(circle at 50% -12%, rgba(255, 255, 255, 0.58), rgba(255, 255, 255, 0) 45%),
-      rgba(246, 248, 255, 0.46);
-    backdrop-filter: blur(20px) saturate(130%);
-    -webkit-backdrop-filter: blur(20px) saturate(130%);
+      radial-gradient(circle at top left, rgba(137, 181, 255, 0.22), transparent 34%),
+      radial-gradient(circle at top right, rgba(255, 255, 255, 0.92), transparent 36%),
+      rgba(244, 248, 252, 0.56);
+    backdrop-filter: blur(18px) saturate(125%);
+    -webkit-backdrop-filter: blur(18px) saturate(125%);
     opacity: 0;
     transition: opacity 0.2s ease;
     pointer-events: none;
@@ -582,11 +583,11 @@ export const getStyles = () => `
     position: relative;
     width: 580px;
     max-width: 90vw;
-    background: linear-gradient(168deg, var(--ec-surface-strong) 0%, var(--ec-surface) 100%);
-    backdrop-filter: blur(28px) saturate(160%);
-    -webkit-backdrop-filter: blur(28px) saturate(160%);
+    background: linear-gradient(180deg, rgba(250, 252, 255, 0.97) 0%, var(--ec-surface) 100%);
+    backdrop-filter: blur(28px) saturate(155%);
+    -webkit-backdrop-filter: blur(28px) saturate(155%);
     border: 1px solid var(--ec-border);
-    border-radius: 24px;
+    border-radius: 26px;
     box-shadow: var(--ec-shadow);
     overflow: hidden;
 
@@ -602,17 +603,17 @@ export const getStyles = () => `
   }
 
   .mole-searchbox.state-running {
-    border-color: rgba(0, 113, 227, 0.2);
-    box-shadow: 0 24px 64px rgba(15, 23, 42, 0.14), 0 0 0 1px rgba(0, 113, 227, 0.12);
+    border-color: rgba(22, 119, 255, 0.24);
+    box-shadow: 0 24px 64px rgba(15, 23, 42, 0.14), 0 0 0 1px rgba(22, 119, 255, 0.12);
   }
 
   .mole-searchbox.state-done {
-    border-color: rgba(36, 138, 61, 0.2);
+    border-color: rgba(18, 183, 106, 0.24);
   }
 
   .mole-searchbox.state-error {
-    border-color: rgba(215, 0, 21, 0.2);
-    box-shadow: 0 24px 64px rgba(15, 23, 42, 0.14), 0 0 0 1px rgba(215, 0, 21, 0.1);
+    border-color: rgba(239, 68, 68, 0.24);
+    box-shadow: 0 24px 64px rgba(15, 23, 42, 0.14), 0 0 0 1px rgba(239, 68, 68, 0.1);
   }
 
   /* 输入行 */
@@ -622,22 +623,23 @@ export const getStyles = () => `
     margin: 12px 12px 8px;
     padding: 12px 14px;
     gap: 12px;
-    border-radius: 13px;
-    border: 1px solid var(--ec-border-soft);
-    background: linear-gradient(170deg, var(--ec-surface-strong) 0%, var(--ec-surface-soft) 100%);
-    transition: background-color 0.2s ease;
-    border: none;
+    border-radius: 18px;
+    border: 1px solid var(--ec-border);
+    background: linear-gradient(180deg, rgba(248, 251, 255, 0.96) 0%, rgba(255, 255, 255, 0.88) 100%);
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.05);
+    transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
   }
 
   .mole-input-row:focus-within {
-    border-color: var(--ec-border-soft);
-    box-shadow: none;
+    border-color: rgba(22, 119, 255, 0.24);
+    background: rgba(255, 255, 255, 0.96);
+    box-shadow: var(--ec-focus-ring);
   }
 
   .mole-input-icon {
     width: 22px;
     height: 22px;
-    border-radius: 5px;
+    border-radius: 8px;
     flex-shrink: 0;
   }
 
@@ -646,8 +648,8 @@ export const getStyles = () => `
     border: none;
     outline: none;
     background: transparent;
-    font-size: 16px;
-    line-height: 1.5;
+    font-size: 15px;
+    line-height: 1.45;
     color: var(--ec-text);
     caret-color: var(--ec-primary);
   }
@@ -664,12 +666,12 @@ export const getStyles = () => `
 
   .mole-input-hint {
     flex-shrink: 0;
-    font-size: 12px;
+    font-size: 11px;
     color: var(--ec-text-muted);
-    padding: 3px 8px;
+    padding: 5px 9px;
     border: 1px solid var(--ec-border-soft);
-    background: var(--ec-primary-soft);
-    border-radius: 7px;
+    background: rgba(255, 255, 255, 0.78);
+    border-radius: 999px;
     line-height: 1;
   }
 
@@ -705,11 +707,11 @@ export const getStyles = () => `
     margin: 8px 0;
     padding: 10px 12px;
     color: var(--ec-text);
-    font-size: 13px;
-    border-radius: 12px;
+    font-size: 12px;
+    border-radius: 14px;
     border: 1px solid var(--ec-border-soft);
-    background: linear-gradient(180deg, rgba(255, 255, 255, 0.82), rgba(248, 250, 252, 0.92));
-    box-shadow: 0 6px 18px rgba(15, 23, 42, 0.04);
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.88), rgba(248, 250, 252, 0.94));
+    box-shadow: 0 8px 20px rgba(15, 23, 42, 0.04);
   }
 
   .mole-status .dot {
@@ -729,11 +731,11 @@ export const getStyles = () => `
     margin: 8px 0;
     padding: 10px 12px;
     color: var(--ec-primary-strong);
-    font-size: 13px;
-    border-radius: 12px;
-    border: 1px solid rgba(0, 113, 227, 0.14);
-    background: linear-gradient(180deg, rgba(0, 113, 227, 0.08), rgba(255, 255, 255, 0.9));
-    box-shadow: 0 8px 22px rgba(0, 113, 227, 0.06);
+    font-size: 12px;
+    border-radius: 14px;
+    border: 1px solid rgba(22, 119, 255, 0.14);
+    background: linear-gradient(180deg, rgba(22, 119, 255, 0.08), rgba(255, 255, 255, 0.92));
+    box-shadow: 0 8px 20px rgba(22, 119, 255, 0.05);
   }
 
   .mole-planning .dot {
@@ -779,8 +781,10 @@ export const getStyles = () => `
   /* 调度状态机日志 */
   .mole-agent-state-panel {
     margin: 10px 0;
-    border-radius: 14px;
-    background: rgba(248, 250, 252, 0.92);
+    border-radius: 18px;
+    border: 1px solid var(--ec-border-soft);
+    background: rgba(248, 251, 255, 0.92);
+    box-shadow: 0 10px 22px rgba(15, 23, 42, 0.04);
     overflow: hidden;
   }
 
@@ -789,10 +793,10 @@ export const getStyles = () => `
     flex-direction: column;
     align-items: stretch;
     gap: 6px;
-    padding: 10px 12px;
-    font-size: 12px;
+    padding: 12px 14px;
+    font-size: 11px;
     color: var(--ec-primary-strong);
-    background: rgba(0, 113, 227, 0.05);
+    background: linear-gradient(180deg, rgba(22, 119, 255, 0.06), rgba(255, 255, 255, 0.38));
     font-weight: 600;
     user-select: none;
     cursor: pointer;
@@ -800,7 +804,7 @@ export const getStyles = () => `
   }
 
   .mole-agent-state-panel.is-live .mole-agent-state-title {
-    background: rgba(0, 113, 227, 0.06);
+    background: linear-gradient(180deg, rgba(22, 119, 255, 0.08), rgba(255, 255, 255, 0.42));
   }
 
   .mole-agent-state-title-main {
@@ -822,13 +826,14 @@ export const getStyles = () => `
     display: -webkit-box;
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
-    font-size: 13px;
+    font-size: 12px;
     line-height: 1.5;
     color: var(--ec-text);
     font-weight: 600;
-    padding: 8px 10px;
-    border-radius: 12px;
-    background: rgba(255, 255, 255, 0.82);
+    padding: 9px 11px;
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.86);
+    border: 1px solid rgba(219, 227, 238, 0.78);
   }
 
   .mole-agent-state-panel.is-live .mole-agent-state-summary::before {
@@ -875,7 +880,7 @@ export const getStyles = () => `
 
   .mole-agent-state-log {
     display: none;
-    padding: 6px 12px;
+    padding: 6px 14px 4px;
   }
 
   .mole-agent-state-panel.open .mole-agent-state-log {
@@ -896,7 +901,7 @@ export const getStyles = () => `
   .mole-task-runtime-board {
     display: none;
     gap: 8px;
-    padding: 0 12px 12px;
+    padding: 0 14px 14px;
     background: transparent;
   }
 
@@ -909,10 +914,11 @@ export const getStyles = () => `
     align-items: center;
     gap: 8px;
     padding: 10px 12px;
-    border-radius: 12px;
-    background: rgba(255, 255, 255, 0.82);
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.84);
+    border: 1px solid rgba(219, 227, 238, 0.74);
     color: var(--ec-text);
-    font-size: 13px;
+    font-size: 12px;
     line-height: 1.5;
     font-weight: 600;
   }
@@ -933,7 +939,7 @@ export const getStyles = () => `
     width: 4px;
     height: 4px;
     border-radius: 999px;
-    background: rgba(0, 113, 227, 0.58);
+    background: rgba(22, 119, 255, 0.58);
     animation: mole-loader-fade 1.2s ease-in-out infinite;
   }
 
@@ -950,7 +956,7 @@ export const getStyles = () => `
     height: 8px;
     border-radius: 999px;
     margin-top: 7px;
-    background: rgba(0, 113, 227, 0.22);
+    background: rgba(22, 119, 255, 0.22);
   }
 
   @keyframes mole-pulse {
@@ -1046,19 +1052,21 @@ export const getStyles = () => `
     display: flex;
     align-items: center;
     gap: 6px;
-    padding: 8px 10px;
-    background: rgba(0, 113, 227, 0.05);
-    border-radius: 10px;
+    padding: 9px 11px;
+    background: linear-gradient(180deg, rgba(22, 119, 255, 0.08), rgba(255, 255, 255, 0.88));
+    border: 1px solid rgba(22, 119, 255, 0.12);
+    border-radius: 12px;
     cursor: pointer;
     font-size: 12px;
     font-weight: 500;
     color: var(--ec-primary-strong);
     user-select: none;
-    transition: background 0.15s ease;
+    transition: background 0.15s ease, border-color 0.15s ease;
   }
 
   .mole-calls-summary:hover {
-    background: rgba(0, 113, 227, 0.08);
+    background: linear-gradient(180deg, rgba(22, 119, 255, 0.1), rgba(255, 255, 255, 0.92));
+    border-color: rgba(22, 119, 255, 0.18);
   }
 
   .mole-calls-summary .arrow {
@@ -1089,7 +1097,7 @@ export const getStyles = () => `
 
   .mole-calls-detail.open {
     display: grid;
-    gap: 4px;
+    gap: 6px;
   }
 
   .mole-calls-detail .mole-call-item {
@@ -1100,29 +1108,31 @@ export const getStyles = () => `
     display: flex;
     align-items: flex-start;
     gap: 8px;
-    padding: 8px 10px;
-    border-radius: 10px;
+    padding: 9px 11px;
+    border-radius: 12px;
     cursor: default;
     font-size: 12px;
     color: var(--ec-text);
     user-select: none;
-    background: rgba(255, 255, 255, 0.78);
+    border: 1px solid rgba(219, 227, 238, 0.72);
+    background: rgba(255, 255, 255, 0.82);
+    box-shadow: 0 6px 16px rgba(15, 23, 42, 0.03);
   }
 
   .mole-call-item.tone-status .mole-call-header {
-    background: rgba(0, 113, 227, 0.04);
+    background: linear-gradient(180deg, rgba(22, 119, 255, 0.06), rgba(255, 255, 255, 0.9));
   }
 
   .mole-call-item.tone-action .mole-call-header {
-    background: rgba(124, 58, 237, 0.05);
+    background: linear-gradient(180deg, rgba(124, 58, 237, 0.06), rgba(255, 255, 255, 0.9));
   }
 
   .mole-call-item.tone-issue .mole-call-header {
-    background: rgba(217, 119, 6, 0.08);
+    background: linear-gradient(180deg, rgba(245, 158, 11, 0.1), rgba(255, 255, 255, 0.9));
   }
 
   .mole-call-item.tone-done .mole-call-header {
-    background: rgba(22, 163, 74, 0.07);
+    background: linear-gradient(180deg, rgba(18, 183, 106, 0.09), rgba(255, 255, 255, 0.9));
   }
 
   .mole-call-header.has-body {
@@ -1141,9 +1151,9 @@ export const getStyles = () => `
 
   .mole-call-status {
     margin-left: auto;
-    font-size: 11px;
+    font-size: 10px;
     padding-top: 1px;
-    color: var(--ec-text-soft);
+    color: var(--ec-text-muted);
     flex-shrink: 0;
   }
 
@@ -1157,13 +1167,13 @@ export const getStyles = () => `
 
   .mole-call-title {
     line-height: 1.4;
-    font-weight: 500;
+    font-weight: 600;
     color: var(--ec-text);
   }
 
   .mole-call-intent {
     font-size: 11px;
-    line-height: 1.35;
+    line-height: 1.45;
     color: var(--ec-text-muted);
     font-weight: 400;
     word-break: break-word;
@@ -1171,7 +1181,7 @@ export const getStyles = () => `
 
   .mole-call-body {
     display: none;
-    padding: 6px 0 6px 24px;
+    padding: 8px 0 8px 24px;
   }
 
   .mole-call-body.open {
@@ -1348,14 +1358,15 @@ export const getStyles = () => `
   /* ---- 用户消息气泡 ---- */
   .mole-user-msg {
     margin: 12px 0 6px;
-    padding: 8px 14px;
-    background: var(--ec-primary-soft);
-    border: 1px solid rgba(0, 113, 227, 0.2);
-    border-radius: 14px 14px 6px 14px;
-    font-size: 14px;
+    padding: 9px 14px;
+    background: linear-gradient(180deg, rgba(22, 119, 255, 0.12), rgba(255, 255, 255, 0.82));
+    border: 1px solid rgba(22, 119, 255, 0.18);
+    border-radius: 16px 16px 8px 16px;
+    font-size: 13px;
     color: var(--ec-text);
     max-width: 85%;
     margin-left: auto;
+    box-shadow: 0 8px 18px rgba(15, 23, 42, 0.04);
     word-break: break-word;
   }
 
@@ -1405,27 +1416,28 @@ export const getStyles = () => `
     display: flex;
     gap: 12px;
     padding: 10px 12px;
-    border: 1px solid rgba(15, 23, 42, 0.06);
-    border-radius: 14px;
-    background: linear-gradient(180deg, rgba(255, 255, 255, 0.72), rgba(255, 255, 255, 0.48));
+    border: 1px solid rgba(219, 227, 238, 0.84);
+    border-radius: 16px;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.84), rgba(248, 251, 255, 0.78));
+    box-shadow: 0 8px 18px rgba(15, 23, 42, 0.04);
     transition: background 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
     cursor: pointer;
   }
 
   .mole-result-card:hover {
-    background: linear-gradient(180deg, rgba(255, 255, 255, 0.9), rgba(240, 247, 255, 0.72));
-    border-color: rgba(0, 113, 227, 0.18);
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(240, 247, 255, 0.8));
+    border-color: rgba(22, 119, 255, 0.18);
     transform: translateY(-1px);
   }
 
   .mole-result-thumb {
     width: 58px;
     height: 58px;
-    border-radius: 10px;
+    border-radius: 12px;
     object-fit: cover;
     flex-shrink: 0;
     background: rgba(148, 163, 184, 0.18);
-    border: 1px solid rgba(15, 23, 42, 0.06);
+    border: 1px solid rgba(219, 227, 238, 0.84);
   }
 
   .mole-result-body {
@@ -1436,15 +1448,15 @@ export const getStyles = () => `
   /* AI 回复文本 */
   .mole-answer {
     margin: 8px 0 4px;
-    padding: 12px 14px;
-    border-radius: 16px;
-    border: 1px solid rgba(15, 23, 42, 0.08);
-    background: linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(250, 252, 255, 0.84));
-    box-shadow: 0 8px 20px rgba(15, 23, 42, 0.08);
+    padding: 13px 15px;
+    border-radius: 18px;
+    border: 1px solid rgba(219, 227, 238, 0.9);
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(248, 251, 255, 0.84));
+    box-shadow: 0 10px 22px rgba(15, 23, 42, 0.05);
     white-space: pre-wrap;
     word-break: break-word;
-    font-size: 14px;
-    line-height: 1.72;
+    font-size: 13px;
+    line-height: 1.7;
   }
 
   .mole-answer p {
@@ -1474,20 +1486,20 @@ export const getStyles = () => `
   }
 
   .mole-answer code {
-    background: rgba(0, 113, 227, 0.1);
-    border: 1px solid rgba(0, 113, 227, 0.12);
-    padding: 1px 6px;
-    border-radius: 6px;
+    background: rgba(22, 119, 255, 0.08);
+    border: 1px solid rgba(22, 119, 255, 0.12);
+    padding: 2px 6px;
+    border-radius: 7px;
     font-size: 12px;
     font-family: "SF Mono", Monaco, Consolas, monospace;
   }
 
   .mole-answer pre {
     margin: 10px 0 0;
-    padding: 10px 12px;
-    border-radius: 10px;
+    padding: 12px 14px;
+    border-radius: 12px;
     border: 1px solid rgba(15, 23, 42, 0.1);
-    background: rgba(15, 23, 42, 0.86);
+    background: rgba(15, 23, 42, 0.9);
     color: #f2f5f9;
     font-family: "SF Mono", Monaco, Consolas, monospace;
     font-size: 12px;
@@ -1505,10 +1517,10 @@ export const getStyles = () => `
 
   .mole-answer blockquote {
     margin: 10px 0 0;
-    padding: 8px 12px;
-    border-left: 3px solid rgba(0, 113, 227, 0.45);
-    border-radius: 0 10px 10px 0;
-    background: rgba(0, 113, 227, 0.07);
+    padding: 9px 12px;
+    border-left: 3px solid rgba(22, 119, 255, 0.42);
+    border-radius: 0 12px 12px 0;
+    background: rgba(22, 119, 255, 0.06);
     color: #314863;
   }
 
@@ -1580,10 +1592,10 @@ export const getStyles = () => `
   .mole-screenshot-section {
     margin: 8px 0;
     padding: 10px;
-    background: linear-gradient(180deg, rgba(255, 255, 255, 0.86), rgba(245, 248, 255, 0.66));
-    border-radius: 14px;
-    border: 1px solid rgba(15, 23, 42, 0.08);
-    box-shadow: 0 6px 16px rgba(15, 23, 42, 0.08);
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.9), rgba(245, 248, 255, 0.72));
+    border-radius: 16px;
+    border: 1px solid rgba(219, 227, 238, 0.9);
+    box-shadow: 0 8px 18px rgba(15, 23, 42, 0.05);
   }
   .mole-screenshot-header {
     display: flex;
@@ -1989,18 +2001,18 @@ export const getStyles = () => `
 
   /* 底部提示区 */
   .mole-footer {
-    padding: 12px 14px;
+    padding: 10px 14px 12px;
     display: flex;
     align-items: center;
     gap: 8px;
     color: var(--ec-text-muted);
-    font-size: 13px;
-    background: linear-gradient(180deg, rgba(255, 255, 255, 0.42) 0%, var(--ec-surface-soft) 100%);
+    font-size: 12px;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.34) 0%, rgba(255, 255, 255, 0.68) 100%);
     border-top: 1px solid var(--ec-border-soft);
   }
 
   .mole-footer-icon {
-    font-size: 15px;
+    font-size: 14px;
     color: var(--ec-primary-strong);
   }
 
@@ -2014,12 +2026,12 @@ export const getStyles = () => `
 
   .mole-footer-time {
     margin-left: auto;
-    font-size: 12px;
+    font-size: 11px;
     color: var(--ec-text-muted);
-    background: var(--ec-primary-soft);
-    border: 1px solid rgba(0, 113, 227, 0.16);
+    background: rgba(255, 255, 255, 0.76);
+    border: 1px solid rgba(22, 119, 255, 0.14);
     border-radius: 999px;
-    padding: 3px 8px;
+    padding: 4px 8px;
     white-space: nowrap;
   }
 
@@ -2028,8 +2040,8 @@ export const getStyles = () => `
   }
 
   .mole-searchbox.state-running .mole-footer-time {
-    background: var(--ec-primary-soft);
-    border-color: rgba(0, 113, 227, 0.2);
+    background: rgba(22, 119, 255, 0.1);
+    border-color: rgba(22, 119, 255, 0.18);
     color: var(--ec-primary-strong);
   }
 
@@ -2047,13 +2059,13 @@ export const getStyles = () => `
 
   .mole-searchbox.state-done .mole-footer-time {
     background: var(--ec-success-soft);
-    border-color: rgba(36, 138, 61, 0.2);
+    border-color: rgba(18, 183, 106, 0.24);
     color: var(--ec-success);
   }
 
   .mole-searchbox.state-error .mole-footer-time {
     background: var(--ec-danger-soft);
-    border-color: rgba(215, 0, 21, 0.2);
+    border-color: rgba(239, 68, 68, 0.18);
     color: var(--ec-danger);
   }
 
@@ -2253,24 +2265,26 @@ export const getStyles = () => `
     display: inline-flex;
     align-items: center;
     gap: 4px;
-    padding: 4px 10px;
+    padding: 5px 10px;
     border-radius: 999px;
-    background: rgba(0, 0, 0, 0.04);
-    border: none;
+    background: rgba(255, 255, 255, 0.86);
+    border: 1px solid rgba(219, 227, 238, 0.84);
     cursor: pointer;
-    transition: background 0.15s;
-    font-size: 12px;
+    transition: background 0.15s, border-color 0.15s, color 0.15s;
+    font-size: 11px;
     line-height: 1.4;
-    color: #636366;
+    color: #667085;
+    box-shadow: 0 4px 10px rgba(15, 23, 42, 0.03);
   }
 
   .mole-workflow-chip:hover {
-    background: rgba(0, 113, 227, 0.1);
-    color: #0071e3;
+    background: rgba(22, 119, 255, 0.08);
+    border-color: rgba(22, 119, 255, 0.16);
+    color: #1677ff;
   }
 
   .mole-workflow-chip:active {
-    background: rgba(0, 113, 227, 0.16);
+    background: rgba(22, 119, 255, 0.14);
   }
 
   .mole-workflow-chip-label {
@@ -2462,8 +2476,8 @@ export const getStyles = () => `
     height: 30px;
     border-radius: 50%;
     border: 1px solid var(--ec-border);
-    background: linear-gradient(180deg, var(--ec-surface-strong) 0%, var(--ec-surface) 100%);
-    box-shadow: 0 10px 22px rgba(15, 23, 42, 0.16);
+    background: linear-gradient(180deg, rgba(248, 251, 255, 0.96) 0%, var(--ec-surface) 100%);
+    box-shadow: 0 10px 22px rgba(15, 23, 42, 0.14);
     color: var(--ec-danger);
     display: inline-flex;
     align-items: center;
