@@ -619,8 +619,8 @@ export const getStyles = () => `
     display: flex;
     align-items: center;
     margin: 0;
-    padding: 14px 18px;
-    gap: 12px;
+    padding: 18px 20px;
+    gap: 14px;
     border-radius: 0;
     border: none;
     background: transparent;
@@ -632,8 +632,8 @@ export const getStyles = () => `
   }
 
   .mole-input-icon {
-    width: 22px;
-    height: 22px;
+    width: 26px;
+    height: 26px;
     border-radius: 8px;
     flex-shrink: 0;
   }
@@ -643,8 +643,8 @@ export const getStyles = () => `
     border: none;
     outline: none;
     background: transparent;
-    font-size: 15px;
-    line-height: 1.45;
+    font-size: 16px;
+    line-height: 1.5;
     color: var(--ec-text);
     caret-color: var(--ec-primary);
   }
