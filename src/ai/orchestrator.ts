@@ -410,8 +410,13 @@ const agenticLoop = async (
             roundsSinceTodoOp = 0;
 
             // emit 事件（UI 展示）
+            const todoSuccess = !todoOutput.includes('"success":false');
             emit({ type: 'function_call', content: JSON.stringify({ name: 'todo', callId: fc.call_id, arguments: fc.arguments }) });
-            emit({ type: 'function_result', content: JSON.stringify({ name: 'todo', callId: fc.call_id, success: !todoOutput.includes('"success":false'), message: '', cancelled: false }) });
+            emit({ type: 'function_result', content: JSON.stringify({ name: 'todo', callId: fc.call_id, success: todoSuccess, message: '', cancelled: false }) });
+            // emit todo 状态更新事件（供悬浮球渲染独立进度视图）
+            if (todoManager.active) {
+              emit({ type: 'todo_update', content: JSON.stringify({ items: todoManager.all, stats: todoManager.stats }) });
+            }
           } else {
             regularCalls.push(fc);
           }

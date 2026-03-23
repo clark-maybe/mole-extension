@@ -149,7 +149,8 @@ export type AIStreamEventType =
   | 'turn_item_started'
   | 'turn_item_completed'
   | 'approval_request'
-  | 'queue_updated';
+  | 'queue_updated'
+  | 'todo_update';
 
 /** 从 background 推送到 content 的流式事件 */
 export interface AIStreamEvent {

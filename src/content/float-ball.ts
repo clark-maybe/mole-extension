@@ -2041,6 +2041,7 @@ export const initFloatBall = async () => {
       <span class="mole-agent-state-summary">等待任务开始</span>
     </div>
     <div class="mole-task-runtime-board"></div>
+    <div class="mole-todo-board"></div>
     <div class="mole-agent-state-ops-anchor"></div>
     <div class="mole-agent-state-log"></div>
   `;
@@ -2716,6 +2717,13 @@ export const initFloatBall = async () => {
   const handleFunctionCallEvent = (content: string) => {
     const callMeta = parseFunctionCallEvent(content);
     const funcName = callMeta.name;
+
+    // todo 调用不显示在执行过程列表中（有独立视图）
+    if (funcName === 'todo') {
+      saveSnapshot();
+      return;
+    }
+
     const icon = FUNCTION_ICONS[funcName] || '';
     const label = FUNCTION_LABELS[funcName] || funcName || '操作执行';
     const intentText = buildToolIntentText(funcName, callMeta.summary);
@@ -2992,6 +3000,54 @@ export const initFloatBall = async () => {
     saveSnapshot();
   };
 
+  // ── Todo 进度视图 ──
+
+  /** 渲染 todo 独立进度视图 */
+  const renderTodoBoard = (items: { id: number; title: string; status: string; result?: string }[], stats: { total: number; completed: number }) => {
+    const panel = resultEl.querySelector('.mole-agent-state-panel:not(.frozen)') as HTMLElement | null;
+    if (!panel) return;
+    const board = panel.querySelector('.mole-todo-board') as HTMLElement | null;
+    if (!board) return;
+
+    if (!items || items.length === 0) {
+      board.innerHTML = '';
+      return;
+    }
+
+    const rows = items.map(item => {
+      const icon = item.status === 'completed' ? '✓'
+                 : item.status === 'in_progress' ? '›'
+                 : '○';
+      const cls = item.status === 'completed' ? 'done'
+                : item.status === 'in_progress' ? 'active'
+                : 'pending';
+      const resultSuffix = item.result ? ` → ${escapeHtml(item.result)}` : '';
+      return `<div class="mole-todo-item ${cls}"><span class="mole-todo-icon">${icon}</span><span class="mole-todo-text">#${item.id} ${escapeHtml(item.title)}${resultSuffix}</span></div>`;
+    }).join('');
+
+    const progress = stats.total > 0 ? Math.round((stats.completed / stats.total) * 100) : 0;
+    board.innerHTML = `
+      <div class="mole-todo-header">
+        <span class="mole-todo-label">任务计划</span>
+        <span class="mole-todo-stats">${stats.completed}/${stats.total}</span>
+      </div>
+      <div class="mole-todo-progress-bar"><div class="mole-todo-progress-fill" style="width:${progress}%"></div></div>
+      <div class="mole-todo-list">${rows}</div>
+    `;
+  };
+
+  const handleTodoUpdateEvent = (content: string) => {
+    try {
+      const parsed = JSON.parse(content);
+      if (parsed && Array.isArray(parsed.items)) {
+        renderTodoBoard(parsed.items, parsed.stats || { total: parsed.items.length, completed: 0 });
+      }
+    } catch {
+      // ignore malformed payload
+    }
+    saveSnapshot();
+  };
+
   const streamEventHandlers: Record<string, (content: string) => void> = {
     tool_group_start: handleToolGroupStartEvent,
     function_call: handleFunctionCallEvent,
@@ -3002,6 +3058,7 @@ export const initFloatBall = async () => {
     page_repair_data: handlePageRepairDataEvent,
     text: handleTextEvent,
     cards: handleCardsEvent,
+    todo_update: handleTodoUpdateEvent,
   };
 
   const handleAIStream = (data: any) => {

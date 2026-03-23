@@ -901,6 +901,112 @@ export const getStyles = () => `
     display: grid;
   }
 
+  /* ── Todo 进度视图 ── */
+  .mole-todo-board {
+    display: none;
+    padding: 0 14px 10px;
+  }
+
+  .mole-agent-state-panel.open .mole-todo-board:not(:empty) {
+    display: block;
+  }
+
+  .mole-todo-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 6px;
+  }
+
+  .mole-todo-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--ec-primary-strong);
+  }
+
+  .mole-todo-stats {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--ec-text-muted);
+  }
+
+  .mole-todo-progress-bar {
+    height: 3px;
+    border-radius: 2px;
+    background: rgba(22, 119, 255, 0.1);
+    margin-bottom: 8px;
+    overflow: hidden;
+  }
+
+  .mole-todo-progress-fill {
+    height: 100%;
+    border-radius: 2px;
+    background: var(--ec-primary);
+    transition: width 0.3s ease;
+  }
+
+  .mole-todo-list {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+
+  .mole-todo-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 6px;
+    padding: 4px 8px;
+    border-radius: 6px;
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--ec-text);
+    transition: background 0.15s ease;
+  }
+
+  .mole-todo-item.active {
+    background: rgba(22, 119, 255, 0.06);
+    font-weight: 600;
+  }
+
+  .mole-todo-item.done {
+    color: var(--ec-text-muted);
+  }
+
+  .mole-todo-item.done .mole-todo-text {
+    text-decoration: line-through;
+    text-decoration-color: rgba(102, 112, 133, 0.4);
+  }
+
+  .mole-todo-item.pending {
+    color: var(--ec-text-muted);
+  }
+
+  .mole-todo-icon {
+    flex-shrink: 0;
+    width: 16px;
+    text-align: center;
+    font-weight: 700;
+    line-height: 1.5;
+  }
+
+  .mole-todo-item.done .mole-todo-icon {
+    color: var(--ec-success);
+  }
+
+  .mole-todo-item.active .mole-todo-icon {
+    color: var(--ec-primary);
+  }
+
+  .mole-todo-item.pending .mole-todo-icon {
+    color: rgba(102, 112, 133, 0.4);
+  }
+
+  .mole-todo-text {
+    min-width: 0;
+    flex: 1;
+    word-break: break-word;
+  }
+
   .mole-runtime-now {
     display: flex;
     align-items: center;
