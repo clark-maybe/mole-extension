@@ -28,7 +28,8 @@ import type {
 import { ArtifactStore } from '../lib/artifact-store';
 import { chatStream, chatComplete } from './llm-client';
 import { compactContext, getTextContent, microCompact, estimateContextTokens, stripImagesFromContent } from './context-manager';
-import { executeToolCalls, SPAWN_SUBTASK_SCHEMA, EXPLORE_SCHEMA, resetSensitiveAccessTrust } from './tool-executor';
+import { executeToolCalls, getSubagentSchemas, isSubagent, resetSensitiveAccessTrust } from './tool-executor';
+import type { SubagentRunner } from './tool-executor';
 import { buildSystemPrompt, buildSubtaskPrompt, buildExplorePrompt } from './system-prompt';
 import { ensureToolRegistryReady, mcpClient } from '../functions/registry';
 import { mcpToolsToSchema } from '../mcp/adapters';
@@ -155,6 +156,31 @@ const EXPLORE_ALLOWED_TOOLS: ReadonlySet<string> = new Set([
   'selection_context',
   'skill',
 ]);
+
+/** 子 agent 循环配置（决定 agenticLoop 的行为） */
+interface SubagentLoopConfig {
+  /** 系统提示词构建函数 */
+  buildPrompt: () => string;
+  /** 工具过滤器（返回 true 保留，不提供则使用全部工具去掉子 agent） */
+  toolFilter?: (toolName: string) => boolean;
+  /** 预算覆盖 */
+  budget: Partial<LoopBudget>;
+}
+
+/** 子 agent 循环配置注册表 */
+const SUBAGENT_LOOP_CONFIGS: Record<string, SubagentLoopConfig> = {
+  spawn_subtask: {
+    buildPrompt: buildSubtaskPrompt,
+    // 只过滤掉自身，保留 explore 等其他子 agent（与重构前行为一致）
+    toolFilter: (name) => name !== 'spawn_subtask',
+    budget: { maxRounds: 25 },
+  },
+  explore: {
+    buildPrompt: buildExplorePrompt,
+    toolFilter: (name) => EXPLORE_ALLOWED_TOOLS.has(name),
+    budget: { maxRounds: 15, maxToolCalls: 30, maxSubtaskDepth: 0 },
+  },
+};
 
 // ============ 辅助函数 ============
 
@@ -565,35 +591,38 @@ const agenticLoop = async (
         break;
       }
 
-      // ── 机制：执行工具 ──
-      const subtaskRunner = depth < budget.maxSubtaskDepth
-        ? (goal: string, subtaskSignal?: AbortSignal) => {
-            const subContext: InputItem[] = [{ role: 'user' as const, content: goal }];
-            const subTools = tools.filter(t => t.name !== 'spawn_subtask');
-            const subBudget = { ...budget, maxRounds: Math.min(budget.maxRounds, 25), maxSubtaskDepth: budget.maxSubtaskDepth };
-            return agenticLoop(
-              subContext, subTools, buildSubtaskPrompt(), subBudget,
-              tabId, subtaskSignal || signal, emit, undefined, depth + 1,
-            );
-          }
-        : undefined;
+      // ── 机制：构建子 agent runners ──
+      const subagentRunners: Record<string, SubagentRunner> = {};
+      for (const [name, config] of Object.entries(SUBAGENT_LOOP_CONFIGS)) {
+        // 检查递归深度限制
+        // - 未指定 maxSubtaskDepth 的子 agent（如 spawn_subtask）：继承父预算的 depth 限制
+        // - maxSubtaskDepth === 0 的子 agent（如 explore）：始终可用，但其内部不会再产生子 agent
+        const configDepth = config.budget.maxSubtaskDepth;
+        if (configDepth === undefined || configDepth > 0) {
+          // 继承父预算深度限制
+          const effectiveDepth = configDepth ?? budget.maxSubtaskDepth;
+          if (depth >= effectiveDepth) continue;
+        }
+        // configDepth === 0：始终创建 runner（不受 depth 限制）
 
-      // ── 机制：探索子 agent ──
-      const exploreRunner = (goal: string, exploreSignal?: AbortSignal) => {
-        const exploreContext: InputItem[] = [{ role: 'user' as const, content: goal }];
-        // 过滤工具：只保留只读白名单中的工具
-        const exploreTools = tools.filter(t => EXPLORE_ALLOWED_TOOLS.has(t.name));
-        const exploreBudget: LoopBudget = {
-          ...budget,
-          maxRounds: 15,
-          maxToolCalls: 30,
-          maxSubtaskDepth: 0, // 不允许递归
+        subagentRunners[name] = (goal: string, runnerSignal?: AbortSignal) => {
+          const subContext: InputItem[] = [{ role: 'user' as const, content: goal }];
+          const subTools = config.toolFilter
+            ? tools.filter(t => config.toolFilter!(t.name))
+            : tools.filter(t => !isSubagent(t.name));
+          // 预算合并：config.budget 中的数值字段使用 Math.min 取较小值（保持与重构前一致的行为）
+          const mergedBudget: Partial<LoopBudget> = {};
+          for (const [key, value] of Object.entries(config.budget)) {
+            const budgetKey = key as keyof LoopBudget;
+            mergedBudget[budgetKey] = Math.min(budget[budgetKey], value as number);
+          }
+          const subBudget: LoopBudget = { ...budget, ...mergedBudget };
+          return agenticLoop(
+            subContext, subTools, config.buildPrompt(), subBudget,
+            tabId, runnerSignal || signal, emit, undefined, depth + 1,
+          );
         };
-        return agenticLoop(
-          exploreContext, exploreTools, buildExplorePrompt(), exploreBudget,
-          tabId, exploreSignal || signal, emit, undefined, depth + 1,
-        );
-      };
+      }
 
       // ── 机制：拦截 todo / compact 调用，本地执行 ──
       const regularCalls: OutputFunctionCallItem[] = [];
@@ -705,7 +734,7 @@ const agenticLoop = async (
 
       // 执行剩余常规工具
       if (regularCalls.length > 0) {
-        const results = await executeToolCalls(regularCalls, tabId, signal, emit, subtaskRunner, exploreRunner);
+        const results = await executeToolCalls(regularCalls, tabId, signal, emit, subagentRunners);
         for (const r of results) context.push(r);
 
         // 注入截图图片到上下文（视觉理解）
@@ -858,11 +887,8 @@ export const handleChat = async (
     // skill 注入失败不影响正常工具链
   }
 
-  // 注入 spawn_subtask（只有顶层才有）
-  tools.push(SPAWN_SUBTASK_SCHEMA);
-
-  // 注入 explore 探索工具（只有顶层才有）
-  tools.push(EXPLORE_SCHEMA);
+  // 注入子 agent 工具（只有顶层才有）
+  tools.push(...getSubagentSchemas());
 
   // ── 任务规划追踪 ──
   const todoManager = options?.resumeTodoSnapshot

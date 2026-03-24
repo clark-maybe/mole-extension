@@ -5,6 +5,7 @@
  */
 
 import type { InputItem, AIStreamEvent, ContentPart, MessageInputItem, FunctionCallInputItem, FunctionCallOutputItem } from './types';
+import { getSubagentNames } from './tool-executor';
 
 /** 上下文压缩标记 */
 const CONTEXT_COMPACT_TAG = '[context-compacted]';
@@ -142,8 +143,14 @@ export const truncateToolResult = (output: string, maxChars: number = 8000): str
   return output.slice(0, maxChars) + '\n\n[结果过长，已截断。如需完整内容请再次查询指定部分]';
 };
 
-/** 不压缩结果的工具白名单（它们本身就是摘要性质） */
-const MICRO_COMPACT_SKIP_TOOLS = new Set(['explore', 'spawn_subtask']);
+/** 不压缩结果的工具白名单（它们本身就是摘要性质，从子 agent 注册表获取） */
+let _microCompactSkipTools: Set<string> | null = null;
+const getMicroCompactSkipTools = (): Set<string> => {
+  if (!_microCompactSkipTools) {
+    _microCompactSkipTools = new Set(getSubagentNames());
+  }
+  return _microCompactSkipTools;
+};
 
 /**
  * 微压缩：每轮静默清理旧工具结果
@@ -153,7 +160,7 @@ const MICRO_COMPACT_SKIP_TOOLS = new Set(['explore', 'spawn_subtask']);
  * - 保留最近 keepRecentOutputs 条完整
  * - 更早的 function_call_output，如果 output > 500 字符，替换为精简摘要
  * - 通过 call_id 关联 function_call 项获取 tool_name
- * - 不压缩 explore 和 spawn_subtask 的结果
+ * - 不压缩子 agent（explore、spawn_subtask 等）的结果
  *
  * @returns 压缩的条目数
  */
@@ -193,7 +200,7 @@ export const microCompact = (context: InputItem[], keepRecentOutputs: number = 6
     const toolName = callIdToName.get(item.call_id) || 'unknown';
 
     // 跳过白名单工具
-    if (MICRO_COMPACT_SKIP_TOOLS.has(toolName)) continue;
+    if (getMicroCompactSkipTools().has(toolName)) continue;
 
     // 判断执行结果成功/失败
     let status = '完成';

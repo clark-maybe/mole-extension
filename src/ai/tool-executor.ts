@@ -8,45 +8,74 @@ import { mcpClient } from '../functions/registry';
 import { truncateToolResult, getTextContent } from './context-manager';
 import { requestConfirmationFunction } from '../functions/request-confirmation';
 
-/** 子任务执行器类型（由 orchestrator 注入，实现递归） */
-export type SubtaskRunner = (goal: string, signal?: AbortSignal) => Promise<InputItem[]>;
+/** 统一子 agent 执行器类型（由 orchestrator 注入，实现递归） */
+export type SubagentRunner = (goal: string, signal?: AbortSignal) => Promise<InputItem[]>;
 
-/** 探索子 agent 执行器类型（由 orchestrator 注入） */
-export type ExploreRunner = (goal: string, signal?: AbortSignal) => Promise<InputItem[]>;
+/** 子 agent 配置 */
+interface SubagentConfig {
+  /** 工具 schema 定义 */
+  schema: ToolSchema;
+  /** thinking 事件的前缀文案 */
+  thinkingPrefix: string;
+  /** 执行失败时的默认错误消息 */
+  defaultErrorMessage: string;
+  /** 执行成功但无输出时的默认消息 */
+  defaultEmptyMessage: string;
+}
 
-/** spawn_subtask 工具 Schema */
-export const SPAWN_SUBTASK_SCHEMA: ToolSchema = {
-  type: 'function',
-  name: 'spawn_subtask',
-  description: '将一个独立的子目标拆分为隔离任务执行。子任务有自己独立的上下文，完成后返回结果摘要。适用于：任务包含多个互不依赖的子目标、需要跨多个网页分别操作、当前上下文已经很长需要隔离执行。不要用于简单的单步操作。',
-  parameters: {
-    type: 'object',
-    properties: {
-      goal: {
-        type: 'string',
-        description: '子任务的目标描述，要具体明确，包含必要的上下文信息',
+/** 子 agent 配置注册表 */
+const SUBAGENT_CONFIGS: Record<string, SubagentConfig> = {
+  spawn_subtask: {
+    schema: {
+      type: 'function',
+      name: 'spawn_subtask',
+      description: '将一个独立的子目标拆分为隔离任务执行。子任务有自己独立的上下文，完成后返回结果摘要。适用于：任务包含多个互不依赖的子目标、需要跨多个网页分别操作、当前上下文已经很长需要隔离执行。不要用于简单的单步操作。',
+      parameters: {
+        type: 'object',
+        properties: {
+          goal: {
+            type: 'string',
+            description: '子任务的目标描述，要具体明确，包含必要的上下文信息',
+          },
+        },
+        required: ['goal'],
       },
     },
-    required: ['goal'],
+    thinkingPrefix: '正在处理子任务',
+    defaultErrorMessage: '子任务执行失败',
+    defaultEmptyMessage: '子任务已完成但无明确输出',
+  },
+  explore: {
+    schema: {
+      type: 'function',
+      name: 'explore',
+      description: '启动探索子 agent 侦察页面结构和交互元素。探索 agent 在独立上下文中运行，只做观察不做写入操作，返回页面分析摘要和建议执行步骤。适合：首次访问陌生页面、需要了解页面结构再制定计划、复杂表单/流程的前期侦察。',
+      parameters: {
+        type: 'object',
+        properties: {
+          goal: {
+            type: 'string',
+            description: '探索目标描述，说明你想了解什么（如"了解这个表单有哪些字段和提交按钮"、"查看搜索结果的结构和翻页方式"）',
+          },
+        },
+        required: ['goal'],
+      },
+    },
+    thinkingPrefix: '正在探索',
+    defaultErrorMessage: '探索执行失败',
+    defaultEmptyMessage: '探索已完成但无明确输出',
   },
 };
 
-/** explore 探索工具 Schema */
-export const EXPLORE_SCHEMA: ToolSchema = {
-  type: 'function',
-  name: 'explore',
-  description: '启动探索子 agent 侦察页面结构和交互元素。探索 agent 在独立上下文中运行，只做观察不做写入操作，返回页面分析摘要和建议执行步骤。适合：首次访问陌生页面、需要了解页面结构再制定计划、复杂表单/流程的前期侦察。',
-  parameters: {
-    type: 'object',
-    properties: {
-      goal: {
-        type: 'string',
-        description: '探索目标描述，说明你想了解什么（如"了解这个表单有哪些字段和提交按钮"、"查看搜索结果的结构和翻页方式"）',
-      },
-    },
-    required: ['goal'],
-  },
-};
+/** 返回所有注册的子 agent 名称列表 */
+export const getSubagentNames = (): string[] => Object.keys(SUBAGENT_CONFIGS);
+
+/** 返回所有子 agent 的 schema */
+export const getSubagentSchemas = (): ToolSchema[] =>
+  Object.values(SUBAGENT_CONFIGS).map(config => config.schema);
+
+/** 判断是否是子 agent 工具 */
+export const isSubagent = (name: string): boolean => name in SUBAGENT_CONFIGS;
 
 /** 执行组类型：并行组或串行组 */
 interface ExecutionGroup {
@@ -70,8 +99,8 @@ const buildExecutionGroups = async (calls: OutputFunctionCallItem[]): Promise<Ex
   };
 
   for (const call of calls) {
-    // spawn_subtask / explore 始终串行
-    if (call.name === 'spawn_subtask' || call.name === 'explore') {
+    // 子 agent 始终串行
+    if (SUBAGENT_CONFIGS[call.name]) {
       flushParallelGroup();
       groups.push({ type: 'serial', calls: [call] });
       continue;
@@ -107,8 +136,7 @@ export const executeToolCalls = async (
   tabId: number | undefined,
   signal: AbortSignal | undefined,
   emit: (event: AIStreamEvent) => void,
-  runSubtask?: SubtaskRunner,
-  runExplore?: ExploreRunner,
+  subagentRunners?: Record<string, SubagentRunner>,
 ): Promise<InputItem[]> => {
   const results: InputItem[] = [];
 
@@ -185,40 +213,24 @@ export const executeToolCalls = async (
     const params = safeParseArgs(call.arguments);
     let output: string;
 
-    if (call.name === 'spawn_subtask' && runSubtask) {
-      // 子任务递归
+    const subagentConfig = SUBAGENT_CONFIGS[call.name];
+    const runner = subagentRunners?.[call.name];
+    if (subagentConfig && runner) {
+      // 统一子 agent 执行
       const goal = String(params.goal || '');
-      emit({ type: 'thinking', content: `正在处理子任务：${goal.slice(0, 60)}` });
+      emit({ type: 'thinking', content: `${subagentConfig.thinkingPrefix}：${goal.slice(0, 60)}` });
 
       try {
-        const subContext = await runSubtask(goal, signal);
+        const subContext = await runner(goal, signal);
         const lastReply = extractLastAssistantReply(subContext);
         output = JSON.stringify({
           success: true,
-          data: { summary: lastReply || '子任务已完成但无明确输出' },
+          data: { summary: lastReply || subagentConfig.defaultEmptyMessage },
         });
       } catch (err: any) {
         output = JSON.stringify({
           success: false,
-          error: err?.message || '子任务执行失败',
-        });
-      }
-    } else if (call.name === 'explore' && runExplore) {
-      // 探索子 agent
-      const goal = String(params.goal || '');
-      emit({ type: 'thinking', content: `正在探索：${goal.slice(0, 60)}` });
-
-      try {
-        const exploreContext = await runExplore(goal, signal);
-        const lastReply = extractLastAssistantReply(exploreContext);
-        output = JSON.stringify({
-          success: true,
-          data: { summary: lastReply || '探索已完成但无明确输出' },
-        });
-      } catch (err: any) {
-        output = JSON.stringify({
-          success: false,
-          error: err?.message || '探索执行失败',
+          error: err?.message || subagentConfig.defaultErrorMessage,
         });
       }
     } else {
