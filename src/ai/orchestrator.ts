@@ -100,6 +100,38 @@ export interface HandleChatOptions {
   resumeTodoSnapshot?: TodoSnapshot;
 }
 
+/** 阶段控制信号（phaseOrchestrator ↔ agenticLoop 通信） */
+export interface PhaseControl {
+  /** 由 phaseOrchestrator 提供：是否应该做交接而不是压缩 */
+  shouldHandoff?: (estimatedTokens: number, round: number) => boolean;
+  /** 由 agenticLoop 写入：true 表示因交接请求而退出 */
+  handoffRequested?: boolean;
+}
+
+/** 交接工件（阶段间传递的结构化状态） */
+interface HandoffArtifact {
+  /** 原始用户目标 */
+  taskGoal: string;
+  /** 当前阶段编号（从 0 开始） */
+  phaseIndex: number;
+  /** todo 快照（完整进度） */
+  todoSnapshot: TodoSnapshot;
+  /** 每个已完成 todo 的摘要 */
+  completedSummaries: string[];
+  /** 浏览器客观状态 */
+  browserState: {
+    tabs: Array<{ tabId: number; url: string; title: string }>;
+    activeTabId: number;
+    currentUrl: string;
+  };
+  /** 已收集的结构化数据 */
+  collectedData: Record<string, unknown>;
+  /** 执行过程中的关键发现 */
+  observations: string[];
+  /** 风险提示 */
+  warnings: string[];
+}
+
 // ============ 默认配置 ============
 
 const DEFAULT_BUDGET: LoopBudget = {
@@ -506,6 +538,7 @@ const agenticLoop = async (
   depth: number = 0,
   todoManager?: TodoManager,
   todoFn?: ReturnType<typeof createTodoFunction>,
+  phaseControl?: PhaseControl,
 ): Promise<InputItem[]> => {
   let round = 0;
   let totalToolCalls = 0;
@@ -534,8 +567,15 @@ const agenticLoop = async (
       });
     }
 
-    // Layer 2: auto_compact — token 阈值触发 LLM 智能摘要
+    // ── 边界：阶段交接检查（优先于 auto_compact） ──
     const estimatedTokens = estimateContextTokens(context);
+    if (phaseControl?.shouldHandoff?.(estimatedTokens, round)) {
+      phaseControl.handoffRequested = true;
+      emitCheckpoint(options, 'act', round, '阶段交接', context, todoManager?.active ? todoManager.toSnapshot() : undefined);
+      break;
+    }
+
+    // Layer 2: auto_compact — token 阈值触发 LLM 智能摘要
     if (estimatedTokens > AUTO_COMPACT_TOKEN_THRESHOLD) {
       const todoText = todoManager?.active ? todoManager.toStatusText() : undefined;
       const autoResult = await performAutoCompact(context, emit, signal, todoText);
@@ -847,6 +887,293 @@ const agenticLoop = async (
 
 // ============ 对外接口 ============
 
+// ============ 阶段编排 ============
+
+/** 阶段交接 token 阈值（低于 auto_compact 的 50000，确保在压缩前交接） */
+const HANDOFF_TOKEN_THRESHOLD = 40000;
+
+/** 最大阶段数 */
+const MAX_PHASES = 10;
+
+/**
+ * 提取浏览器客观状态
+ * 不依赖 LLM，通过 chrome.tabs API 直接获取
+ */
+const getBrowserState = async (tabId?: number): Promise<HandoffArtifact['browserState']> => {
+  try {
+    if (typeof chrome === 'undefined' || !chrome.tabs) {
+      return { tabs: [], activeTabId: tabId || 0, currentUrl: '' };
+    }
+    // 精确查询当前聚焦窗口的活动标签页
+    const [focusedActiveTab] = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
+    const allTabs = await chrome.tabs.query({});
+    const activeTab = focusedActiveTab || allTabs[0];
+    return {
+      tabs: allTabs.slice(0, 10).map(t => ({
+        tabId: t.id || 0,
+        url: t.url || '',
+        title: t.title || '',
+      })),
+      activeTabId: activeTab?.id || tabId || 0,
+      currentUrl: activeTab?.url || '',
+    };
+  } catch {
+    return { tabs: [], activeTabId: tabId || 0, currentUrl: '' };
+  }
+};
+
+/**
+ * 从上下文中提取已收集数据和关键观察
+ * 规则提取优先：从工具结果中用正则提取结构化信息，不调用 LLM
+ */
+const extractDataFromContext = (context: InputItem[]): {
+  collectedData: Record<string, unknown>;
+  observations: string[];
+  warnings: string[];
+} => {
+  const collectedData: Record<string, unknown> = {};
+  const observationSet = new Set<string>();
+  const warningSet = new Set<string>();
+
+  for (const item of context) {
+    if (!('type' in item) || item.type !== 'function_call_output') continue;
+    const output = (item as FunctionCallOutputItem).output;
+    if (!output || output.length < 10) continue;
+
+    try {
+      const parsed = JSON.parse(output);
+      if (!parsed?.success) continue;
+      const data = parsed.data;
+      if (!data) continue;
+
+      // 提取 extract_data 的结果
+      if (data.buffer_id) {
+        collectedData[`buffer_${data.buffer_id}`] = {
+          count: data.count ?? data.total,
+          sample: data.sample ?? data.items?.slice?.(0, 3),
+        };
+      }
+      // 提取 tab_navigate 返回的 tab 信息
+      if (data.tab_id && data.url) {
+        collectedData[`tab_${data.tab_id}`] = { url: data.url, title: data.title };
+      }
+      // 提取包含 items/results 的结构化数据
+      if (Array.isArray(data.items) && data.items.length > 0) {
+        const key = `items_${Object.keys(collectedData).length}`;
+        collectedData[key] = data.items.slice(0, 5); // 保留前 5 条作为样本
+      }
+      if (Array.isArray(data.results) && data.results.length > 0) {
+        const key = `results_${Object.keys(collectedData).length}`;
+        collectedData[key] = data.results.slice(0, 5);
+      }
+    } catch {
+      // JSON 解析失败，跳过
+    }
+  }
+
+  // 从 assistant 消息中提取关键观察（简单启发式）
+  for (const item of context) {
+    if (!('role' in item) || item.role !== 'assistant') continue;
+    const text = getTextContent(item.content);
+    if (text.includes('需要登录') || text.includes('需要验证')) {
+      observationSet.add('页面可能需要登录或验证');
+    }
+    if (text.includes('加载失败') || text.includes('找不到')) {
+      warningSet.add('部分操作可能未成功');
+    }
+  }
+
+  return { collectedData, observations: [...observationSet], warnings: [...warningSet] };
+};
+
+/**
+ * 提取交接工件
+ * 从当前上下文、TodoManager、浏览器状态中组装结构化交接数据
+ */
+const extractHandoffArtifact = async (
+  context: InputItem[],
+  todoManager: TodoManager,
+  tabId: number | undefined,
+  originalQuery: string,
+  phaseIndex: number,
+): Promise<HandoffArtifact> => {
+  const browserState = await getBrowserState(tabId);
+  const { collectedData, observations, warnings } = extractDataFromContext(context);
+
+  const completedSummaries: string[] = [];
+  for (const item of todoManager.all) {
+    if (item.status === 'completed') {
+      completedSummaries.push(`#${item.id} ${item.title}${item.result ? `: ${item.result}` : ''}`);
+    }
+  }
+
+  return {
+    taskGoal: originalQuery,
+    phaseIndex,
+    todoSnapshot: todoManager.toSnapshot(),
+    completedSummaries,
+    browserState,
+    collectedData,
+    observations,
+    warnings,
+  };
+};
+
+/**
+ * 构建交接注入 prompt（新阶段的首条用户消息）
+ */
+const buildHandoffPrompt = (artifact: HandoffArtifact): string => {
+  const parts: string[] = [];
+
+  parts.push('## 任务接续');
+  parts.push('你正在接手一个进行中的任务。以下是前序阶段的执行状态：');
+  parts.push('');
+
+  // 原始目标
+  parts.push('### 用户目标');
+  parts.push(artifact.taskGoal);
+  parts.push('');
+
+  // 进度
+  parts.push('### 当前进度');
+  for (const s of artifact.completedSummaries) {
+    parts.push(`- [x] ${s}`);
+  }
+  const pending = artifact.todoSnapshot.items.filter(i => i.status !== 'completed');
+  for (const t of pending) {
+    const icon = t.status === 'in_progress' ? '[>]' : '[ ]';
+    parts.push(`- ${icon} #${t.id} ${t.title}`);
+  }
+  parts.push('');
+
+  // 浏览器状态
+  parts.push('### 当前浏览器状态');
+  parts.push(`当前页面：${artifact.browserState.currentUrl || '(未知)'}`);
+  if (artifact.browserState.tabs.length > 1) {
+    parts.push('打开的标签页：');
+    for (const tab of artifact.browserState.tabs) {
+      const marker = tab.tabId === artifact.browserState.activeTabId ? ' **(当前)**' : '';
+      parts.push(`- [tab_id=${tab.tabId}] ${tab.title || '(无标题)'}${marker} — ${tab.url}`);
+    }
+  }
+  parts.push('');
+
+  // 已收集数据
+  const dataKeys = Object.keys(artifact.collectedData);
+  if (dataKeys.length > 0) {
+    parts.push('### 已收集数据');
+    parts.push('```json');
+    parts.push(JSON.stringify(artifact.collectedData, null, 2));
+    parts.push('```');
+    parts.push('');
+  }
+
+  // 观察和警告
+  if (artifact.observations.length > 0) {
+    parts.push('### 关键观察');
+    for (const obs of artifact.observations) {
+      parts.push(`- ${obs}`);
+    }
+    parts.push('');
+  }
+
+  if (artifact.warnings.length > 0) {
+    parts.push('### 注意事项');
+    for (const w of artifact.warnings) {
+      parts.push(`- ${w}`);
+    }
+    parts.push('');
+  }
+
+  parts.push('请使用 todo(action=\'list\') 查看当前进度，然后继续执行下一步待办事项。');
+
+  return parts.join('\n');
+};
+
+/**
+ * 阶段编排器
+ *
+ * 包裹 agenticLoop，在 token 预算预警时做结构化交接而不是压缩。
+ * 简单任务（一个阶段内完成）零开销 —— phaseOrchestrator 透传 agenticLoop 的结果。
+ */
+const phaseOrchestrator = async (
+  query: string,
+  tools: ToolSchema[],
+  systemPrompt: string,
+  budget: LoopBudget,
+  tabId: number | undefined,
+  signal: AbortSignal | undefined,
+  emit: (event: AIStreamEvent) => void,
+  options: HandleChatOptions | undefined,
+  previousContext: InputItem[] | undefined,
+  todoManager: TodoManager,
+  todoFn: ReturnType<typeof createTodoFunction>,
+): Promise<InputItem[]> => {
+  const originalQuery = query;
+  let lastContext: InputItem[] = [];
+
+  for (let phase = 0; phase < MAX_PHASES; phase++) {
+    // 构建阶段上下文
+    let context: InputItem[];
+    if (phase === 0) {
+      // 首阶段：正常启动（与原 handleChat 行为一致）
+      context = previousContext ? [...previousContext] : [];
+      const shouldAppendQuery = options?.appendUserQuery !== false;
+      if (shouldAppendQuery && query.trim()) {
+        context.push({ role: 'user' as const, content: query });
+      }
+    } else {
+      // 后续阶段：从交接工件启动干净上下文
+      // handoffPrompt 已在上一轮循环末尾构建并设置
+      context = [{ role: 'user' as const, content: query }];
+    }
+
+    // 阶段控制信号
+    const phaseControl: PhaseControl = {
+      shouldHandoff: (tokens) => tokens > HANDOFF_TOKEN_THRESHOLD,
+    };
+
+    // 执行 agenticLoop
+    const resultContext = await agenticLoop(
+      context, tools, systemPrompt, budget,
+      tabId, signal, emit, options, 0,
+      todoManager, todoFn, phaseControl,
+    );
+
+    lastContext = resultContext;
+
+    // 检查退出原因
+    if (!phaseControl.handoffRequested) {
+      // 正常完成（任务结束、取消、错误、预算耗尽）
+      return resultContext;
+    }
+
+    // ── 交接流程 ──
+    emit({
+      type: 'phase_handoff',
+      content: JSON.stringify({
+        phase,
+        nextPhase: phase + 1,
+        reason: 'token_budget',
+        todoStats: todoManager.active ? todoManager.stats : null,
+      }),
+    });
+
+    // 提取交接工件
+    const artifact = await extractHandoffArtifact(
+      resultContext, todoManager, tabId, originalQuery, phase,
+    );
+
+    // 用交接 prompt 替换 query，下一轮循环会构建干净上下文
+    query = buildHandoffPrompt(artifact);
+  }
+
+  // 最大阶段数耗尽
+  return lastContext;
+};
+
+// ============ 对外接口 ============
+
 /**
  * AI 对话入口（与 background.ts 对接）
  *
@@ -935,13 +1262,10 @@ export const handleChat = async (
   // 构建系统提示词（域级 guide 直接注入，全局只放目录）
   const systemPrompt = buildSystemPrompt(tools, true, domainGuides, globalCatalog);
 
-  // 构建初始上下文
-  const context: InputItem[] = previousContext ? [...previousContext] : [];
-  const shouldAppendQuery = options?.appendUserQuery !== false;
-  if (shouldAppendQuery && query.trim()) {
-    context.push({ role: 'user' as const, content: query });
-  }
-
-  // 执行循环
-  return agenticLoop(context, tools, systemPrompt, budget, tabId, signal, onEvent, options, 0, todoManager, todoFn);
+  // 通过阶段编排器执行（简单任务零开销，长任务自动交接）
+  return phaseOrchestrator(
+    query, tools, systemPrompt, budget,
+    tabId, signal, onEvent, options,
+    previousContext, todoManager, todoFn,
+  );
 };
