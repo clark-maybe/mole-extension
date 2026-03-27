@@ -20,6 +20,9 @@ features:
   - icon: "\U0001F916"
     title: AI-Native Chat
     details: Summon the floating ball anytime for streaming responses and natural language interaction. Shadow DOM style isolation — never affects any webpage.
+  - icon: "\U0001F510"
+    title: In-Place Execution
+    details: Works inside your real browser, reusing your existing login sessions. Operates directly on sites you're signed into — no cookie migration, no re-login, data stays local.
   - icon: "\U0001F6E0\uFE0F"
     title: 36+ Built-in Tools
     details: Page operations, deep CDP control (10 domains), request interception, DOM/CSS/storage manipulation, navigation, screenshots, network diagnostics, device emulation, scheduled tasks... covering every aspect of browser automation.

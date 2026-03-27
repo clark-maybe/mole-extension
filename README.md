@@ -25,6 +25,7 @@ After you ask a question, Mole dives underground like a real mole — silently c
 ## Features
 
 - **AI-Native Chat** — Summon the floating ball anytime for natural language interaction with streaming responses
+- **In-Place Execution** — Works inside your real browser, reusing your existing login sessions. No cookie migration, no re-login — operates directly on sites you're already signed into
 - **36+ Built-in Tools** — Page operations, deep CDP control (10 domains), request interception, DOM/CSS/storage manipulation, navigation, screenshots, network diagnostics, human-in-the-loop confirmation...
 - **Workflow Recorder** — Show Mole how to do it once, it learns and repeats. Record your browser actions, AI cleans them up, and generates a reusable workflow automatically
 - **Site Workflows** — Declarative JSON definitions to automate website operations without writing code

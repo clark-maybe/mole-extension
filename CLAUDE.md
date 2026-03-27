@@ -35,7 +35,7 @@ Keep this managed block so 'openspec update' can refresh the instructions.
 
 用户提出问题后，Mole 会像鼹鼠钻入地下一样，潜入后台默默挖掘——调用工具、搜索网页、解析数据、跨站点采集信息。当它找到宝藏（结果），便会重新浮出地面，把挖到的东西呈现给你。整个过程中，它不会打扰你正在做的事情，就像鼹鼠在地表之下悄无声息地工作。
 
-本项目是 **MoleClaw** Chrome 扩展程序（MV3），使用 React + TypeScript + Vite 构建。核心功能是**在任意网页上注入一个 AI 悬浮助手（Mole）**，用户通过悬浮球或快捷键唤起对话框，与 AI 交互。AI 通过 Agentic Loop 自主调用 37+ 内置工具，在后台多轮执行，完成后以流式方式返回结果。
+本项目是 **MoleClaw** Chrome 扩展程序（MV3），使用 React + TypeScript + Vite 构建。核心功能是**在任意网页上注入一个 AI 悬浮助手（Mole）**，用户通过悬浮球或快捷键唤起对话框，与 AI 交互。Mole 运行在用户的真实浏览器环境中，天然复用用户的登录态和 Cookie，无需额外的身份验证或 Cookie 迁移。AI 通过 Agentic Loop 自主调用 37+ 内置工具，在后台多轮执行，完成后以流式方式返回结果。
 
 ## 构建系统
 

@@ -8,6 +8,26 @@ Mole works just like its namesake: after you ask a question, it burrows undergro
 > Underground = Background (where the AI works)
 > Tunnels = Channel + MCP (the communication network connecting everything)
 
+## In-Place Execution — Your Browser Is the Workspace
+
+Mole is not a remote scraper or a simulated browser — it runs directly inside the Chrome you're already using.
+
+This brings one key advantage: **login session reuse**. Any website you're signed into — e-commerce, GitHub, Slack, internal admin panels — Mole can operate on directly. The website sees your real session, no extra authentication required.
+
+### Use Cases
+
+- Order management and price monitoring on e-commerce sites you're logged into
+- Internal/admin system assistance
+- Social media information gathering and message processing
+- Accessing member-only content
+- Banking and finance sites with strong authentication (operations require your confirmation first)
+
+### Data Safety
+
+- All operations happen locally in your browser
+- Your cookies and login credentials are never sent to any external service
+- Irreversible actions (submission, payment, deletion) always ask for your confirmation first
+
 ## Floating Ball AI Chat
 
 Mole injects a floating ball on every webpage as the entry point for AI interaction.
