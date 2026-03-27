@@ -1622,6 +1622,36 @@ export const getStyles = () => `
     color: #314863;
   }
 
+  .mole-answer hr {
+    border: none;
+    height: 1px;
+    background: rgba(219, 227, 238, 0.6);
+    margin: 14px 0;
+  }
+
+  .mole-answer table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 10px 0;
+    font-size: 12.5px;
+  }
+
+  .mole-answer th, .mole-answer td {
+    padding: 6px 10px;
+    border: 1px solid rgba(219, 227, 238, 0.7);
+    text-align: left;
+  }
+
+  .mole-answer th {
+    background: rgba(22, 119, 255, 0.06);
+    font-weight: 600;
+    color: #111112;
+  }
+
+  .mole-answer tr:nth-child(even) td {
+    background: rgba(248, 250, 253, 0.5);
+  }
+
   .mole-answer strong {
     font-weight: 600;
     color: var(--ec-text);

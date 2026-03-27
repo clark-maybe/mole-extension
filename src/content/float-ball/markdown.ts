@@ -20,7 +20,7 @@ export const inlineMarkdown = (escaped: string): string => {
     .replace(/\[(.+?)\]\((.+?)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
 };
 
-/** Markdown 文本转 HTML（支持标题、列表、段落、内联格式） */
+/** Markdown 文本转 HTML（支持标题、列表、表格、水平线、段落、内联格式） */
 export const markdownToHtml = (text: string): string => {
   const blocks = text.split(/\n{2,}/);
   let html = '';
@@ -40,10 +40,17 @@ export const markdownToHtml = (text: string): string => {
       continue;
     }
 
-    // 标题
-    const headingMatch = trimmed.match(/^(#{1,3})\s+(.+)$/);
+    // 水平分割线（---、***、___）
+    if (/^[-*_]{3,}\s*$/.test(trimmed)) {
+      html += '<hr>';
+      continue;
+    }
+
+    // 标题（支持 1-6 级，映射为 h3-h5 适配小面板）
+    const headingMatch = trimmed.match(/^(#{1,6})\s+(.+)$/);
     if (headingMatch) {
-      const tag = `h${headingMatch[1].length + 2}`;
+      const level = Math.min(headingMatch[1].length + 2, 5);
+      const tag = `h${level}`;
       html += `<${tag}>${inlineMarkdown(escapeHtml(headingMatch[2]))}</${tag}>`;
       continue;
     }
@@ -55,6 +62,36 @@ export const markdownToHtml = (text: string): string => {
         .map((line) => inlineMarkdown(escapeHtml(line)))
         .join('<br>');
       html += `<blockquote>${quote}</blockquote>`;
+      continue;
+    }
+
+    // 表格（首行含 |，第二行是分隔行 |---|）
+    if (lines.length >= 2 && lines[0].includes('|') && /^\|?[\s:]*-+[\s:]*/.test(lines[1])) {
+      const parseRow = (row: string): string[] =>
+        row.replace(/^\|/, '').replace(/\|$/, '').split('|').map(c => c.trim());
+
+      const headers = parseRow(lines[0]);
+      const bodyRows = lines.slice(2).filter(l => l.includes('|'));
+
+      html += '<table><thead><tr>';
+      for (const h of headers) {
+        html += `<th>${inlineMarkdown(escapeHtml(h))}</th>`;
+      }
+      html += '</tr></thead>';
+
+      if (bodyRows.length > 0) {
+        html += '<tbody>';
+        for (const row of bodyRows) {
+          const cells = parseRow(row);
+          html += '<tr>';
+          for (const cell of cells) {
+            html += `<td>${inlineMarkdown(escapeHtml(cell))}</td>`;
+          }
+          html += '</tr>';
+        }
+        html += '</tbody>';
+      }
+      html += '</table>';
       continue;
     }
 
