@@ -65,6 +65,46 @@ const SUBAGENT_CONFIGS: Record<string, SubagentConfig> = {
     defaultErrorMessage: '探索执行失败',
     defaultEmptyMessage: '探索已完成但无明确输出',
   },
+  plan: {
+    schema: {
+      type: 'function',
+      name: 'plan',
+      description: '启动规划子 agent 分析任务并制定执行计划。规划 agent 在独立上下文中观察页面、拆解目标，返回可直接用于 todo 的结构化步骤。适合：复杂多步任务开始前的整体规划、不确定最佳路径时的方案评估、需要根据页面现状调整策略时。',
+      parameters: {
+        type: 'object',
+        properties: {
+          goal: {
+            type: 'string',
+            description: '需要规划的任务目标，说明你想完成什么（如"在携程上订一张下周五北京到上海的高铁票"、"把这个表格的数据导出为 CSV 文件"）',
+          },
+        },
+        required: ['goal'],
+      },
+    },
+    thinkingPrefix: '正在规划',
+    defaultErrorMessage: '规划执行失败',
+    defaultEmptyMessage: '规划已完成但无明确输出',
+  },
+  review: {
+    schema: {
+      type: 'function',
+      name: 'review',
+      description: '启动独立审查 agent 验证操作结果。审查 agent 用干净上下文重新观察页面实际状态，对比预期结果，返回结构化的通过/未通过判定。适合：关键操作后验证（表单提交、数据提取、页面跳转）、多步任务的阶段性检查。不要用于简单的信息查询。',
+      parameters: {
+        type: 'object',
+        properties: {
+          goal: {
+            type: 'string',
+            description: '审查目标，说明预期状态和需要验证的内容（如"验证表单是否提交成功，页面应显示订单确认信息"、"检查搜索结果是否包含 AirPods Pro 的价格信息"）',
+          },
+        },
+        required: ['goal'],
+      },
+    },
+    thinkingPrefix: '正在审查',
+    defaultErrorMessage: '审查执行失败',
+    defaultEmptyMessage: '审查已完成但无明确输出',
+  },
 };
 
 /** 返回所有注册的子 agent 名称列表 */

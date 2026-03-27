@@ -151,7 +151,9 @@ export type AIStreamEventType =
   | 'approval_request'
   | 'queue_updated'
   | 'todo_update'
-  | 'phase_handoff';
+  | 'phase_handoff'
+  | 'review_started'
+  | 'review_completed';
 
 /** 从 background 推送到 content 的流式事件 */
 export interface AIStreamEvent {

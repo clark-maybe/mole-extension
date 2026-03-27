@@ -96,6 +96,12 @@ const LOGO_EXPLORE = `data:image/svg+xml;charset=utf-8,${encodeURIComponent('<sv
 // 上下文压缩（折叠/压缩图标，石板灰色）
 const LOGO_COMPACT = `data:image/svg+xml;charset=utf-8,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 14 10 14 10 20"/><polyline points="20 10 14 10 14 4"/><line x1="14" y1="10" x2="21" y2="3"/><line x1="3" y1="21" x2="10" y2="14"/></svg>')}`;
 
+// 任务规划（路线图/地图标记，靛蓝色）
+const LOGO_PLAN = `data:image/svg+xml;charset=utf-8,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#4f46e5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6l6-3 6 3 6-3v15l-6 3-6-3-6 3z"/><line x1="9" y1="3" x2="9" y2="18"/><line x1="15" y1="6" x2="15" y2="21"/></svg>')}`;
+
+// 审查验证（盾牌打勾，翠绿色）
+const LOGO_REVIEW = `data:image/svg+xml;charset=utf-8,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg>')}`;
+
 // 函数图标映射（函数名 → logo）
 export const FUNCTION_ICONS: Record<string, string> = {
   page_viewer: LOGO_PAGE_VIEWER,
@@ -131,6 +137,8 @@ export const FUNCTION_ICONS: Record<string, string> = {
   todo: LOGO_TODO,
   explore: LOGO_EXPLORE,
   compact: LOGO_COMPACT,
+  plan: LOGO_PLAN,
+  review: LOGO_REVIEW,
 };
 
 // 函数中文名映射（用户可见，不暴露英文标识）
@@ -168,4 +176,6 @@ export const FUNCTION_LABELS: Record<string, string> = {
   todo: '任务规划',
   explore: '探索',
   compact: '压缩',
+  plan: '规划',
+  review: '审查',
 };

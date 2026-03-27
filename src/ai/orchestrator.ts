@@ -30,7 +30,7 @@ import { chatStream, chatComplete } from './llm-client';
 import { compactContext, getTextContent, microCompact, estimateContextTokens, stripImagesFromContent } from './context-manager';
 import { executeToolCalls, getSubagentSchemas, isSubagent, resetSensitiveAccessTrust } from './tool-executor';
 import type { SubagentRunner } from './tool-executor';
-import { buildSystemPrompt, buildSubtaskPrompt, buildExplorePrompt } from './system-prompt';
+import { buildSystemPrompt, buildSubtaskPrompt, buildExplorePrompt, buildReviewPrompt, buildPlanPrompt } from './system-prompt';
 import { ensureToolRegistryReady, mcpClient } from '../functions/registry';
 import { mcpToolsToSchema } from '../mcp/adapters';
 import { buildSiteWorkflowSchema } from '../functions/site-workflow';
@@ -106,6 +106,8 @@ export interface PhaseControl {
   shouldHandoff?: (estimatedTokens: number, round: number) => boolean;
   /** 由 agenticLoop 写入：true 表示因交接请求而退出 */
   handoffRequested?: boolean;
+  /** Todo 完成回调，返回 true 表示应该触发交接 */
+  onTodoCompleted?: () => boolean;
 }
 
 /** 交接工件（阶段间传递的结构化状态） */
@@ -130,6 +132,8 @@ interface HandoffArtifact {
   observations: string[];
   /** 风险提示 */
   warnings: string[];
+  /** 审查反馈（仅重试时存在） */
+  reviewFeedback?: string;
 }
 
 // ============ 默认配置 ============
@@ -189,6 +193,16 @@ const EXPLORE_ALLOWED_TOOLS: ReadonlySet<string> = new Set([
   'skill',
 ]);
 
+/** review 审查子 agent 允许使用的只读工具白名单 */
+const REVIEW_ALLOWED_TOOLS: ReadonlySet<string> = new Set([
+  'page_skeleton',
+  'page_snapshot',
+  'page_viewer',
+  'screenshot',
+  'tab_navigate',
+  'extract_data',
+]);
+
 /** 子 agent 循环配置（决定 agenticLoop 的行为） */
 interface SubagentLoopConfig {
   /** 系统提示词构建函数 */
@@ -211,6 +225,16 @@ const SUBAGENT_LOOP_CONFIGS: Record<string, SubagentLoopConfig> = {
     buildPrompt: buildExplorePrompt,
     toolFilter: (name) => EXPLORE_ALLOWED_TOOLS.has(name),
     budget: { maxRounds: 15, maxToolCalls: 30, maxSubtaskDepth: 0 },
+  },
+  plan: {
+    buildPrompt: buildPlanPrompt,
+    toolFilter: (name) => EXPLORE_ALLOWED_TOOLS.has(name),
+    budget: { maxRounds: 15, maxToolCalls: 30, maxSubtaskDepth: 0 },
+  },
+  review: {
+    buildPrompt: buildReviewPrompt,
+    toolFilter: (name) => REVIEW_ALLOWED_TOOLS.has(name),
+    budget: { maxRounds: 8, maxToolCalls: 15, maxSubtaskDepth: 0 },
   },
 };
 
@@ -722,6 +746,21 @@ const agenticLoop = async (
             if (todoManager.active) {
               emit({ type: 'todo_update', content: JSON.stringify({ items: todoManager.all, stats: todoManager.stats }) });
             }
+
+            // ── 阶段边界：todo 完成事件驱动交接 ──
+            if (todoSuccess && phaseControl?.onTodoCompleted) {
+              try {
+                const params = JSON.parse(fc.arguments || '{}');
+                if (params.action === 'update' && params.status === 'completed') {
+                  // 最后一个 todo 完成时不触发交接（任务即将自然结束）
+                  const allDone = todoManager.stats.total > 0 &&
+                    todoManager.stats.completed === todoManager.stats.total;
+                  if (!allDone && phaseControl.onTodoCompleted()) {
+                    phaseControl.handoffRequested = true;
+                  }
+                }
+              } catch { /* 参数解析失败跳过 */ }
+            }
           } else if (fc.name === 'compact') {
             // Layer 3: compact 工具 — 模型主动触发压缩
             emit({ type: 'function_call', content: JSON.stringify({ name: 'compact', callId: fc.call_id, arguments: fc.arguments }) });
@@ -831,6 +870,13 @@ const agenticLoop = async (
 
       const todoSnap = todoManager?.active ? todoManager.toSnapshot() : undefined;
       emitCheckpoint(options, 'act', round, `工具执行完毕（共 ${totalToolCalls} 次调用）`, context, todoSnap);
+
+      // ── 边界：Todo 完成驱动的阶段交接 ──
+      if (phaseControl?.handoffRequested) {
+        emitCheckpoint(options, 'act', round, '阶段交接（Todo 完成）', context, todoSnap);
+        break;
+      }
+
       continue;
     }
 
@@ -891,6 +937,15 @@ const agenticLoop = async (
 
 /** 阶段交接 token 阈值（低于 auto_compact 的 50000，确保在压缩前交接） */
 const HANDOFF_TOKEN_THRESHOLD = 40000;
+
+/** 连续轮数强制交接阈值 */
+const FORCE_HANDOFF_ROUNDS = 20;
+
+/** todo 完成数触发交接的阈值 */
+const TODO_COMPLETION_THRESHOLD = 2;
+
+/** 审查失败最大重试次数 */
+const MAX_REVIEW_RETRIES = 1;
 
 /** 最大阶段数 */
 const MAX_PHASES = 10;
@@ -1085,9 +1140,188 @@ const buildHandoffPrompt = (artifact: HandoffArtifact): string => {
     parts.push('');
   }
 
+  // 审查反馈（重试时注入）
+  if (artifact.reviewFeedback) {
+    parts.push('### 审查反馈');
+    parts.push('上一次执行的审查发现以下问题，请在本阶段优先修正：');
+    parts.push(artifact.reviewFeedback);
+    parts.push('');
+  }
+
   parts.push('请使用 todo(action=\'list\') 查看当前进度，然后继续执行下一步待办事项。');
 
   return parts.join('\n');
+};
+
+// ============ 审查 Agent ============
+
+/** 写入类工具名称集合（用于判断是否为纯只读任务） */
+const WRITE_TOOLS: ReadonlySet<string> = new Set([
+  'cdp_input', 'cdp_dom', 'cdp_frame', 'save_workflow', 'data_pipeline',
+]);
+
+/**
+ * 判断是否应跳过审查
+ * 纯信息查询、简单任务、任务已全部完成时跳过
+ */
+const shouldSkipReview = (
+  todoManager: TodoManager,
+  context: InputItem[],
+): boolean => {
+  // 所有 todo 已完成 → 任务即将结束，无需审查
+  if (todoManager.active && todoManager.stats.total > 0 &&
+    todoManager.stats.completed === todoManager.stats.total) {
+    return true;
+  }
+
+  // 上下文很短（< 15 条，约 < 5 轮工具调用）→ 简单任务
+  if (context.length < 15) {
+    return true;
+  }
+
+  // 纯只读任务（无写入操作）→ 无需验证
+  let hasWriteOp = false;
+  for (const item of context) {
+    if ('type' in item && item.type === 'function_call') {
+      const fc = item as FunctionCallInputItem;
+      if (WRITE_TOOLS.has(fc.name)) {
+        hasWriteOp = true;
+        break;
+      }
+    }
+  }
+  if (!hasWriteOp) return true;
+
+  return false;
+};
+
+/**
+ * 构建审查目标（提供给审查 Agent 的 user message）
+ */
+const buildReviewGoal = (artifact: HandoffArtifact): string => {
+  const parts: string[] = [];
+  parts.push('请审查以下执行阶段的结果：');
+  parts.push('');
+
+  parts.push('## 任务目标');
+  parts.push(artifact.taskGoal);
+  parts.push('');
+
+  parts.push('## 已完成步骤');
+  if (artifact.completedSummaries.length > 0) {
+    for (const s of artifact.completedSummaries) {
+      parts.push(`- ${s}`);
+    }
+  } else {
+    parts.push('- （无明确完成记录）');
+  }
+  parts.push('');
+
+  parts.push('## 预期页面状态');
+  parts.push(`当前 URL 应为：${artifact.browserState.currentUrl || '(未知)'}`);
+  parts.push('');
+
+  const dataKeys = Object.keys(artifact.collectedData);
+  if (dataKeys.length > 0) {
+    parts.push('## 声称已收集的数据');
+    parts.push('```json');
+    parts.push(JSON.stringify(artifact.collectedData, null, 2));
+    parts.push('```');
+    parts.push('');
+  }
+
+  parts.push('请用 screenshot(annotate=true) 查看当前页面实际状态，对比上述声称的结果，逐维度给出审查判定。');
+  return parts.join('\n');
+};
+
+/**
+ * 从审查 Agent 的上下文中解析审查结论
+ * 查找最后一条 assistant 消息，识别"通过/未通过"关键词
+ */
+const parseReviewVerdict = (context: InputItem[]): { passed: boolean; feedback?: string } => {
+  // 从后往前找最后一条有内容的 assistant 消息
+  for (let i = context.length - 1; i >= 0; i--) {
+    const item = context[i];
+    if (!('role' in item) || item.role !== 'assistant') continue;
+    const text = getTextContent(item.content);
+    if (!text.trim()) continue;
+
+    // 检测"未通过"优先（避免"审查结果：通过"误匹配"未通过"的子串）
+    const failed = text.includes('审查结果：未通过') || text.includes('未通过');
+    if (failed) {
+      // 提取改进建议
+      const feedbackMatch = text.match(/(?:改进建议|建议)[：:]?\s*([\s\S]*?)(?=\n###|\n##|$)/);
+      const problemMatch = text.match(/(?:发现的问题|问题)[：:]?\s*([\s\S]*?)(?=\n###|\n##|$)/);
+      const feedback = feedbackMatch?.[1]?.trim() || problemMatch?.[1]?.trim() || text.slice(-500);
+      return { passed: false, feedback };
+    }
+
+    // 明确通过
+    if (text.includes('审查结果：通过') || text.includes('通过')) {
+      return { passed: true };
+    }
+
+    // 兜底：没有明确关键词，默认通过（避免误阻塞）
+    return { passed: true };
+  }
+
+  // 没有 assistant 消息，默认通过
+  return { passed: true };
+};
+
+/**
+ * 运行审查 Agent
+ * 在独立上下文中执行审查，不携带执行 agent 的对话历史
+ */
+const runReviewAgent = async (
+  artifact: HandoffArtifact,
+  tools: ToolSchema[],
+  tabId: number | undefined,
+  signal: AbortSignal | undefined,
+  emit: (event: AIStreamEvent) => void,
+): Promise<{ passed: boolean; feedback?: string }> => {
+  const config = SUBAGENT_LOOP_CONFIGS.review;
+
+  emit({ type: 'review_started', content: JSON.stringify({ phase: artifact.phaseIndex }) });
+
+  try {
+    // 构建审查上下文（干净的）
+    const goal = buildReviewGoal(artifact);
+    const reviewContext: InputItem[] = [{ role: 'user' as const, content: goal }];
+
+    // 审查工具（只读白名单）
+    const reviewTools = tools.filter(t => config.toolFilter!(t.name));
+
+    // 审查预算
+    const reviewBudget: LoopBudget = {
+      ...DEFAULT_BUDGET,
+      maxRounds: (config.budget.maxRounds ?? 8),
+      maxToolCalls: (config.budget.maxToolCalls ?? 15),
+      maxSubtaskDepth: 0,
+    };
+
+    // 执行审查循环
+    const resultContext = await agenticLoop(
+      reviewContext, reviewTools, config.buildPrompt(), reviewBudget,
+      tabId, signal, emit, undefined, 1, // depth=1 防止嵌套
+    );
+
+    const verdict = parseReviewVerdict(resultContext);
+
+    emit({
+      type: 'review_completed',
+      content: JSON.stringify({ phase: artifact.phaseIndex, passed: verdict.passed }),
+    });
+
+    return verdict;
+  } catch {
+    // 审查失败不阻塞主流程，默认通过
+    emit({
+      type: 'review_completed',
+      content: JSON.stringify({ phase: artifact.phaseIndex, passed: true, error: true }),
+    });
+    return { passed: true };
+  }
 };
 
 /**
@@ -1111,6 +1345,7 @@ const phaseOrchestrator = async (
 ): Promise<InputItem[]> => {
   const originalQuery = query;
   let lastContext: InputItem[] = [];
+  let reviewRetries = 0;
 
   for (let phase = 0; phase < MAX_PHASES; phase++) {
     // 构建阶段上下文
@@ -1124,13 +1359,24 @@ const phaseOrchestrator = async (
       }
     } else {
       // 后续阶段：从交接工件启动干净上下文
-      // handoffPrompt 已在上一轮循环末尾构建并设置
       context = [{ role: 'user' as const, content: query }];
     }
 
-    // 阶段控制信号
+    // ── 阶段控制信号（todo 完成 + token 预算 + 轮数阈值） ──
+    let todoCompletedSinceHandoff = 0;
     const phaseControl: PhaseControl = {
-      shouldHandoff: (tokens) => tokens > HANDOFF_TOKEN_THRESHOLD,
+      shouldHandoff: (tokens, round) => {
+        // 触发 2：token 预算预警
+        if (tokens > HANDOFF_TOKEN_THRESHOLD) return true;
+        // 触发 3：轮数阈值强制交接
+        if (round >= FORCE_HANDOFF_ROUNDS) return true;
+        return false;
+      },
+      onTodoCompleted: () => {
+        // 触发 1：todo 完成事件（积累足够进展后触发）
+        todoCompletedSinceHandoff++;
+        return todoCompletedSinceHandoff >= TODO_COMPLETION_THRESHOLD;
+      },
     };
 
     // 执行 agenticLoop
@@ -1149,12 +1395,15 @@ const phaseOrchestrator = async (
     }
 
     // ── 交接流程 ──
+    const handoffReason = todoCompletedSinceHandoff >= TODO_COMPLETION_THRESHOLD
+      ? 'todo_completed' : 'token_budget';
+
     emit({
       type: 'phase_handoff',
       content: JSON.stringify({
         phase,
         nextPhase: phase + 1,
-        reason: 'token_budget',
+        reason: handoffReason,
         todoStats: todoManager.active ? todoManager.stats : null,
       }),
     });
@@ -1163,6 +1412,20 @@ const phaseOrchestrator = async (
     const artifact = await extractHandoffArtifact(
       resultContext, todoManager, tabId, originalQuery, phase,
     );
+
+    // ── 审查流程 ──
+    if (!shouldSkipReview(todoManager, resultContext)) {
+      const verdict = await runReviewAgent(artifact, tools, tabId, signal, emit);
+
+      if (!verdict.passed) {
+        if (reviewRetries < MAX_REVIEW_RETRIES) {
+          // 审查未通过，带反馈重试
+          reviewRetries++;
+          artifact.reviewFeedback = verdict.feedback;
+        }
+        // 重试次数耗尽时也继续（不阻塞用户），但不带 feedback
+      }
+    }
 
     // 用交接 prompt 替换 query，下一轮循环会构建干净上下文
     query = buildHandoffPrompt(artifact);
