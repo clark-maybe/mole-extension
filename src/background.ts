@@ -47,6 +47,7 @@ import type {
 } from './ai/types';
 import { TimerStore } from './lib/timer-store';
 import { TimerScheduler } from './lib/timer-scheduler';
+import { computeNextScheduleRun } from './functions/timer';
 import { CDPSessionManager } from './lib/cdp-session';
 import { MAX_SESSION_HISTORY, SESSION_HISTORY_STORAGE_KEY } from './session-history/constants';
 import type {
@@ -2994,6 +2995,21 @@ async function handleTimerTrigger(timerId: string, source: 'alarm' | 'runtime_ti
                     currentCount: task.currentCount,
                     nextRunAt: Date.now() + intervalMs,
                 });
+            }
+        } else if (task.type === 'schedule') {
+            task.currentCount++;
+            if (task.maxCount && task.currentCount >= task.maxCount) {
+                // 达到最大次数，清理
+                await chrome.alarms.clear(`mole_timer_${timerId}`);
+                await TimerStore.remove(timerId);
+                RuntimeResourceManager.unregisterFromAllSessions('timer', timerId);
+                console.log(`[Mole] 定时调度已达最大次数，已清理: ${timerId}`);
+                void broadcastBgTasksChanged();
+            } else {
+                // 计算下一次执行时间，创建新的一次性 alarm
+                const nextRunAt = computeNextScheduleRun(task.scheduleRule!);
+                await TimerStore.update(timerId, { currentCount: task.currentCount, nextRunAt });
+                await chrome.alarms.create(`mole_timer_${timerId}`, { when: nextRunAt });
             }
         } else {
             // timeout：执行后清理

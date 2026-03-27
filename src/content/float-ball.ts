@@ -1088,9 +1088,22 @@ export const initFloatBall = async () => {
     if (bgTasksData?.timers) {
       for (const t of bgTasksData.timers) {
         const icon = FUNCTION_ICONS['timer'] || '';
-        const name = escapeHtml(String(t.action || '').slice(0, 40));
+        const displayName = t.name || String(t.action || '').slice(0, 40);
+        const nameHtml = escapeHtml(displayName);
+        const fullAction = escapeHtml(String(t.action || ''));
         let meta = '';
-        if (t.type === 'timeout') {
+        if (t.type === 'schedule' && t.scheduleRule) {
+          const rule = t.scheduleRule;
+          if (rule.startsWith('daily:')) {
+            meta = `每天 ${rule.slice(6)}`;
+          } else if (rule.startsWith('weekly:')) {
+            const parts = rule.slice(7).split(':');
+            const dayNames = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
+            meta = `每${dayNames[parseInt(parts[0])]} ${parts[1]}:${parts[2]}`;
+          }
+          if (t.currentCount) meta += ` \u00B7 已执行 ${t.currentCount} 次`;
+          if (t.nextRunAt) meta += ` \u00B7 下次 ${formatClock(t.nextRunAt)}`;
+        } else if (t.type === 'timeout') {
           meta = `延时 \u00B7 将在 ${formatClock(t.nextRunAt)} 执行`;
         } else {
           meta = `周期 \u00B7 已执行 ${t.currentCount || 0} 次`;
@@ -1101,7 +1114,7 @@ export const initFloatBall = async () => {
         html += `<div class="mole-bg-task-item" data-kind="timer" data-id="${escapeHtml(String(t.id))}">`;
         html += `<span class="mole-bg-task-icon">${icon ? `<img src="${icon}" alt="" />` : ''}</span>`;
         html += `<div class="mole-bg-task-info">`;
-        html += `<span class="mole-bg-task-name">${name}</span>`;
+        html += `<span class="mole-bg-task-name" title="${fullAction}">${nameHtml}</span>`;
         html += `<span class="mole-bg-task-meta">${escapeHtml(meta)}</span>`;
         html += `</div>`;
         html += `<button class="mole-bg-task-close" type="button" title="关闭">\u00D7</button>`;

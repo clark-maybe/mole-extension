@@ -9,8 +9,10 @@ const STORAGE_KEY = 'mole_timers';
 export interface TimerTask {
   /** 唯一标识 */
   id: string;
-  /** 类型：延时 or 周期 */
-  type: 'timeout' | 'interval';
+  /** 类型：延时 / 周期 / 定时调度 */
+  type: 'timeout' | 'interval' | 'schedule';
+  /** 用户友好名称（如"每日天气"、"价格监控"） */
+  name?: string;
   /** 到期时要执行的操作描述（作为 AI prompt） */
   action: string;
   /** 创建时的标签页 ID */
@@ -33,6 +35,8 @@ export interface TimerTask {
   maxCount?: number;
   /** 当前已执行次数 */
   currentCount: number;
+  /** 调度规则，仅 schedule 类型（"daily:HH:MM" 或 "weekly:D:HH:MM"，D=0-6 对应周日到周六） */
+  scheduleRule?: string;
 }
 
 export const TimerStore = {
