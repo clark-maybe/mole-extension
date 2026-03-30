@@ -33,7 +33,7 @@ function formatSize(bytes: number) {
   <div v-if="release.hasRelease" class="release-card">
     <div class="release-meta">
       <span class="version-badge">{{ release.version }}</span>
-      <span class="release-date">{{ formatDate(release.publishedAt) }}</span>
+      <!-- <span class="release-date">{{ formatDate(release.publishedAt) }}</span> -->
       <span v-if="release.downloadSize" class="release-size">
         {{ formatSize(release.downloadSize) }}
       </span>

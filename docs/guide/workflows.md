@@ -1,10 +1,26 @@
-# Site Workflows
+# Workflows
 
-## Overview
+Workflows let you teach Mole repeatable tasks. Show it once, and it can replay the steps anytime you ask.
 
-Site Workflows are MoleClaw's declarative automation system. Define a series of steps in JSON format to automate website operations without writing code.
+## Two Ways to Create Workflows
 
-Core principle: **Extension = interpreter engine, Manifest = content distribution**. No workflow definitions are hardcoded in the source code — all workflows are distributed and synced via Manifest files.
+### Record It (Recommended)
+
+The easiest way — just demonstrate what you want:
+
+1. Click the "Record Workflow" button at the bottom of the search box
+2. Do the task as you normally would — click, type, navigate
+3. Stop recording when you're done
+4. Mole's AI cleans up the recording: removes accidental clicks, merges keystrokes, and marks customizable parts (like search terms)
+5. The workflow is saved and ready to use
+
+Next time, just say something like "run my check-in workflow" and Mole replays it.
+
+### Write It by Hand (Advanced)
+
+For more control, you can write workflows as JSON definitions. This is useful for complex automations or sharing workflows with others. See the technical reference below.
+
+---
 
 ## Built-in Workflows
 

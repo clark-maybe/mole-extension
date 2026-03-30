@@ -1,77 +1,56 @@
 # 快速开始
 
-## 安装
+5 分钟内让 Mole 跑起来。
 
-MoleClaw 目前通过源码构建安装。
+## 第一步：安装扩展
 
-### 1. 克隆仓库
+1. 打开[下载页面](/zh/download)，下载最新版本
+2. 解压下载的文件
+3. 在 Chrome 中打开 `chrome://extensions/`
+4. 开启右上角的**开发者模式**
+5. 点击**加载已解压的扩展程序**，选择解压后的文件夹
+6. 将 Mole 固定到工具栏，方便使用
 
-```bash
-git clone https://github.com/clark-maybe/mole-extension.git
-cd mole-extension
-```
-
-### 2. 安装依赖
-
-```bash
-npm install
-```
-
-### 3. 构建扩展
-
-```bash
-npm run build
-```
-
-构建产物输出到 `build_version/mole-extension/` 目录。
-
-### 4. 加载到 Chrome
-
-1. 打开 Chrome，访问 `chrome://extensions/`
-2. 开启右上角的 **开发者模式**
-3. 点击 **加载已解压的扩展程序**
-4. 选择 `build_version/mole-extension/` 目录
-5. 扩展安装完成，图标出现在浏览器工具栏
-
-## 首次使用
-
-### 配置 LLM
-
-Mole 需要连接一个 OpenAI API 兼容的 LLM 服务。首次使用前需要完成配置：
-
-1. 点击浏览器工具栏的 Mole 图标，打开弹窗
-2. 进入 **Options 页面**（右键扩展图标 > 选项）
-3. 填写以下配置：
-   - **API Endpoint** - LLM 服务地址（默认 `https://api.openai.com/v1`）
-   - **API Key** - 你的 API 密钥
-   - **Model** - 使用的模型名称（如 `gpt-4o-mini`、`gpt-4o` 等）
-4. 点击保存
-
-::: tip 提示
-Mole 兼容任何 OpenAI API 格式的服务，包括但不限于：OpenAI、Azure OpenAI、Claude（通过兼容层）、本地部署的 Ollama 等。
+::: tip 想从源码构建？
+请参考[开发指南](/zh/guide/development)了解如何从仓库构建。
 :::
 
-### 唤起 AI 助手
-配置完成后，访问任意网页：
+## 第二步：连接 AI 模型
 
-- **快捷键**：按 `Cmd+M`（Mac）或 `Ctrl+M`（Windows/Linux）唤起搜索框
-- **悬浮球**：页面右侧会出现一个贴边的悬浮球，hover 滑出，点击即可唤起
+Mole 需要一个 AI 服务来思考。配置一次就好。
 
-## 基本交互
+1. 右键点击工具栏上的 Mole 图标，选择**选项**
+2. 填写 AI 服务信息：
+   - **API Endpoint** — 如 `https://api.openai.com/v1`
+   - **API Key** — 你的 API 密钥
+   - **Model** — 如 `gpt-4o-mini` 或 `gpt-4o`
+3. 点击**保存**
 
-1. 通过快捷键或悬浮球唤起搜索框
-2. 输入自然语言指令，例如：
-   - "帮我截个图"
-   - "这个页面讲了什么"
-   - "在京东搜索 iPhone 16"
-   - "帮我把这个页面的表格数据提取出来"
-3. AI 会自动选择合适的工具执行任务
-4. 执行过程中会显示工具调用状态，最终以流式方式返回结果
+::: details 支持哪些 AI 服务？
+任何支持 OpenAI API 格式且支持 **Function Calling**（工具调用）的服务：
 
-::: info 任务分级
-Mole 会根据请求的复杂度自动分级处理：
-- **直接回答** - 简单问答，不调用工具
-- **单步操作** - 一个工具即可完成
-- **多步任务** - 需要多个工具协作
-- **复合任务** - 拆分为独立子任务并行执行
+- **OpenAI** — `https://api.openai.com/v1`
+- **Azure OpenAI** — 你的 Azure 端点
+- **Claude** — 通过 OpenAI 兼容代理
+- **Ollama**（本地）— `http://localhost:11434/v1`
+- **LM Studio**（本地）— `http://localhost:1234/v1`
+- 其他任何 OpenAI 兼容服务
 :::
+
+## 第三步：试一试
+
+打开任意网页，按 `Cmd+M`（Mac）或 `Ctrl+M`（Windows）。
+
+试着输入：
+- 「这个页面讲了什么？」
+- 「帮我截个图」
+- 「在淘宝搜索 iPhone 16，给我前 5 个结果」
+
+Mole 会在后台工作，然后把结果带回来。
+
+## 接下来
+
+- [第一个任务](/zh/guide/first-task) — 手把手引导教程
+- [Mole 能做什么？](/zh/guide/examples) — 浏览使用场景和示例
+- [工作流](/zh/guide/workflows) — 教 Mole 重复执行任务
+- [配置指南](/zh/guide/configuration) — 高级设置

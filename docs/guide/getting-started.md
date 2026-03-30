@@ -1,78 +1,56 @@
-# Getting Started
+# Get Started
 
-## Installation
+Get Mole running in under 5 minutes.
 
-MoleClaw is currently installed by building from source.
+## Step 1: Install the Extension
 
-### 1. Clone the Repository
+1. Go to the [Download](/download) page and download the latest release
+2. Unzip the downloaded file
+3. Open `chrome://extensions/` in Chrome
+4. Enable **Developer Mode** (top right corner)
+5. Click **Load unpacked** and select the unzipped folder
+6. Pin Mole to your toolbar for easy access
 
-```bash
-git clone https://github.com/clark-maybe/mole-extension.git
-cd mole-extension
-```
-
-### 2. Install Dependencies
-
-```bash
-npm install
-```
-
-### 3. Build the Extension
-
-```bash
-npm run build
-```
-
-Build output goes to the `build_version/mole-extension/` directory.
-
-### 4. Load into Chrome
-
-1. Open Chrome and navigate to `chrome://extensions/`
-2. Enable **Developer mode** in the top right corner
-3. Click **Load unpacked**
-4. Select the `build_version/mole-extension/` directory
-5. The extension is installed — the icon appears in the browser toolbar
-
-## First Use
-
-### Configure Your LLM
-
-Mole needs to connect to an OpenAI API-compatible LLM service. Complete the configuration before first use:
-
-1. Click the Mole icon in the browser toolbar to open the popup
-2. Go to the **Options page** (right-click the extension icon > Options)
-3. Fill in the following settings:
-   - **API Endpoint** — LLM service URL (default: `https://api.openai.com/v1`)
-   - **API Key** — Your API key
-   - **Model** — Model name to use (e.g., `gpt-4o-mini`, `gpt-4o`, etc.)
-4. Click Save
-
-::: tip
-Mole is compatible with any OpenAI API-format service, including but not limited to: OpenAI, Azure OpenAI, Claude (via compatibility layer), locally deployed Ollama, etc.
+::: tip Want to build from source?
+See the [Development Guide](/guide/development) for instructions on building from the repository.
 :::
 
-### Summon the AI Assistant
+## Step 2: Connect an AI Model
 
-After configuration, visit any webpage:
+Mole needs an AI service to do its thinking. Set it up once and you're good to go.
 
-- **Keyboard shortcut**: Press `Cmd+M` (Mac) or `Ctrl+M` (Windows/Linux) to summon the search box
-- **Floating ball**: A capsule-shaped floating ball appears on the right side of the page — hover to slide out, click to open
+1. Right-click the Mole icon in your toolbar, select **Options**
+2. Fill in your AI service details:
+   - **API Endpoint** — e.g. `https://api.openai.com/v1`
+   - **API Key** — your API key
+   - **Model** — e.g. `gpt-4o-mini` or `gpt-4o`
+3. Click **Save**
 
-## Basic Interaction
+::: details Which AI services work?
+Any service that supports the OpenAI API format and **Function Calling** (tool use):
 
-1. Summon the search box via shortcut or floating ball
-2. Type natural language instructions, for example:
-   - "Take a screenshot of this page"
-   - "What is this page about"
-   - "Search for iPhone 16 on Amazon"
-   - "Extract the table data from this page"
-3. The AI will automatically choose the right tools to execute the task
-4. Tool call status is displayed during execution, and results stream back in real time
-
-::: info Task Levels
-Mole automatically classifies requests by complexity:
-- **Direct answer** — Simple Q&A, no tools needed
-- **Single-step** — One tool call is sufficient
-- **Multi-step** — Multiple tools working together
-- **Compound task** — Split into independent subtasks executed in parallel
+- **OpenAI** — `https://api.openai.com/v1`
+- **Azure OpenAI** — your Azure endpoint
+- **Claude** — via OpenAI-compatible proxy
+- **Ollama** (local) — `http://localhost:11434/v1`
+- **LM Studio** (local) — `http://localhost:1234/v1`
+- Any other OpenAI-compatible service
 :::
+
+## Step 3: Try It Out
+
+Visit any webpage and press `Cmd+M` (Mac) or `Ctrl+M` (Windows).
+
+Try typing:
+- "What is this page about?"
+- "Take a screenshot"
+- "Search for iPhone 16 on Amazon and show me the top 5 results"
+
+Mole works in the background and brings you the results.
+
+## Next Steps
+
+- [Your First Task](/guide/first-task) — A guided walkthrough
+- [What Can Mole Do?](/guide/examples) — Browse use cases and examples
+- [Record a Workflow](/guide/workflows) — Teach Mole to repeat tasks for you
+- [Configuration Details](/guide/configuration) — Advanced settings

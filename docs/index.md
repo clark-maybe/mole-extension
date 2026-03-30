@@ -3,41 +3,38 @@ layout: home
 
 hero:
   name: MoleClaw
-  text: Your AI Treasure-Hunting Assistant
-  tagline: Like a mole, it dives underground after you ask, silently digging through tools and data, then surfaces with the treasure. 36+ built-in tools, 10 CDP protocol domains, declarative workflows, any OpenAI-compatible LLM.
+  text: Your AI Browser Assistant
+  tagline: Tell Mole what you need. It works behind the scenes — searching, clicking, extracting, filling forms — then brings back the results. No coding required.
   image:
     src: /logo.png
     alt: MoleClaw Logo
   actions:
     - theme: brand
-      text: Getting Started
-      link: /guide/getting-started
+      text: Download Now
+      link: /download
     - theme: alt
-      text: GitHub
-      link: https://github.com/clark-maybe/mole-extension
+      text: What Can Mole Do?
+      link: /guide/examples
 
 features:
+  - icon: "\U0001F4AC"
+    title: Just Ask
+    details: Press Cmd+M and type what you need in plain language. "Find the cheapest flight to Tokyo" or "Fill in this form for me." Mole figures out the rest.
+  - icon: "\U0001F512"
+    title: Works Where You're Logged In
+    details: Mole runs right inside your Chrome browser, using your existing login sessions. Shop on Amazon, manage GitHub issues, check your bank — no re-login needed.
   - icon: "\U0001F916"
-    title: AI-Native Chat
-    details: Summon the floating ball anytime for streaming responses and natural language interaction. Shadow DOM style isolation — never affects any webpage.
-  - icon: "\U0001F510"
-    title: In-Place Execution
-    details: Works inside your real browser, reusing your existing login sessions. Operates directly on sites you're signed into — no cookie migration, no re-login, data stays local.
-  - icon: "\U0001F6E0\uFE0F"
-    title: 36+ Built-in Tools
-    details: Page operations, deep CDP control (10 domains), request interception, DOM/CSS/storage manipulation, navigation, screenshots, network diagnostics, device emulation, scheduled tasks... covering every aspect of browser automation.
-  - icon: "\U0001F4CB"
-    title: Site Workflows
-    details: Declarative JSON definitions to automate website operations without writing code. Supports remote Manifest syncing and custom extensions.
+    title: Automates Any Browser Task
+    details: Search across sites, extract tables and data, fill forms, compare prices, take screenshots — Mole handles multi-step tasks start to finish.
+  - icon: "\U0001F3AC"
+    title: Record Once, Replay Anytime
+    details: Show Mole a task once by recording your actions. Next time, just ask and it replays the steps automatically — your own custom automations.
   - icon: "\U0001F50C"
-    title: Bring Your Own LLM
-    details: Compatible with any OpenAI API-compatible service. Configure your own endpoint, API Key, and model — full data sovereignty.
-  - icon: "\U0001F9E9"
-    title: MCP Protocol
-    details: Built-in MCP Server/Client for standardized tool registration and invocation. Supports dynamic tool extensions (HTTP remote tools).
-  - icon: "\U0001F4D6"
-    title: Open Source
-    details: AGPL-3.0 licensed, fully open source, community-driven. Contributions, issues, and PRs are welcome.
+    title: Use Any AI Model
+    details: Works with OpenAI, Claude, Ollama, and any OpenAI-compatible service. Choose the model you trust, keep your API key, stay in control.
+  - icon: "\U0001F6E1\uFE0F"
+    title: Private & Open Source
+    details: All operations happen locally in your browser. No data is sent anywhere except your chosen AI service. Free, open source, no tracking.
 ---
 
 <div style="text-align: center; padding: 2rem 1rem 1rem; color: var(--vp-c-text-2); font-size: 0.95rem;">

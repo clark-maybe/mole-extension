@@ -1,42 +1,6 @@
-# Features
+# Architecture
 
-## Why "Mole"?
-
-Mole works just like its namesake: after you ask a question, it burrows underground (into the background), silently digging through tunnel networks — calling tools, searching the web, parsing data. Once it finds the treasure, it surfaces and presents the results in the floating ball. The whole process never interrupts what you're doing.
-
-> Surface = Floating ball (the entry point you see)
-> Underground = Background (where the AI works)
-> Tunnels = Channel + MCP (the communication network connecting everything)
-
-## In-Place Execution — Your Browser Is the Workspace
-
-Mole is not a remote scraper or a simulated browser — it runs directly inside the Chrome you're already using.
-
-This brings one key advantage: **login session reuse**. Any website you're signed into — e-commerce, GitHub, Slack, internal admin panels — Mole can operate on directly. The website sees your real session, no extra authentication required.
-
-### Use Cases
-
-- Order management and price monitoring on e-commerce sites you're logged into
-- Internal/admin system assistance
-- Social media information gathering and message processing
-- Accessing member-only content
-- Banking and finance sites with strong authentication (operations require your confirmation first)
-
-### Data Safety
-
-- All operations happen locally in your browser
-- Your cookies and login credentials are never sent to any external service
-- Irreversible actions (submission, payment, deletion) always ask for your confirmation first
-
-## Floating Ball AI Chat
-
-Mole injects a floating ball on every webpage as the entry point for AI interaction.
-
-- **Shadow DOM isolation** — The floating ball's styles are fully isolated within Shadow DOM, never affecting or being affected by the host page's styles
-- **Keyboard shortcut** — `Cmd+M` (Mac) / `Ctrl+M` (Windows) to quickly summon the search box
-- **Drag to reposition** — The floating ball can be dragged anywhere on screen; position persists to `chrome.storage.local`
-- **Edge-hugging** — Capsule shape hugs the screen edge, slides out on hover, never disrupts normal browsing
-- **Streaming responses** — AI replies stream in real time, showing the thinking process and tool call status
+This page covers the technical architecture behind Mole. For user-facing features, see [Tips & Tricks](/guide/tips).
 
 ## Agentic Loop Architecture
 
@@ -103,12 +67,6 @@ All page-operating tools support an optional `tab_id` parameter. The AI follows 
 - **Default behavior unchanged** — When `tab_id` is omitted, tools operate on the tab where the user started the conversation, exactly as before.
 - **List open tabs** — `tab_navigate(action='list')` shows all tabs with their IDs.
 
-### Example Scenarios
-
-- "Open Hacker News, extract the top 5 headlines, and summarize them here"
-- "Search for product X on site A, then fill in the price on site B's form"
-- "Compare the pricing tables on these two URLs"
-
 ## Deep CDP Control
 
 Mole connects to 10 Chrome DevTools Protocol (CDP) domains, providing browser-process-level deep control that overcomes Content Script limitations:
@@ -127,31 +85,9 @@ Mole connects to 10 Chrome DevTools Protocol (CDP) domains, providing browser-pr
 
 All CDP tools share a unified session manager (`cdp-session.ts`) that automatically manages debugger attach/detach lifecycle and domain event listeners.
 
-## Workflow Recorder
+## Automatic Context Compression
 
-Mole supports a **"show once, learn forever"** workflow recording mode. Instead of manually writing JSON workflow definitions, you can simply demonstrate the operation on the page, and Mole will learn from your actions.
-
-### How It Works
-
-1. **Start Recording** — Click the "Record Workflow" button in the floating ball's search box footer
-2. **Demonstrate** — Perform the operation on the page as you normally would. Mole captures clicks, text input, form submissions, and page navigations in the background
-3. **Mark Results** — After stopping the recording, you can click on the page element that represents the operation result (e.g., a search result list), or skip this step for full-page snapshot mode
-4. **AI Audit** — Mole sends the raw recorded steps to the AI, which:
-   - Removes noise (accidental clicks, meaningless scrolls)
-   - Merges fragmented actions (multiple keystrokes → one type action)
-   - Identifies parameterizable inputs (marks them as `{{param_name}}`)
-   - Generates assertions based on the result selector
-   - Outputs a standard workflow plan
-5. **Save & Reuse** — The generated workflow is automatically saved to the workflow registry, ready for use in future conversations
-
-### Recording Indicators
-
-- The capsule shows a red recording pulse with "Recording" text
-- The search box footer displays the step count, recording duration, and a "Stop" button
-
-### Cross-Navigation Support
-
-Recording persists across page navigations within the same tab. If the page redirects during your demonstration, Mole automatically records the navigation step and continues capturing on the new page.
+When conversation context grows too long, Mole automatically compresses historical context while preserving key information, ensuring continued operation within the LLM's context window limits. This prevents long multi-step tasks from failing due to context overflow.
 
 ## Vision (Visual Understanding)
 
@@ -165,40 +101,8 @@ Use `screenshot(annotate=true)` to get a screenshot with numbered interactive el
 - AI can visually identify the target element and use the corresponding element_id for precise operations
 - Follows the **Look → Act → Check** protocol: observe the page first, act with confidence, verify critical results
 
-**Use cases:**
-- Pages with Canvas, charts, or infographics that DOM parsing cannot capture
-- Understanding overall page layout and visual hierarchy
-- CAPTCHA recognition
-- Verifying visual states (colors, positions, size relationships)
-- Complex pages with many similar interactive elements where DOM text alone is ambiguous
-
 **Limits:**
 - Up to 15 screenshot images per task to control context size
 - Images are automatically stripped during context compression, replaced with text placeholders
 - Prefer `page_snapshot` / `page_skeleton` for structured data; use visual analysis as a supplement
 - The floating ball is automatically hidden during screenshots to avoid obscuring page content
-
-## Task Recovery
-
-If a task is interrupted due to Service Worker restart, network error, or LLM API timeout, Mole saves the execution context as a checkpoint. When the failure occurs:
-
-- The floating ball shows an error message with a **Retry** button
-- Clicking "Retry" resumes execution from the last checkpoint — no need to start over
-- The AI receives the full context of previous tool calls and results, and continues from where it left off
-
-Recoverable error types include: Service Worker restart, LLM API errors, user cancellation, and tool execution failures.
-
-## Human-in-the-Loop
-
-Mole supports two types of human interaction during task execution:
-
-- **Confirmation** (`request_confirmation`) — Before irreversible actions (form submission, payment, deletion), the AI pauses and asks for user approval
-- **Question** (`ask_user`) — When the AI encounters multiple options or needs missing information, it presents a question card with preset options and/or a free text input field. The user's answer is fed back into the loop, and execution continues
-
-## Automatic Context Compression
-
-When conversation context grows too long, Mole automatically compresses historical context while preserving key information, ensuring continued operation within the LLM's context window limits. This prevents long multi-step tasks from failing due to context overflow.
-
-## Session History
-
-Mole supports session history — you can view and manage past conversations in the Options page. The complete process of each conversation (including tool calls and results) is saved.

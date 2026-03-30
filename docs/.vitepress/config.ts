@@ -2,7 +2,7 @@ import { defineConfig } from 'vitepress'
 
 export default defineConfig({
   title: 'MoleClaw',
-  description: 'MoleClaw - AI-powered browser assistant with workflow automation',
+  description: 'MoleClaw - AI-powered browser assistant',
 
   head: [
     ['link', { rel: 'icon', href: '/logo.png' }],
@@ -15,31 +15,36 @@ export default defineConfig({
       themeConfig: {
         nav: [
           { text: 'Home', link: '/' },
-          { text: 'Guide', link: '/guide/getting-started' },
+          { text: 'Get Started', link: '/guide/getting-started' },
+          { text: 'What Can Mole Do?', link: '/guide/examples' },
           { text: 'Download', link: '/download' },
           { text: 'GitHub', link: 'https://github.com/clark-maybe/mole-extension' },
         ],
         sidebar: {
           '/guide/': [
             {
-              text: 'Getting Started',
+              text: 'Get Started',
               items: [
-                { text: 'Quick Start', link: '/guide/getting-started' },
-                { text: 'Features', link: '/guide/features' },
+                { text: 'Download & Install', link: '/guide/getting-started' },
+                { text: 'Your First Task', link: '/guide/first-task' },
               ],
             },
             {
-              text: 'Usage',
+              text: 'Explore',
               items: [
-                { text: 'Built-in Tools', link: '/guide/tools' },
-                { text: 'Site Workflows', link: '/guide/workflows' },
+                { text: 'What Can Mole Do?', link: '/guide/examples' },
+                { text: 'Workflows', link: '/guide/workflows' },
+                { text: 'Tips & Tricks', link: '/guide/tips' },
+              ],
+            },
+            {
+              text: 'Reference',
+              collapsed: true,
+              items: [
+                { text: 'Tools Reference', link: '/guide/tools' },
                 { text: 'Configuration', link: '/guide/configuration' },
-              ],
-            },
-            {
-              text: 'Development',
-              items: [
-                { text: 'Development Guide', link: '/guide/development' },
+                { text: 'Architecture', link: '/guide/features' },
+                { text: 'Development', link: '/guide/development' },
               ],
             },
           ],
@@ -70,30 +75,35 @@ export default defineConfig({
       themeConfig: {
         nav: [
           { text: '首页', link: '/zh/' },
-          { text: '指南', link: '/zh/guide/getting-started' },
+          { text: '快速开始', link: '/zh/guide/getting-started' },
+          { text: 'Mole 能做什么？', link: '/zh/guide/examples' },
           { text: '下载', link: '/zh/download' },
           { text: 'GitHub', link: 'https://github.com/clark-maybe/mole-extension' },
         ],
         sidebar: {
           '/zh/guide/': [
             {
-              text: '入门',
+              text: '快速上手',
               items: [
-                { text: '快速开始', link: '/zh/guide/getting-started' },
-                { text: '功能介绍', link: '/zh/guide/features' },
+                { text: '下载安装', link: '/zh/guide/getting-started' },
+                { text: '第一个任务', link: '/zh/guide/first-task' },
               ],
             },
             {
-              text: '使用',
+              text: '探索',
               items: [
-                { text: '内置工具列表', link: '/zh/guide/tools' },
-                { text: '站点工作流', link: '/zh/guide/workflows' },
+                { text: 'Mole 能做什么？', link: '/zh/guide/examples' },
+                { text: '工作流', link: '/zh/guide/workflows' },
+                { text: '使用技巧', link: '/zh/guide/tips' },
+              ],
+            },
+            {
+              text: '参考',
+              collapsed: true,
+              items: [
+                { text: '工具列表', link: '/zh/guide/tools' },
                 { text: '配置指南', link: '/zh/guide/configuration' },
-              ],
-            },
-            {
-              text: '开发',
-              items: [
+                { text: '架构说明', link: '/zh/guide/features' },
                 { text: '开发指南', link: '/zh/guide/development' },
               ],
             },
