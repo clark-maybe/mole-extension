@@ -83,6 +83,12 @@ export const askUserFunction: FunctionDefinition = {
       const handler = (data: any) => {
         if (settled || data?.requestId !== requestId) return;
         cleanup();
+        // 广播给所有标签页，同步更新卡片状态
+        Channel.broadcast('__ask_user_settled', {
+          requestId,
+          answer: String(data.answer || ''),
+          source: data.source === 'option' ? 'option' : 'text',
+        });
         resolve({
           success: true,
           data: {

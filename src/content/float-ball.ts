@@ -172,6 +172,11 @@ export const initFloatBall = async () => {
   trigger.appendChild(pillNoticeEl);
   trigger.appendChild(settingsBtn);
 
+  // ---- 悬浮球迷你操作卡片（确认/提问，不展开面板即可操作）----
+  const pillActionCard = document.createElement('div');
+  pillActionCard.className = 'mole-pill-action-card';
+  trigger.appendChild(pillActionCard);
+
   // ---- 关闭菜单 ----
   const currentHostname = window.location.hostname;
   const closeMenuEl = document.createElement('div');
@@ -973,6 +978,56 @@ export const initFloatBall = async () => {
     }, 4200);
   };
 
+  // ---- 悬浮球迷你操作卡片函数 ----
+
+  /** 隐藏迷你操作卡片 */
+  const hidePillActionCard = () => {
+    pillActionCard.innerHTML = '';
+    pillActionCard.classList.remove('visible');
+  };
+
+  /** 显示确认迷你卡片 */
+  const showPillApprovalCard = (requestId: string, message: string) => {
+    const shortMsg = message.length > 40 ? message.slice(0, 40) + '...' : message;
+    pillActionCard.innerHTML = `
+      <div class="pac-body" data-request-id="${requestId}" data-type="approval">
+        <div class="pac-msg">${escapeHtml(shortMsg)}</div>
+        <div class="pac-actions">
+          <button class="pac-btn pac-approve">批准</button>
+          <button class="pac-btn pac-reject">拒绝</button>
+        </div>
+      </div>
+    `;
+    pillActionCard.classList.add('visible');
+  };
+
+  /** 显示提问迷你卡片 */
+  const showPillAskUserCard = (
+    requestId: string,
+    question: string,
+    options?: string[],
+    allowFreeText?: boolean,
+  ) => {
+    const shortQ = question.length > 40 ? question.slice(0, 40) + '...' : question;
+    const optionsHtml = options && options.length > 0
+      ? options.map(o => `<button class="pac-btn pac-option">${escapeHtml(o)}</button>`).join('')
+      : '';
+    const inputHtml = allowFreeText
+      ? `<div class="pac-input-row">
+          <input class="pac-text" placeholder="输入回答..." />
+          <button class="pac-btn pac-send">发送</button>
+        </div>`
+      : '';
+    pillActionCard.innerHTML = `
+      <div class="pac-body" data-request-id="${requestId}" data-type="ask-user">
+        <div class="pac-msg">${escapeHtml(shortQ)}</div>
+        ${optionsHtml ? `<div class="pac-options">${optionsHtml}</div>` : ''}
+        ${inputHtml}
+      </div>
+    `;
+    pillActionCard.classList.add('visible');
+  };
+
   // ---- 胶囊状态更新 ----
   const updatePillState = () => {
     trigger.classList.remove('task-running', 'task-done', 'task-error');
@@ -1723,6 +1778,7 @@ export const initFloatBall = async () => {
       Channel.send('__session_clear', { sessionId: currentTask.id });
     }
     clearPillNotice();
+    hidePillActionCard();
     trigger.classList.remove('announce');
     currentTask = null;
     resetReplayCursor();
@@ -2488,6 +2544,9 @@ export const initFloatBall = async () => {
     // 胶囊提示
     showPillNotice('等待确认', 'info');
 
+    // 悬浮球迷你操作卡片（不展开面板也能操作）
+    showPillApprovalCard(requestId, message);
+
     resultEl.scrollTop = resultEl.scrollHeight;
     saveSnapshot();
   };
@@ -2516,6 +2575,9 @@ export const initFloatBall = async () => {
       const titleEl = standalone.querySelector('.mole-approval-header-bar span') as HTMLElement;
       if (titleEl) titleEl.textContent = approved ? '已批准' : '已拒绝';
     }
+
+    // 收起悬浮球迷你操作卡片
+    hidePillActionCard();
 
     saveSnapshot();
   };
@@ -2601,6 +2663,9 @@ export const initFloatBall = async () => {
     // 胶囊提示
     showPillNotice('等待回答', 'info');
 
+    // 悬浮球迷你操作卡片（不展开面板也能操作）
+    showPillAskUserCard(requestId, question, options, allowFreeText);
+
     resultEl.scrollTop = resultEl.scrollHeight;
     saveSnapshot();
   };
@@ -2642,6 +2707,9 @@ export const initFloatBall = async () => {
       if (titleEl) titleEl.textContent = '已回答';
     }
 
+    // 收起悬浮球迷你操作卡片
+    hidePillActionCard();
+
     saveSnapshot();
   };
 
@@ -2670,6 +2738,7 @@ export const initFloatBall = async () => {
       if (titleEl) titleEl.textContent = '已取消';
     }
 
+    hidePillActionCard();
     saveSnapshot();
   };
 
@@ -3117,6 +3186,22 @@ export const initFloatBall = async () => {
   Channel.on('__approval_cancel', (data: any) => {
     handleApprovalCancel(data?.requestId);
   });
+  // 确认卡片跨标签页同步：用户在其他 tab 响应后，本 tab 卡片同步更新
+  Channel.on('__approval_settled', (data: any) => {
+    const { requestId, approved, trustAll } = data || {};
+    if (!requestId) return;
+    const card = resultEl.querySelector(
+      `.mole-approval-card[data-request-id="${requestId}"]`,
+    ) as HTMLElement;
+    if (card && !card.classList.contains('settled')) {
+      disableApprovalCard(card, !!approved);
+      if (trustAll) {
+        const headerSpan = card.closest('.mole-approval-standalone')
+          ?.querySelector('.mole-approval-header-bar span');
+        if (headerSpan) headerSpan.textContent = '已批准（本次不再询问）';
+      }
+    }
+  });
 
   // 截图时临时隐藏/恢复悬浮球，避免遮挡页面内容
   Channel.on('__screenshot_hide', (_data: any, _sender, sendResponse) => {
@@ -3145,6 +3230,17 @@ export const initFloatBall = async () => {
   });
   Channel.on('__ask_user_cancel', (data: any) => {
     handleAskUserCancel(data?.requestId);
+  });
+  // 提问卡片跨标签页同步：用户在其他 tab 回答后，本 tab 卡片同步更新
+  Channel.on('__ask_user_settled', (data: any) => {
+    const { requestId, answer, source } = data || {};
+    if (!requestId) return;
+    const card = resultEl.querySelector(
+      `.mole-ask-user-card[data-request-id="${requestId}"]`,
+    ) as HTMLElement;
+    if (card && !card.classList.contains('settled')) {
+      disableAskUserCard(requestId, answer || '', source || 'text');
+    }
   });
 
   // 提问卡片文本输入框 Enter 键提交
@@ -4153,6 +4249,51 @@ export const initFloatBall = async () => {
 
   pill.addEventListener('mousedown', onMouseDown);
 
+  // ---- 悬浮球迷你操作卡片事件 ----
+  // 阻止冒泡到 pill（避免触发拖拽/toggle），独立处理点击
+  pillActionCard.addEventListener('mousedown', (e) => {
+    e.stopPropagation();
+  });
+  pillActionCard.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const target = e.target as HTMLElement;
+    const pacBtn = target.closest('.pac-btn') as HTMLElement | null;
+    if (!pacBtn) return;
+    const pacBody = pacBtn.closest('.pac-body') as HTMLElement;
+    if (!pacBody) return;
+    const requestId = pacBody.getAttribute('data-request-id');
+    const cardType = pacBody.getAttribute('data-type');
+    if (!requestId) return;
+
+    if (cardType === 'approval') {
+      if (pacBtn.classList.contains('pac-approve')) {
+        Channel.send('__approval_response', { requestId, approved: true });
+        const panelCard = resultEl.querySelector(`.mole-approval-card[data-request-id="${requestId}"]`) as HTMLElement;
+        if (panelCard && !panelCard.classList.contains('settled')) disableApprovalCard(panelCard, true);
+        hidePillActionCard();
+      } else if (pacBtn.classList.contains('pac-reject')) {
+        Channel.send('__approval_response', { requestId, approved: false, userMessage: '' });
+        const panelCard = resultEl.querySelector(`.mole-approval-card[data-request-id="${requestId}"]`) as HTMLElement;
+        if (panelCard && !panelCard.classList.contains('settled')) disableApprovalCard(panelCard, false);
+        hidePillActionCard();
+      }
+    } else if (cardType === 'ask-user') {
+      if (pacBtn.classList.contains('pac-option')) {
+        const answer = pacBtn.textContent || '';
+        Channel.send('__ask_user_response', { requestId, answer, source: 'option' });
+        disableAskUserCard(requestId, answer, 'option');
+        hidePillActionCard();
+      } else if (pacBtn.classList.contains('pac-send')) {
+        const textInput = pacBody.querySelector('.pac-text') as HTMLInputElement;
+        const answer = textInput?.value?.trim() || '';
+        if (!answer) return;
+        Channel.send('__ask_user_response', { requestId, answer, source: 'text' });
+        disableAskUserCard(requestId, answer, 'text');
+        hidePillActionCard();
+      }
+    }
+  });
+
   // ---- 悬浮球 hover 状态管理 ----
   // 用 JS class 管理 hover 状态，避免 trigger 宽度区域拦截页面操作
   // pill/按钮/菜单共享 hovering 状态，离开后延迟移除以覆盖元素间间隙
@@ -4172,7 +4313,7 @@ export const initFloatBall = async () => {
     }, HOVER_LEAVE_DELAY);
   };
 
-  for (const el of [pill, closeBtn, settingsBtn, closeMenuEl, recordBtn]) {
+  for (const el of [pill, closeBtn, settingsBtn, closeMenuEl, recordBtn, pillActionCard]) {
     el.addEventListener('mouseenter', enterHover);
     el.addEventListener('mouseleave', leaveHover);
   }

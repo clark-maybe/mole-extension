@@ -836,6 +836,29 @@ export function FloatingChat({ mode = 'float' }: FloatingChatProps) {
       saveSnapshot();
     };
 
+    // 确认卡片跨标签页同步：用户在其他地方响应后，本页卡片同步更新
+    const handleApprovalSettled = (data: any) => {
+      const { requestId, approved, trustAll } = data || {};
+      if (!requestId) return;
+      const card = resultRef.current?.querySelector(`.mole-approval-card[data-request-id="${requestId}"]`) as HTMLElement;
+      if (!card || card.classList.contains('settled')) return;
+      card.classList.add('settled');
+      card.querySelectorAll('button').forEach(btn => { (btn as HTMLButtonElement).disabled = true; });
+      const rejectInput = card.querySelector('.mole-approval-reject-input') as HTMLElement;
+      if (rejectInput) rejectInput.classList.remove('open');
+      const resultText = document.createElement('div');
+      resultText.className = 'mole-approval-result';
+      resultText.textContent = approved ? '✓ 已批准' : '✗ 已拒绝';
+      card.appendChild(resultText);
+      const standalone = card.closest('.mole-approval-standalone') as HTMLElement;
+      if (standalone) {
+        standalone.classList.add('settled');
+        const titleEl = standalone.querySelector('.mole-approval-header-bar span') as HTMLElement;
+        if (titleEl) titleEl.textContent = trustAll ? '已批准（本次不再询问）' : (approved ? '已批准' : '已拒绝');
+      }
+      saveSnapshot();
+    };
+
     const handleAskUserRequest = (data: any) => {
       const requestId = data?.requestId;
       const question = data?.question;
@@ -882,6 +905,32 @@ export function FloatingChat({ mode = 'float' }: FloatingChatProps) {
       resultText.className = 'mole-ask-user-result';
       resultText.textContent = '已取消';
       card.appendChild(resultText);
+      saveSnapshot();
+    };
+
+    // 提问卡片跨标签页同步：用户在其他地方回答后，本页卡片同步更新
+    const handleAskUserSettled = (data: any) => {
+      const { requestId, answer, source } = data || {};
+      if (!requestId) return;
+      const card = resultRef.current?.querySelector(`.mole-ask-user-card[data-request-id="${requestId}"]`) as HTMLElement;
+      if (!card || card.classList.contains('settled')) return;
+      card.classList.add('settled');
+      card.querySelectorAll('button, input').forEach(el2 => { (el2 as HTMLButtonElement).disabled = true; });
+      if (source === 'option') {
+        const optionBtns = card.querySelectorAll('.mole-ask-user-option');
+        optionBtns.forEach(btn => {
+          if (btn.textContent === answer) btn.classList.add('selected');
+        });
+      }
+      const resultText = document.createElement('div');
+      resultText.className = 'mole-ask-user-result';
+      resultText.textContent = source === 'option' ? `已选择：${answer}` : `已回答：${answer}`;
+      card.appendChild(resultText);
+      const standalone = card.closest('.mole-ask-user-standalone') as HTMLElement;
+      if (standalone) {
+        const titleEl = standalone.querySelector('.mole-ask-user-header-bar span') as HTMLElement;
+        if (titleEl) titleEl.textContent = '已回答';
+      }
       saveSnapshot();
     };
 
@@ -1034,8 +1083,10 @@ export function FloatingChat({ mode = 'float' }: FloatingChatProps) {
     Channel.on('__session_replay', handleSessionReplay);
     Channel.on('__approval_request', handleApprovalRequest);
     Channel.on('__approval_cancel', handleApprovalCancel);
+    Channel.on('__approval_settled', handleApprovalSettled);
     Channel.on('__ask_user_request', handleAskUserRequest);
     Channel.on('__ask_user_cancel', handleAskUserCancel);
+    Channel.on('__ask_user_settled', handleAskUserSettled);
 
     // ---- 初始化：恢复活跃会话 ----
     Channel.send('__session_get_active', {}, (response: SessionSyncPayload | null | undefined) => {
@@ -1086,8 +1137,10 @@ export function FloatingChat({ mode = 'float' }: FloatingChatProps) {
       Channel.off('__session_replay', handleSessionReplay);
       Channel.off('__approval_request', handleApprovalRequest);
       Channel.off('__approval_cancel', handleApprovalCancel);
+      Channel.off('__approval_settled', handleApprovalSettled);
       Channel.off('__ask_user_request', handleAskUserRequest);
       Channel.off('__ask_user_cancel', handleAskUserCancel);
+      Channel.off('__ask_user_settled', handleAskUserSettled);
       clearInterval(timer);
     };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps

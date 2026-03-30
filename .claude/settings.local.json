@@ -92,7 +92,19 @@
       "Bash(git -C /Users/clark/MySpace/mole-extension tag -l)",
       "Bash(gh release list --limit 5 2>/dev/null || echo \"No releases found or gh not configured\")",
       "Bash(gh repo view --json name,url,isPrivate 2>/dev/null || echo \"Could not get repo info\")",
-      "Bash(cd /Users/clark/MySpace/mole-extension/docs && npx vitepress build 2>&1 | tail -10)"
+      "Bash(cd /Users/clark/MySpace/mole-extension/docs && npx vitepress build 2>&1 | tail -10)",
+      "Bash(TASK_DIR=\".trellis/tasks/03-26-visual-grounding\"\n./.trellis/scripts/task.sh add-context \"$TASK_DIR\" implement \"src/content/page-grounding.ts\" \"标注元素收集、DOM标记注入/移除\"\n./.trellis/scripts/task.sh add-context \"$TASK_DIR\" implement \"src/functions/screenshot.ts\" \"screenshot工具增强annotate参数\"\n./.trellis/scripts/task.sh add-context \"$TASK_DIR\" implement \"src/ai/orchestrator.ts\" \"截图注入增强、映射表注入\"\n./.trellis/scripts/task.sh add-context \"$TASK_DIR\" implement \"src/ai/system-prompt.ts\" \"Look→Act→Check协议引导\"\n./.trellis/scripts/task.sh add-context \"$TASK_DIR\" check \"src/content/page-grounding.ts\" \"验证标注逻辑\"\n./.trellis/scripts/task.sh add-context \"$TASK_DIR\" check \"src/functions/screenshot.ts\" \"验证screenshot增强\"\n./.trellis/scripts/task.sh add-context \"$TASK_DIR\" check \"src/ai/orchestrator.ts\" \"验证注入逻辑\"\n./.trellis/scripts/task.sh start \"$TASK_DIR\")",
+      "Bash(find /Users/clark/MySpace/mole-extension -name \"*.md\" -not -path \"*/node_modules/*\" -type f 2>/dev/null | head -50)",
+      "Bash(/Users/clark/MySpace/mole-extension/.trellis/scripts/task.sh start \".trellis/tasks/03-26-structured-handoff-review\")",
+      "Bash(grep -r \"hr\\\\|horizontal\\\\|---\\\\|分割\" /Users/clark/MySpace/mole-extension/src/content/float-ball/ --include=\"*.ts\" 2>/dev/null | head -20)",
+      "Bash(grep -h \"浏览器\\\\|助手\\\\|定位\\\\|positioning\" /Users/clark/MySpace/mole-extension/zh/*.md | head -15)",
+      "Bash(find /Users/clark/MySpace/mole-extension -name CHANGELOG* -o -name ROADMAP* -o -name TODO*)",
+      "Bash(wc:*)",
+      "Bash(grep \"\\\\.ts$\")",
+      "Bash(sed 's/\\\\.ts$//')",
+      "Bash(find /Users/clark/MySpace/mole-extension/.trellis/tasks -name task.json -path */archive/* -mtime -30)",
+      "Bash(npx vitepress:*)",
+      "Bash(grep:*)"
     ],
     "deny": [],
     "ask": []

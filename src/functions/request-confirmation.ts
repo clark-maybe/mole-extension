@@ -58,6 +58,13 @@ export const requestConfirmationFunction: FunctionDefinition = {
       const handler = (data: any) => {
         if (settled || data?.requestId !== requestId) return;
         cleanup();
+        // 广播给所有标签页，同步更新卡片状态
+        Channel.broadcast('__approval_settled', {
+          requestId,
+          approved: !!data.approved,
+          userMessage: data.userMessage || '',
+          trustAll: !!data.trustAll,
+        });
         resolve({
           success: true,
           data: {

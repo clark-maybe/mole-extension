@@ -393,6 +393,160 @@ export const getStyles = () => `
     pointer-events: none;
   }
 
+  /* ---- 悬浮球迷你操作卡片 ---- */
+  .mole-pill-action-card {
+    position: absolute;
+    bottom: calc(100% + 6px);
+    right: 10%;
+    transform: translateY(4px) scale(0.96);
+    width: max-content;
+    max-width: 280px;
+    min-width: 160px;
+    background: #fff;
+    border: 1px solid var(--ec-border);
+    border-radius: 12px;
+    box-shadow: 0 4px 16px rgba(15, 23, 42, 0.14);
+    padding: 0;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease, transform 0.22s ease;
+    z-index: 10;
+  }
+
+  .mole-pill-action-card.visible {
+    opacity: 1;
+    pointer-events: auto;
+    transform: translateY(0px) scale(1);
+  }
+
+  /* 左侧时卡片左对齐 */
+  .mole-trigger.side-left .mole-pill-action-card {
+    right: auto;
+    left: 0;
+  }
+
+  .pac-body {
+    padding: 10px 12px;
+  }
+
+  .pac-msg {
+    font-size: 12px;
+    color: var(--ec-text);
+    line-height: 1.4;
+    margin-bottom: 8px;
+    word-break: break-word;
+  }
+
+  .pac-actions {
+    display: flex;
+    gap: 6px;
+  }
+
+  .pac-options {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 6px;
+  }
+
+  .pac-btn {
+    flex: 1;
+    min-width: 0;
+    padding: 5px 10px;
+    border: 1px solid var(--ec-border);
+    border-radius: 8px;
+    font-size: 12px;
+    cursor: pointer;
+    background: var(--ec-surface);
+    color: var(--ec-text);
+    transition: background 0.15s ease, border-color 0.15s ease;
+  }
+
+  .pac-btn:hover {
+    background: var(--ec-surface-strong);
+  }
+
+  .pac-approve {
+    background: var(--ec-primary);
+    color: #fff;
+    border-color: var(--ec-primary);
+  }
+
+  .pac-approve:hover {
+    background: var(--ec-primary-strong);
+    border-color: var(--ec-primary-strong);
+  }
+
+  .pac-reject {
+    background: var(--ec-surface);
+    color: var(--ec-danger);
+    border-color: var(--ec-danger);
+  }
+
+  .pac-reject:hover {
+    background: rgba(215, 0, 21, 0.06);
+  }
+
+  .pac-option {
+    flex: none;
+    background: var(--ec-surface);
+    border-color: var(--ec-border);
+    color: var(--ec-primary);
+  }
+
+  .pac-option:hover {
+    background: rgba(0, 113, 227, 0.06);
+    border-color: var(--ec-primary);
+  }
+
+  .pac-input-row {
+    display: flex;
+    gap: 4px;
+    margin-top: 6px;
+  }
+
+  .pac-text {
+    flex: 1;
+    min-width: 0;
+    padding: 5px 8px;
+    border: 1px solid var(--ec-border);
+    border-radius: 8px;
+    font-size: 12px;
+    background: var(--ec-surface);
+    color: var(--ec-text);
+    outline: none;
+  }
+
+  .pac-text:focus {
+    border-color: var(--ec-primary);
+    box-shadow: 0 0 0 2px rgba(0, 113, 227, 0.12);
+  }
+
+  .pac-send {
+    flex: none;
+    width: auto;
+    padding: 5px 10px;
+    background: var(--ec-primary);
+    color: #fff;
+    border-color: var(--ec-primary);
+  }
+
+  .pac-send:hover {
+    background: var(--ec-primary-strong);
+    border-color: var(--ec-primary-strong);
+  }
+
+  /* 面板展开时隐藏迷你卡片（避免重复操作） */
+  .mole-trigger.active .mole-pill-action-card {
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .mole-trigger.dragging .mole-pill-action-card {
+    opacity: 0;
+    pointer-events: none;
+  }
+
   /* ---- 关闭按钮（角标式，内嵌于 pill） ---- */
   .mole-close-btn {
     position: absolute;
@@ -2446,6 +2600,7 @@ export const getStyles = () => `
   .mole-bg-task-badge.visible {
     display: block;
   }
+
 
   /* ===== 后台任务面板 ===== */
 

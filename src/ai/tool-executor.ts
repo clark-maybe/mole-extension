@@ -203,6 +203,19 @@ export const executeToolCalls = async (
       if (action === 'set_cookie') return `AI 正在请求设置 Cookie "${params.name || ''}"`;
       if (action === 'delete_cookie') return `AI 正在请求删除 Cookie "${params.name || ''}"`;
     }
+    // 页面导航：重定向/关闭当前页会中断用户操作
+    if (name === 'tab_navigate') {
+      if (action === 'navigate') return `AI 正在请求跳转当前页面到 ${params.url || '?'}`;
+      if (action === 'close') return 'AI 正在请求关闭当前标签页';
+    }
+    // DOM 内容修改：直接改页面会干扰用户正在查看/操作的内容
+    if (name === 'cdp_dom') {
+      if (action === 'set_html' || action === 'set_text' || action === 'insert_html') {
+        return `AI 正在请求修改页面内容（${action}）`;
+      }
+      if (action === 'remove_node') return 'AI 正在请求删除页面元素';
+      if (action === 'set_outer_html') return 'AI 正在请求替换页面元素';
+    }
     return null;
   };
 
