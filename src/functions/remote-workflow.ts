@@ -446,6 +446,16 @@ const runRemotePlan = async (
         return { success: false, error: `unsupported plan action: ${step.action}` };
       }
 
+      // 安全拦截：workflow 中 tab_navigate(navigate) 自动改写为 open（后台新开标签页）
+      // 防止 workflow 未经用户确认就跳转当前页面
+      if (
+        step.action === 'tab_navigate'
+        && String(resolvedParams.action || '').toLowerCase() === 'navigate'
+      ) {
+        resolvedParams.action = 'open';
+        if (resolvedParams.active === undefined) resolvedParams.active = false;
+      }
+
       const maxAttempts = step.retry?.maxAttempts || 1;
       let retryDelayMs = step.retry?.delayMs || 0;
       let stepResult: FunctionResult = {

@@ -156,6 +156,7 @@ export const buildSystemPrompt = (
 4. 操作完毕后用 tab_navigate(action='close', tab_id=...) 关闭不再需要的标签页
 
 **重要规则：**
+- **禁止用 tab_navigate(action='navigate') 跳转用户当前页面**。要访问新网站时，必须用 tab_navigate(action='open') 在新标签页打开，保持用户当前页面不变
 - element_id 是标签页私有的，不能跨标签页复用
 - 切换到新标签页前，先用 page_snapshot(tab_id=目标tab) 获取该页面的元素
 - 不传 tab_id 时，默认操作用户发起对话时所在的标签页

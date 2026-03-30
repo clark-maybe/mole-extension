@@ -405,6 +405,34 @@ export const initFloatBall = async () => {
   /** 后台任务数据（定时器 + 常驻任务） */
   let bgTasksData: { timers: any[]; residentJobs: any[] } | null = null;
 
+  // ---- 输入历史 ----
+  const INPUT_HISTORY_KEY = 'mole_input_history';
+  const INPUT_HISTORY_MAX = 50;
+  let inputHistory: string[] = [];        // 持久化的历史记录
+  let inputHistoryCursor = -1;            // 当前浏览位置，-1 表示在最新输入
+  let inputHistoryDraft = '';             // 暂存用户当前正在输入的内容
+
+  // 从 storage 加载历史记录
+  chrome.storage.local.get(INPUT_HISTORY_KEY, (result) => {
+    const saved = result[INPUT_HISTORY_KEY];
+    if (Array.isArray(saved)) inputHistory = saved;
+  });
+
+  /** 将一条输入追加到历史并持久化 */
+  const pushInputHistory = (text: string) => {
+    // 去重：如果最新一条相同则不重复添加
+    if (inputHistory.length > 0 && inputHistory[inputHistory.length - 1] === text) return;
+    inputHistory.push(text);
+    if (inputHistory.length > INPUT_HISTORY_MAX) inputHistory.shift();
+    chrome.storage.local.set({ [INPUT_HISTORY_KEY]: inputHistory });
+  };
+
+  /** 重置历史浏览状态 */
+  const resetInputHistoryCursor = () => {
+    inputHistoryCursor = -1;
+    inputHistoryDraft = '';
+  };
+
   // ---- 工作流录制状态 ----
   let isRecording = false;
   let recorderStepCount = 0;
@@ -3988,8 +4016,11 @@ export const initFloatBall = async () => {
     }
   });
 
-  // ---- 用户输入时清除 workflow 卡片 ----
+  // ---- 用户输入时清除 workflow 卡片 + 重置历史游标 ----
   inputEl.addEventListener('input', () => {
+    // 用户手动输入时退出历史浏览模式
+    if (inputHistoryCursor !== -1) resetInputHistoryCursor();
+
     const hints = resultEl.querySelector('.mole-workflow-hints');
     if (hints) {
       hints.remove();
@@ -3997,14 +4028,45 @@ export const initFloatBall = async () => {
     }
   });
 
-  // Enter 发送到 AI
+  // Enter / 上下键
   inputEl.addEventListener('keydown', (e) => {
+    // ---- 上下键历史浏览 ----
+    if ((e.key === 'ArrowUp' || e.key === 'ArrowDown') && !e.isComposing && inputHistory.length > 0) {
+      e.preventDefault();
+      if (e.key === 'ArrowUp') {
+        if (inputHistoryCursor === -1) {
+          // 首次按上键：暂存当前输入，从最新历史开始
+          inputHistoryDraft = inputEl.value;
+          inputHistoryCursor = inputHistory.length - 1;
+        } else if (inputHistoryCursor > 0) {
+          inputHistoryCursor--;
+        }
+      } else {
+        // ArrowDown
+        if (inputHistoryCursor === -1) return; // 已在最新位置
+        if (inputHistoryCursor < inputHistory.length - 1) {
+          inputHistoryCursor++;
+        } else {
+          // 回到用户正在输入的内容
+          inputHistoryCursor = -1;
+          inputEl.value = inputHistoryDraft;
+          return;
+        }
+      }
+      inputEl.value = inputHistory[inputHistoryCursor] ?? '';
+      return;
+    }
+
     if (e.key === 'Enter' && !e.isComposing) {
       const value = inputEl.value.trim();
       if (!value) return;
 
       // running 时不允许新输入
       if (currentTask?.status === 'running') return;
+
+      // 记录到历史并重置游标
+      pushInputHistory(value);
+      resetInputHistoryCursor();
 
       inputEl.value = '';
 

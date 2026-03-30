@@ -180,6 +180,15 @@ export const executeToolCalls = async (
 ): Promise<InputItem[]> => {
   const results: InputItem[] = [];
 
+  /** 高危操作：即使用户选了"本次不再询问"也必须每次确认（导航/关闭会销毁 content script） */
+  const isAlwaysConfirmOperation = (name: string, params: Record<string, any>): boolean => {
+    if (name === 'tab_navigate') {
+      const action = String(params.action || '');
+      return action === 'navigate' || action === 'close';
+    }
+    return false;
+  };
+
   /** 敏感操作检测：需要用户确认的工具+参数组合 */
   const getSensitiveApprovalMessage = (name: string, params: Record<string, any>): string | null => {
     const action = String(params.action || '');
@@ -228,7 +237,10 @@ export const executeToolCalls = async (
   ): Promise<string | null> => {
     const params = safeParseArgs(call.arguments);
     const approvalMessage = getSensitiveApprovalMessage(call.name, params);
-    if (!approvalMessage || sensitiveAccessTrusted) return null;
+    if (!approvalMessage) return null;
+    // 高危操作（导航/关闭标签页）始终需要确认，不受 trustAll 影响
+    const alwaysConfirm = isAlwaysConfirmOperation(call.name, params);
+    if (sensitiveAccessTrusted && !alwaysConfirm) return null;
 
     const approvalResult = await requestConfirmationFunction.execute(
       { message: approvalMessage },
