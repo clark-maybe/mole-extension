@@ -1,56 +1,56 @@
-# Your First Task
+# 第一个任务
 
-You've installed Mole and connected an AI model. Let's try it out.
+Mole 装好了，AI 也配好了，来试试看。
 
-## Open the Assistant
+## 打开助手
 
-Press `Cmd+M` (Mac) or `Ctrl+M` (Windows) on any webpage. A search box appears at the top of the page.
+在任意网页按 `Cmd+M`（Mac）或 `Ctrl+M`（Windows），页面顶部会弹出搜索框。
 
-You can also find the floating ball on the right edge of the page — hover over it and click to open.
+也可以在页面右侧找到悬浮球，鼠标悬停后点击打开。
 
-## Ask a Question
+## 问个问题
 
-Type in the search box:
+在搜索框输入：
 
-> What is this page about?
+> 这个页面讲了什么？
 
-Mole reads the page content and gives you a concise summary. No setup, no tools to pick — just a question and an answer.
+Mole 会阅读页面内容，给你一段简洁的摘要。不需要选工具、不需要配置——问就行了。
 
-## Try a Page Action
+## 试个页面操作
 
-Now try something more hands-on:
+来点实际的：
 
-> Take a screenshot of this page
+> 帮我截个图
 
-Mole captures what you see on screen and shows you the image right in the chat.
+Mole 截取当前页面，截图直接展示在对话中。
 
-## Try a Multi-Step Task
+## 试个多步任务
 
-Here's where it gets interesting. Try:
+好戏来了：
 
-> Search for "wireless keyboard" on Amazon and show me the top 5 results with prices
+> 在淘宝搜索「机械键盘」，给我前 5 个结果的名称和价格
 
-Watch what happens: Mole opens Amazon, types in the search, reads the results page, extracts the product names and prices, and presents them as a clean list — all automatically.
+Mole 会打开淘宝、输入搜索词、阅读结果页、提取商品信息，最后整理成列表展示给你——全自动。
 
-## What's Happening Behind the Scenes
+## 背后发生了什么
 
-When you give Mole a task, it figures out the best approach:
+Mole 会根据任务复杂度自动选择策略：
 
-- **Simple questions** — Mole answers directly, no browsing needed
-- **Quick actions** — One step, like taking a screenshot or clicking a button
-- **Complex tasks** — Multiple steps chained together automatically
-- **Big jobs** — Split into parallel subtasks for speed
+- **简单问题** — 直接回答，不需要浏览页面
+- **快速操作** — 一步完成，比如截图、点击按钮
+- **复杂任务** — 多步自动串联
+- **大型任务** — 拆分成子任务并行处理
 
-You'll see brief status updates as Mole works. For anything sensitive — like submitting a form or making a purchase — Mole will always ask for your confirmation first.
+执行过程中会显示简短的状态提示。涉及敏感操作（提交表单、付款、删除）时，Mole 会先征求你的确认。
 
-## Tips for Better Results
+## 让 Mole 更好用的小技巧
 
-- **Be specific** — "Search Amazon for wireless keyboards under $50" works better than "find me a keyboard"
-- **Reference the page** — Mole can see what's on your screen. "Click the blue button" or "extract the table below" just works
-- **Chain requests** — You can ask follow-up questions in the same conversation
+- **说得具体点** — 「在淘宝搜 50 块以内的机械键盘」比「帮我找个键盘」效果好
+- **直接引用页面内容** — Mole 能看到你的页面，「点那个蓝色按钮」「提取下面的表格」都可以
+- **追问** — 同一个对话中可以继续追问，Mole 保持上下文
 
-## What's Next
+## 接下来
 
-- [What Can Mole Do?](/guide/examples) — Browse more examples
-- [Record a Workflow](/guide/workflows) — Teach Mole to repeat tasks
-- [Tips & Tricks](/guide/tips) — Get more out of Mole
+- [Mole 能做什么？](/guide/examples) — 看看更多使用场景
+- [工作流](/guide/workflows) — 教 Mole 重复执行任务
+- [使用技巧](/guide/tips) — 更多进阶用法

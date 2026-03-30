@@ -3,40 +3,40 @@ layout: home
 
 hero:
   name: MoleClaw
-  text: Your AI Browser Assistant
-  tagline: Tell Mole what you need. It works behind the scenes — searching, clicking, extracting, filling forms — then brings back the results. No coding required.
+  text: 你的 AI 浏览器助手
+  tagline: 告诉 Mole 你需要什么，它在浏览器后台默默工作——搜索、点击、提取数据、填表——然后把结果带回来。无需编程。
   image:
     src: /logo.png
     alt: MoleClaw Logo
   actions:
     - theme: brand
-      text: Download Now
-      link: /download
+      text: 立即下载
+      link: /zh/download
     - theme: alt
-      text: What Can Mole Do?
-      link: /guide/examples
+      text: Mole 能做什么？
+      link: /zh/guide/examples
 
 features:
   - icon: "\U0001F4AC"
-    title: Just Ask
-    details: Press Cmd+M and type what you need in plain language. "Find the cheapest flight to Tokyo" or "Fill in this form for me." Mole figures out the rest.
+    title: 开口就行
+    details: 按 Cmd+M 用自然语言说出需求。「帮我找飞东京最便宜的机票」或「帮我填完这个表单」，Mole 自己搞定。
   - icon: "\U0001F512"
-    title: Works Where You're Logged In
-    details: Mole runs right inside your Chrome browser, using your existing login sessions. Shop on Amazon, manage GitHub issues, check your bank — no re-login needed.
+    title: 直接用你的登录状态
+    details: Mole 直接运行在你的 Chrome 浏览器里，复用已有的登录态。淘宝下单、GitHub 管理、银行查账——无需重新登录。
   - icon: "\U0001F916"
-    title: Automates Any Browser Task
-    details: Search across sites, extract tables and data, fill forms, compare prices, take screenshots — Mole handles multi-step tasks start to finish.
+    title: 什么浏览器任务都能做
+    details: 跨站搜索、提取表格数据、填表、比价、截图——Mole 全程自动处理多步任务。
   - icon: "\U0001F3AC"
-    title: Record Once, Replay Anytime
-    details: Show Mole a task once by recording your actions. Next time, just ask and it replays the steps automatically — your own custom automations.
+    title: 录制一次，随时重播
+    details: 录下你的操作演示给 Mole 看，下次只需一句话就能自动重播——属于你自己的自动化。
   - icon: "\U0001F50C"
-    title: Use Any AI Model
-    details: Works with OpenAI, Claude, Ollama, and any OpenAI-compatible service. Choose the model you trust, keep your API key, stay in control.
+    title: 自由选择 AI 模型
+    details: 支持 OpenAI、Claude、Ollama 及任何 OpenAI 兼容服务。选择你信任的模型，API Key 由你掌控。
   - icon: "\U0001F6E1\uFE0F"
-    title: Private & Open Source
-    details: All operations happen locally in your browser. No data is sent anywhere except your chosen AI service. Free, open source, no tracking.
+    title: 隐私优先，开源免费
+    details: 所有操作在本地浏览器完成，数据只发送到你选择的 AI 服务。免费开源，无追踪。
 ---
 
 <div style="text-align: center; padding: 2rem 1rem 1rem; color: var(--vp-c-text-2); font-size: 0.95rem;">
-  <p>This project was initiated in the <a href="https://linux.do" target="_blank" rel="noopener" style="color: var(--vp-c-brand-1); font-weight: 500;">linux.do</a> community. Thanks to the community members for their feedback and support.</p>
+  <p>本项目在 <a href="https://linux.do" target="_blank" rel="noopener" style="color: var(--vp-c-brand-1); font-weight: 500;">linux.do</a> 社区发起，感谢社区成员的反馈与支持。</p>
 </div>

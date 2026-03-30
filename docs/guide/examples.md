@@ -1,81 +1,81 @@
-# What Can Mole Do?
+# Mole 能做什么？
 
-Mole is your hands-free browser assistant. Here are some things people use it for.
+Mole 是你的浏览器助手，说一句话就能帮你完成各种任务。
 
-## Shopping & Prices
+## 购物比价
 
-### "Find the best price for AirPods Pro across Amazon and Best Buy"
+### "帮我比一下这个商品在淘宝和京东的价格"
 
-Mole opens both sites, searches the product, extracts prices, and gives you a comparison table — all without you switching tabs.
+Mole 打开两个平台，分别搜索商品、提取价格，整理成对比表格给你——不用你来回切换标签页。
 
-### "Track this product and notify me when it drops below $200"
+### "监控这个商品，降到 200 块以下通知我"
 
-Mole sets up a periodic check on the product page and sends you a browser notification when the price hits your target.
+Mole 设置定时检查，价格达到你的目标时发送浏览器通知。
 
-### "Extract everything from my Amazon cart into a table"
+### "把我京东购物车里的东西整理成表格"
 
-Mole reads your cart page, pulls out every item name, quantity, and price, and formats it as a table you can copy into a spreadsheet.
+Mole 读取购物车页面，提取每个商品的名称、数量和价格，整理成可以复制到 Excel 的表格。
 
-## Work & Productivity
+## 工作效率
 
-### "Summarize the emails on this Gmail page"
+### "帮我总结一下这个页面的内容"
 
-Mole reads the visible emails and gives you a concise bullet-point summary of each one.
+Mole 阅读当前页面，给你一段条理清晰的摘要。
 
-### "Fill in this job application form with my info"
+### "帮我把这个表单填了"
 
-Tell Mole your details. It identifies each form field and fills them in, waiting for your confirmation before submitting.
+告诉 Mole 你的信息，它识别每个字段并逐一填写，提交前会先征求你的确认。
 
-### "Take a screenshot of this report and highlight the key metrics"
+### "截个图，把关键数据标出来"
 
-Mole captures the page and can annotate what it sees, making it easy to share with your team.
+Mole 截取页面，还能标注它看到的内容，方便你分享给同事。
 
-## Research & Data
+## 信息研究
 
-### "What are the top stories on Hacker News right now?"
+### "今日头条现在什么热搜？"
 
-Mole opens Hacker News, extracts the headlines, scores, and links, and presents them in a clean list.
+Mole 打开今日头条，提取热榜标题和热度，整理成清晰的列表。
 
-### "Extract the table from this Wikipedia page"
+### "把这个页面的表格提取出来"
 
-Mole finds the table, parses every row and column, and gives you structured data you can copy or export.
+Mole 找到表格，解析每行每列，给你结构化的数据，可以直接复制或导出。
 
-### "Compare iPhone 16 and Pixel 9 specs from GSMArena"
+### "帮我对比一下 iPhone 16 和小米 15 的参数"
 
-Mole opens both product pages, pulls out key specifications, and builds a side-by-side comparison.
+Mole 分别打开两个产品页，提取关键参数，生成并排对比表。
 
-## Page Interaction
+## 页面操作
 
-### "Click the 'Accept All Cookies' button on this page"
+### "点掉这个弹窗"
 
-Mole identifies the cookie banner and clicks the button for you.
+Mole 识别弹窗并点击关闭按钮。
 
-### "Scroll through this infinite-scroll page and collect all the comments"
+### "往下翻页，把评论都收集起来"
 
-Mole scrolls progressively, handling lazy-loading automatically, and gathers everything into one list.
+Mole 自动滚动页面，处理懒加载，把所有内容汇总到一起。
 
-## Monitoring & Automation
+## 监控自动化
 
-### "Check this stock page every hour and alert me if it drops 5%"
+### "每小时帮我看一下这个基金净值，跌了 5% 就通知我"
 
-Mole sets up a recurring task that monitors the page and sends you a notification when your condition is met.
+Mole 设置定时任务监控页面，满足条件时发送通知。
 
-### "Every morning, open my three news sites and summarize the top stories"
+### "每天早上帮我看看微博热搜，总结一下"
 
-Mole runs a workflow across multiple tabs and delivers a daily digest.
+Mole 定时执行工作流，打开多个标签页，给你一份每日摘要。
 
-## Custom Workflows
+## 自定义工作流
 
-### "I want to automate my daily attendance check-in on this site"
+### "我想把每天的考勤打卡自动化"
 
-Record the steps once using Mole's workflow recorder. From then on, just say "do my check-in" and Mole replays the whole thing.
+用 Mole 的工作流录制功能录一次操作步骤。以后只需说「帮我打卡」，Mole 自动重播整个流程。
 
-### "Every time I open Jira, collect my assigned tickets into a summary"
+### "每次打开飞书，帮我把待办事项汇总一下"
 
-Create a workflow that Mole triggers when you visit the page, saving you the manual triage.
+创建一个工作流，访问页面时 Mole 自动触发，省去手动整理的麻烦。
 
 ---
 
 ::: tip
-These are just examples. You can ask Mole to do anything you'd normally do in a browser — just describe it in plain language.
+以上只是一些例子。你可以让 Mole 做任何你平时在浏览器中做的事——用自然语言描述就行。
 :::

@@ -1,49 +1,49 @@
-# Workflows
+# 工作流
 
-Workflows let you teach Mole repeatable tasks. Show it once, and it can replay the steps anytime you ask.
+工作流让你教会 Mole 可重复的任务。演示一次，以后随时让它重播。
 
-## Two Ways to Create Workflows
+## 两种创建方式
 
-### Record It (Recommended)
+### 录制（推荐）
 
-The easiest way — just demonstrate what you want:
+最简单的方式——直接演示：
 
-1. Click the "Record Workflow" button at the bottom of the search box
-2. Do the task as you normally would — click, type, navigate
-3. Stop recording when you're done
-4. Mole's AI cleans up the recording: removes accidental clicks, merges keystrokes, and marks customizable parts (like search terms)
-5. The workflow is saved and ready to use
+1. 点击搜索框底部的「录制流程」按钮
+2. 像平时一样操作——点击、输入、导航
+3. 完成后停止录制
+4. Mole 的 AI 自动清洗录制内容：去除误点击、合并击键、标记可自定义的部分（如搜索词）
+5. 工作流保存完毕，可以使用了
 
-Next time, just say something like "run my check-in workflow" and Mole replays it.
+下次直接说「帮我打卡」之类的，Mole 就会自动重播。
 
-### Write It by Hand (Advanced)
+### 手动编写（进阶）
 
-For more control, you can write workflows as JSON definitions. This is useful for complex automations or sharing workflows with others. See the technical reference below.
+如果需要更精细的控制，可以用 JSON 手写工作流定义。适合复杂自动化或者分享给他人。详见下方技术参考。
 
 ---
 
-## Built-in Workflows
+## 内置工作流
 
-MoleClaw comes with the following predefined workflows:
+MoleClaw 默认包含以下预定义工作流：
 
-| Workflow | Description | URL Match |
-|----------|-------------|-----------|
-| JD Product Search | Search products on JD.com, returns product card list | All pages |
-| Baidu Search | Search keywords on Baidu, returns search result list | All pages |
-| Boss Zhipin Message Reply | Operate chats, collect messages, auto-reply on Boss Zhipin | `*.zhipin.com` |
-| Taobao Product Search | Search products on Taobao, returns product list | All pages |
-| Taobao Product Details | Collect structured data from Taobao/Tmall product detail pages | All pages |
-| Toutiao Hot List | Collect the Top 100 trending news from Toutiao Hot List | All pages |
+| 工作流 | 说明 | URL 匹配 |
+|--------|------|----------|
+| 京东商品搜索 | 在京东搜索商品，返回商品卡片列表 | 所有页面 |
+| 百度搜索 | 在百度搜索关键词，返回搜索结果列表 | 所有页面 |
+| Boss 直聘消息回复 | 在 Boss 直聘聊天页面操作会话、采集消息、自动回复 | `*.zhipin.com` |
+| 淘宝商品搜索 | 在淘宝搜索商品，返回商品列表 | 所有页面 |
+| 淘宝商品详情 | 采集淘宝/天猫商品详情页的结构化数据 | 所有页面 |
+| 今日热榜 | 采集今日热榜 Top 100 热点新闻 | 所有页面 |
 
-## Workflow Structure
+## 工作流结构
 
-Each workflow is a JSON object with the following fields:
+每个工作流是一个 JSON 对象，包含以下字段：
 
 ```json
 {
-  "name": "workflow_name",
-  "label": "Display Label",
-  "description": "Workflow description — AI uses this to decide when to invoke it",
+  "name": "工作流名称",
+  "label": "显示标签",
+  "description": "工作流描述，AI 据此判断何时使用",
   "url_patterns": ["*://*.example.com/*"],
   "version": 1,
   "enabled": true,
@@ -52,7 +52,7 @@ Each workflow is a JSON object with the following fields:
     "properties": {
       "keyword": {
         "type": "string",
-        "description": "Search keyword"
+        "description": "搜索关键词"
       }
     },
     "required": ["keyword"]
@@ -62,7 +62,7 @@ Each workflow is a JSON object with the following fields:
     "steps": [
       {
         "action": "tab_navigate",
-        "note": "Navigate to the target page",
+        "note": "导航到目标页面",
         "params": {
           "action": "navigate",
           "url": "https://example.com/search?q={{keyword}}"
@@ -71,7 +71,7 @@ Each workflow is a JSON object with the following fields:
       },
       {
         "action": "cdp_input",
-        "note": "Wait for results to load",
+        "note": "等待结果加载",
         "params": {
           "action": "wait_for_element",
           "selector": ".results",
@@ -80,7 +80,7 @@ Each workflow is a JSON object with the following fields:
       },
       {
         "action": "cdp_dom",
-        "note": "Collect result data",
+        "note": "采集结果数据",
         "params": {
           "action": "query",
           "selector": ".result-item",
@@ -94,71 +94,71 @@ Each workflow is a JSON object with the following fields:
 }
 ```
 
-### Key Fields
+### 关键字段说明
 
-- **`url_patterns`** — URL matching rules using wildcard syntax; determines which pages the workflow is available on
-- **`parameters`** — Parameter definitions in JSON Schema format, passed by the AI when invoking
-- **`plan.steps`** — Array of steps, each calling a built-in tool
-- **`plan.steps[].action`** — Name of the tool to call
-- **`plan.steps[].params`** — Tool parameters, supports `{{variable}}` template syntax
-- **`plan.steps[].saveAs`** — Store the step result as a variable for subsequent steps to reference
-- **`plan.steps[].when`** — Conditional execution; step is skipped when the value is falsy
-- **`plan.steps[].retry`** — Retry configuration (`maxAttempts`, `delayMs`, `backoffFactor`)
-- **`plan.steps[].onError`** — Error handling strategy (`"continue"` to skip and proceed)
-- **`plan.resultPath`** — Path to extract the final result from
-- **`plan.closeOpenedTabs`** — Whether to close newly opened tabs after completion (`"on_success"`)
+- **`url_patterns`** - URL 匹配规则，使用通配符语法，决定工作流在哪些页面可用
+- **`parameters`** - JSON Schema 格式的参数定义，AI 调用时传入
+- **`plan.steps`** - 步骤数组，每一步调用一个内置工具
+- **`plan.steps[].action`** - 要调用的工具名称
+- **`plan.steps[].params`** - 工具参数，支持 `{{变量}}` 模板语法
+- **`plan.steps[].saveAs`** - 将步骤结果存储为变量，供后续步骤引用
+- **`plan.steps[].when`** - 条件执行，值为 falsy 时跳过该步骤
+- **`plan.steps[].retry`** - 重试配置（`maxAttempts`、`delayMs`、`backoffFactor`）
+- **`plan.steps[].onError`** - 错误处理策略（`"continue"` 跳过继续）
+- **`plan.resultPath`** - 最终结果的取值路径
+- **`plan.closeOpenedTabs`** - 是否在完成后关闭新开的标签页（`"on_success"`）
 
-## Recording Workflows
+## 录制工作流
 
-The easiest way to create a custom workflow is to **record it** directly in the floating ball. Instead of writing JSON by hand, just demonstrate the operation and let AI generate the workflow for you.
+创建自定义工作流最简单的方式是在悬浮球中**直接录制**。无需手写 JSON，只需演示一遍操作，AI 会自动生成工作流。
 
-### Steps
+### 操作步骤
 
-1. Open the floating ball search box (`Cmd+M` / `Ctrl+M`)
-2. Click the **"Record Workflow"** button in the footer area
-3. Perform the operation on the page (click, type, navigate, etc.)
-4. Click **"Stop"** when done
-5. Optionally click on the result element, or click **"Skip"** for full-page snapshot mode
-6. Wait for AI to process — it will clean up the recording, remove noise, identify parameters, and generate a standard workflow
-7. The workflow is saved automatically and can be invoked by AI in future conversations
+1. 打开悬浮球搜索框（`Cmd+M` / `Ctrl+M`）
+2. 点击底部的**「录制流程」**按钮
+3. 在页面上进行操作（点击、输入、导航等）
+4. 操作完成后点击**「停止」**
+5. 可以点击页面上的结果元素进行标记，或点击**「跳过」**进入整页快照模式
+6. 等待 AI 处理 — 它会清洗录制内容、去除噪声、识别可参数化的输入，生成标准工作流
+7. 工作流自动保存，后续对话中 AI 可直接调用
 
-::: tip
-Recorded workflows are marked with `source: "user"` and stored alongside manually added and remote-synced workflows. You can manage them from the Options page.
+::: tip 提示
+录制生成的工作流标记为 `source: "user"`，与手动添加和远程同步的工作流一起管理。可在 Options 页面进行查看和编辑。
 :::
 
-## Custom Workflows
+## 自定义工作流
 
-### Via the Options Page
+### 通过 Options 页面
 
-1. Right-click the Mole extension icon and select **Options**
-2. In the workflow management area, click **Add Workflow**
-3. Paste the workflow JSON definition
-4. Save — takes effect immediately
+1. 右键点击 Mole 扩展图标，选择 **选项**
+2. 在工作流管理区域，点击 **添加工作流**
+3. 粘贴工作流 JSON 定义
+4. 保存后立即生效
 
-### Via Remote Manifest Sync
+### 通过 Manifest 远程同步
 
-MoleClaw supports syncing workflow Manifests from remote URLs.
+MoleClaw 支持从远程 URL 同步工作流 Manifest。
 
-#### Manifest Format
+#### Manifest 格式
 
 ```json
 {
   "version": 2,
   "updatedAt": "2025-01-01T00:00:00Z",
   "workflows": [
-    { /* workflow definition */ },
-    { /* workflow definition */ }
+    { /* 工作流定义 */ },
+    { /* 工作流定义 */ }
   ]
 }
 ```
 
-#### Sync Mechanism
+#### 同步机制
 
-- Supports configuring multiple Manifest sources
-- Auto-syncs every 6 hours by default (via Chrome Alarms API)
-- Can also be manually triggered from the Options page
-- Remote workflows are tagged as `source: "remote"`, user-added ones as `source: "user"`
+- 支持配置多个 Manifest 源
+- 默认每 6 小时自动同步一次（通过 Chrome Alarms API）
+- 也可以在 Options 页面手动触发同步
+- 远程工作流标记为 `source: "remote"`，用户手动添加的标记为 `source: "user"`
 
-::: tip
-You can host your own Manifest service to centrally manage and distribute workflows to your team.
+::: tip 提示
+你可以搭建自己的 Manifest 服务，集中管理和分发工作流给团队使用。
 :::

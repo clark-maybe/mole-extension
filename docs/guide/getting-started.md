@@ -1,56 +1,56 @@
-# Get Started
+# 快速开始
 
-Get Mole running in under 5 minutes.
+5 分钟内让 Mole 跑起来。
 
-## Step 1: Install the Extension
+## 第一步：安装扩展
 
-1. Go to the [Download](/download) page and download the latest release
-2. Unzip the downloaded file
-3. Open `chrome://extensions/` in Chrome
-4. Enable **Developer Mode** (top right corner)
-5. Click **Load unpacked** and select the unzipped folder
-6. Pin Mole to your toolbar for easy access
+1. 打开[下载页面](/download)，下载最新版本
+2. 解压下载的文件
+3. 在 Chrome 中打开 `chrome://extensions/`
+4. 开启右上角的**开发者模式**
+5. 点击**加载已解压的扩展程序**，选择解压后的文件夹
+6. 将 Mole 固定到工具栏，方便使用
 
-::: tip Want to build from source?
-See the [Development Guide](/guide/development) for instructions on building from the repository.
+::: tip 想从源码构建？
+请参考[开发指南](/guide/development)了解如何从仓库构建。
 :::
 
-## Step 2: Connect an AI Model
+## 第二步：连接 AI 模型
 
-Mole needs an AI service to do its thinking. Set it up once and you're good to go.
+Mole 需要一个 AI 服务来思考。配置一次就好。
 
-1. Right-click the Mole icon in your toolbar, select **Options**
-2. Fill in your AI service details:
-   - **API Endpoint** — e.g. `https://api.openai.com/v1`
-   - **API Key** — your API key
-   - **Model** — e.g. `gpt-4o-mini` or `gpt-4o`
-3. Click **Save**
+1. 右键点击工具栏上的 Mole 图标，选择**选项**
+2. 填写 AI 服务信息：
+   - **API Endpoint** — 如 `https://api.openai.com/v1`
+   - **API Key** — 你的 API 密钥
+   - **Model** — 如 `gpt-4o-mini` 或 `gpt-4o`
+3. 点击**保存**
 
-::: details Which AI services work?
-Any service that supports the OpenAI API format and **Function Calling** (tool use):
+::: details 支持哪些 AI 服务？
+任何支持 OpenAI API 格式且支持 **Function Calling**（工具调用）的服务：
 
 - **OpenAI** — `https://api.openai.com/v1`
-- **Azure OpenAI** — your Azure endpoint
-- **Claude** — via OpenAI-compatible proxy
-- **Ollama** (local) — `http://localhost:11434/v1`
-- **LM Studio** (local) — `http://localhost:1234/v1`
-- Any other OpenAI-compatible service
+- **Azure OpenAI** — 你的 Azure 端点
+- **Claude** — 通过 OpenAI 兼容代理
+- **Ollama**（本地）— `http://localhost:11434/v1`
+- **LM Studio**（本地）— `http://localhost:1234/v1`
+- 其他任何 OpenAI 兼容服务
 :::
 
-## Step 3: Try It Out
+## 第三步：试一试
 
-Visit any webpage and press `Cmd+M` (Mac) or `Ctrl+M` (Windows).
+打开任意网页，按 `Cmd+M`（Mac）或 `Ctrl+M`（Windows）。
 
-Try typing:
-- "What is this page about?"
-- "Take a screenshot"
-- "Search for iPhone 16 on Amazon and show me the top 5 results"
+试着输入：
+- 「这个页面讲了什么？」
+- 「帮我截个图」
+- 「在淘宝搜索 iPhone 16，给我前 5 个结果」
 
-Mole works in the background and brings you the results.
+Mole 会在后台工作，然后把结果带回来。
 
-## Next Steps
+## 接下来
 
-- [Your First Task](/guide/first-task) — A guided walkthrough
-- [What Can Mole Do?](/guide/examples) — Browse use cases and examples
-- [Record a Workflow](/guide/workflows) — Teach Mole to repeat tasks for you
-- [Configuration Details](/guide/configuration) — Advanced settings
+- [第一个任务](/guide/first-task) — 手把手引导教程
+- [Mole 能做什么？](/guide/examples) — 浏览使用场景和示例
+- [工作流](/guide/workflows) — 教 Mole 重复执行任务
+- [配置指南](/guide/configuration) — 高级设置

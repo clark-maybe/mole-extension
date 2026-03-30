@@ -1,83 +1,83 @@
-# Tips & Tricks
+# 使用技巧
 
-Get more out of Mole with these tips.
+这些技巧帮你更好地使用 Mole。
 
-## Your Browser, Your Workspace
+## 你的浏览器就是工作环境
 
-Mole is not a remote scraper or a simulated browser — it runs directly inside the Chrome you're already using.
+Mole 不是远程爬虫，也不是模拟浏览器——它直接运行在你正在使用的 Chrome 里。
 
-This means **login session reuse**. Any website you're signed into — e-commerce, GitHub, Slack, internal admin panels — Mole can operate on directly. The website sees your real session, no extra authentication triggered.
+这意味着**登录态复用**。你在淘宝、GitHub、飞书、企业后台等任何网站上的登录状态，Mole 都可以直接使用。网站看到的就是你本人的访问，不会触发额外的风控。
 
-### Where This Shines
+### 最适合的场景
 
-- Managing orders on e-commerce sites you're already logged into
-- Working with internal company tools and admin panels
-- Organizing information on social media platforms
-- Accessing member-only content
-- Operating on banking and finance sites (sensitive actions always ask for your confirmation)
+- 已登录的电商平台上管理订单、监控价格
+- 企业内网 / 后台系统的辅助操作
+- 社交平台的信息整理和消息处理
+- 需要会员权限的内容获取
+- 银行、证券等需要强身份验证的站点（敏感操作前会请求确认）
 
-### Your Data Stays Safe
+### 数据安全
 
-- All operations happen locally in your browser
-- Your cookies and login credentials are never sent to any external service
-- Irreversible actions (form submission, payment, deletion) always ask for your confirmation first
+- 所有操作在本地浏览器中完成
+- 不会将你的 Cookie 或登录凭证发送到任何外部服务
+- 不可逆操作（提交、付款、删除）会先请求你的确认
 
-## The Floating Ball
+## 悬浮球
 
-Mole places a small floating ball on every webpage — your entry point to the AI assistant.
+Mole 在每个网页上放置一个小悬浮球——你和 AI 助手交互的入口。
 
-- **Keyboard shortcut** — `Cmd+M` (Mac) / `Ctrl+M` (Windows) to quickly open the search box
-- **Drag to move** — Drag the floating ball anywhere on screen; your preferred position is remembered
-- **Stays out of the way** — It hugs the screen edge and hides itself; hover to reveal
-- **Real-time updates** — As Mole works, you see status updates streaming in real time
+- **快捷键** — `Cmd+M`（Mac）/ `Ctrl+M`（Windows）快速打开搜索框
+- **拖拽移动** — 悬浮球可以拖到屏幕任意位置，位置会被记住
+- **不碍事** — 贴边微隐藏，鼠标悬停才滑出
+- **实时更新** — Mole 工作时，你能看到实时的状态更新
 
-## Workflow Recorder
+## 工作流录制
 
-Don't want to repeat the same steps every day? Record them once, and Mole replays them for you.
+不想每天重复同样的操作？录一次，以后 Mole 帮你重播。
 
-### How It Works
+### 怎么用
 
-1. **Start Recording** — Click the "Record Workflow" button at the bottom of the search box
-2. **Do your thing** — Perform the task as you normally would. Mole watches silently in the background
-3. **Mark the result** — After stopping, click on the element that represents the result (optional)
-4. **Mole cleans it up** — The AI removes accidental clicks, merges keystrokes, and identifies parts that should be customizable (like search terms)
-5. **Use it anytime** — The workflow is saved and ready. Next time, just ask "run my check-in workflow" or similar
+1. **开始录制** — 点击搜索框底部的「录制流程」按钮
+2. **正常操作** — 像平时一样在页面上操作，Mole 在后台静默观察
+3. **标记结果** — 停止后，点击代表操作结果的元素（可选）
+4. **AI 清洗** — AI 自动去除误点击、合并击键、识别可参数化的输入（比如搜索词）
+5. **随时使用** — 工作流保存完毕，下次直接说「帮我打卡」之类的就行
 
-Recording continues even if the page navigates — Mole tracks the whole flow.
+录制过程中页面发生跳转也没关系，Mole 会自动跟踪整个流程。
 
-## Screenshots and Visual Understanding
+## 截图和视觉理解
 
-Mole can take screenshots and actually understand what's on screen. This is useful when:
+Mole 可以截图，而且能真正理解画面内容。适用于：
 
-- The page has charts, images, or Canvas content that can't be read as text
-- You need to verify how something looks (layout, colors, positioning)
-- There are many similar elements on the page and you need Mole to identify the right one visually
+- 页面上有图表、图片、Canvas 等无法用文字读取的内容
+- 需要确认某些东西的外观（布局、颜色、位置）
+- 页面上有很多相似元素，需要 Mole 用「眼睛」来区分
 
-In annotated mode, Mole marks every clickable element with a number, making it easy to say "click element 3" with precision.
+在标注模式下，Mole 会给每个可点击元素编号，你可以精确地说「点击第 3 个」。
 
-## Task Recovery
+## 任务恢复
 
-If something goes wrong mid-task — a network hiccup, the browser restarting, or an API timeout — Mole doesn't lose your progress.
+如果任务执行中出了问题——网络波动、浏览器重启、API 超时——Mole 不会丢失进度。
 
-You'll see a **Retry** button. Click it, and Mole picks up right where it left off, with full memory of what it already did. No need to start over.
+你会看到一个**重试**按钮。点击后，Mole 从中断处继续执行，完整记得之前做了什么。不需要从头开始。
 
-## Safety Checks
+## 安全确认
 
-Mole has built-in safety for sensitive actions:
+Mole 对敏感操作有内置保护：
 
-- **Confirmation before action** — Before submitting a form, making a payment, or deleting anything, Mole pauses and asks "Are you sure?"
-- **Questions when unsure** — If Mole encounters multiple options or needs information it doesn't have, it asks you directly with clear choices
+- **操作前确认** — 提交表单、付款、删除之前，Mole 会暂停问你「确定吗？」
+- **不确定时提问** — 如果遇到多个选项或缺少信息，Mole 会直接问你，给出清晰的选择
 
-You're always in control.
+你始终掌握控制权。
 
-## Session History
+## 会话历史
 
-Every conversation with Mole is saved. Open the Options page to browse past sessions, review what happened, and pick up where you left off.
+每次和 Mole 的对话都会保存。打开 Options 页面可以浏览历史会话、回顾执行过程。
 
-## Pro Tips
+## 进阶技巧
 
-- **Be specific** — "Search Amazon for wireless keyboards under $50" beats "find me a keyboard"
-- **Reference what you see** — Mole can see your page. "Click the blue button" or "extract the table below" just works
-- **Chain requests** — Ask follow-up questions in the same conversation for context-aware responses
-- **Use workflows for repetition** — If you do something more than twice, record it as a workflow
-- **Multiple tabs** — Mole can work across tabs. "Open Amazon, search for X, then come back here and fill in the price" is a valid request
+- **说得具体点** — 「在淘宝搜 50 块以内的机械键盘」比「帮我找个键盘」效果好
+- **直接引用页面** — Mole 能看到你的页面，「点那个蓝色按钮」「提取下面的表格」都可以
+- **追问** — 同一个对话中继续追问，Mole 保持上下文
+- **重复操作录工作流** — 做过两次以上的事情，录成工作流
+- **跨标签页** — Mole 可以跨标签页工作。「打开淘宝搜 X，再回来把价格填到这里」是有效的指令
