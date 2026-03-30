@@ -11,10 +11,10 @@ hero:
   actions:
     - theme: brand
       text: 立即下载
-      link: /zh/download
+      link: /download
     - theme: alt
       text: Mole 能做什么？
-      link: /zh/guide/examples
+      link: /guide/examples
 
 features:
   - icon: "\U0001F4AC"
