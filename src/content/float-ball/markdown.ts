@@ -21,25 +21,66 @@ export const inlineMarkdown = (escaped: string): string => {
     .replace(/\[(.+?)\]\((.+?)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
 };
 
-/** Markdown 文本转 HTML（支持标题、列表、表格、水平线、段落、内联格式） */
+/** 将原始文本拆分为段落，代码块作为完整单元保留不被打断 */
+const splitBlocks = (text: string): string[] => {
+  const result: string[] = [];
+  const lines = text.split('\n');
+  let buf: string[] = [];
+  let inFence = false;
+
+  const flushBuf = () => {
+    if (buf.length === 0) return;
+    const joined = buf.join('\n');
+    // 按双换行拆分非代码块内容，标题和水平线独立成 block
+    const preprocessed = joined
+      .replace(/^(#{1,6}\s+.+)$/gm, '\n\n$1\n\n')
+      .replace(/^([-*_]{3,})\s*$/gm, '\n\n$1\n\n');
+    for (const b of preprocessed.split(/\n{2,}/)) {
+      const t = b.trim();
+      if (t) result.push(t);
+    }
+    buf = [];
+  };
+
+  for (const line of lines) {
+    if (!inFence && /^```/.test(line.trim())) {
+      // 进入代码块：先 flush 之前的普通内容
+      flushBuf();
+      inFence = true;
+      buf.push(line);
+      // 单行自闭合 ```code``` 的情况（不含换行的简单围栏）
+      // 开始行同时也是结束行：```lang\ncode\n``` 不会在同一行
+      continue;
+    }
+    if (inFence && /^```\s*$/.test(line.trim())) {
+      // 代码块结束
+      buf.push(line);
+      result.push(buf.join('\n'));
+      buf = [];
+      inFence = false;
+      continue;
+    }
+    buf.push(line);
+  }
+  // 处理未闭合的围栏（当作普通文本）或剩余内容
+  flushBuf();
+  return result;
+};
+
+/** Markdown 文本转 HTML（支持标题、列表、表格、水平线、代码块、段落、内联格式） */
 export const markdownToHtml = (text: string): string => {
-  // 预处理：确保标题行、水平线、代码块围栏独立成 block
-  const preprocessed = text
-    .replace(/^(#{1,6}\s+.+)$/gm, '\n\n$1\n\n')
-    .replace(/^([-*_]{3,})\s*$/gm, '\n\n$1\n\n');
-  const blocks = preprocessed.split(/\n{2,}/);
+  const blocks = splitBlocks(text);
   let html = '';
 
-  for (const block of blocks) {
-    const trimmed = block.trim();
+  for (const trimmed of blocks) {
     if (!trimmed) continue;
     const lines = trimmed.split('\n');
 
-    // 代码块
-    const fenceMatch = trimmed.match(/^```([a-zA-Z0-9_-]+)?\n([\s\S]*?)```$/);
+    // 代码块（围栏完整保留，含空行）
+    const fenceMatch = trimmed.match(/^```([a-zA-Z0-9_-]*)[ \t]*\n([\s\S]*?)\n?```\s*$/);
     if (fenceMatch) {
       const language = (fenceMatch[1] || '').trim();
-      const codeText = fenceMatch[2].replace(/\n$/, '');
+      const codeText = fenceMatch[2];
       const langClass = language ? ` class="language-${escapeHtml(language)}"` : '';
       html += `<pre><code${langClass}>${escapeHtml(codeText)}</code></pre>`;
       continue;
