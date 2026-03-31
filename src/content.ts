@@ -4,7 +4,10 @@
  */
 import _console from './lib/console';
 import Channel from './lib/channel';
-import { initFloatBall } from './content/float-ball';
+// React 版悬浮球（重构中）
+import { initFloatBallReact } from './content/float-ball-react';
+// 旧版保留，待迁移完成后删除
+// import { initFloatBall } from './content/float-ball';
 import { initPageParser } from './content/page-parser';
 import { initActionExecutor } from './content/action-executor';
 import { initPageGrounding } from './content/page-grounding';
@@ -35,5 +38,5 @@ initPageGrounding();
 // 初始化页面骨架树（层级化 DOM 感知）
 initPageSkeleton();
 
-// 初始化悬浮球
-initFloatBall();
+// 初始化悬浮球（React 版）
+initFloatBallReact();

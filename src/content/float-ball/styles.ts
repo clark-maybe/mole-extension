@@ -1995,7 +1995,7 @@ export const getStyles = () => `
 
   /* 确认卡片 — 独立展示 */
   .mole-approval-standalone {
-    margin: 10px 0;
+    margin: 10px 18px;
     border-radius: 14px;
     background: linear-gradient(135deg, rgba(240, 253, 250, 0.95), rgba(204, 251, 241, 0.55));
     border: 1.5px solid rgba(13, 148, 136, 0.22);
@@ -2378,7 +2378,7 @@ export const getStyles = () => `
   /* ===== 提问卡片（ask_user）===== */
 
   .mole-ask-user-standalone {
-    margin: 10px 0;
+    margin: 10px 18px;
     border-radius: 14px;
     background: linear-gradient(135deg, rgba(238, 242, 255, 0.95), rgba(199, 210, 254, 0.55));
     border: 1.5px solid rgba(79, 70, 229, 0.22);
