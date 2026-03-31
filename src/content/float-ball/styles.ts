@@ -1432,6 +1432,7 @@ export const getStyles = () => `
     font-weight: 600;
     color: var(--ec-text);
     flex-shrink: 0;
+    font-size: 10px;
   }
 
   .mole-call-intent {
@@ -1708,15 +1709,13 @@ export const getStyles = () => `
 
   /* AI 回复文本 */
   .mole-answer {
-    margin: 6px 0 4px;
-    padding: 12px 14px;
-    border-radius: 10px;
-    border: none;
-    background: rgba(248, 250, 253, 0.72);
+    margin: 4px 0;
+    padding: 2px 0;
     white-space: pre-wrap;
     word-break: break-word;
-    font-size: 13px;
-    line-height: 1.7;
+    font-size: 14px;
+    line-height: 1.85;
+    color: var(--ec-text);
   }
 
   .mole-answer p {
@@ -1724,7 +1723,7 @@ export const getStyles = () => `
   }
 
   .mole-answer p + p {
-    margin-top: 10px;
+    margin-top: 14px;
   }
 
   /* 流式增量淡入：仅对新追加的块级元素生效 */
@@ -1737,42 +1736,57 @@ export const getStyles = () => `
   }
 
   .mole-answer h3, .mole-answer h4, .mole-answer h5 {
-    font-weight: 600;
-    margin: 14px 0 6px;
+    font-weight: 650;
     color: #111112;
+    letter-spacing: -0.01em;
   }
 
-  .mole-answer h3 { font-size: 16px; letter-spacing: -0.01em; }
-  .mole-answer h4 { font-size: 15px; letter-spacing: -0.01em; }
+  .mole-answer h3 {
+    font-size: 16px;
+    margin: 20px 0 8px;
+  }
+  .mole-answer h4 {
+    font-size: 15px;
+    margin: 16px 0 6px;
+  }
+  .mole-answer h5 {
+    font-size: 14px;
+    margin: 14px 0 4px;
+  }
 
   .mole-answer ul, .mole-answer ol {
-    padding-left: 20px;
-    margin: 8px 0;
+    padding-left: 22px;
+    margin: 10px 0;
   }
 
   .mole-answer li {
-    margin: 4px 0;
+    margin: 5px 0;
+  }
+
+  .mole-answer li + li {
+    margin-top: 6px;
   }
 
   .mole-answer code {
-    background: rgba(22, 119, 255, 0.08);
-    border: 1px solid rgba(22, 119, 255, 0.12);
-    padding: 2px 6px;
-    border-radius: 7px;
-    font-size: 12px;
+    background: rgba(109, 40, 217, 0.07);
+    color: #6d28d9;
+    font-weight: 500;
+    padding: 2px 7px;
+    border-radius: 5px;
+    font-size: 12.5px;
     font-family: "SF Mono", Monaco, Consolas, monospace;
   }
 
   .mole-answer pre {
-    margin: 10px 0 0;
-    padding: 12px 14px;
-    border-radius: 12px;
-    border: 1px solid rgba(15, 23, 42, 0.1);
-    background: rgba(15, 23, 42, 0.9);
-    color: #f2f5f9;
+    margin: 12px 0 4px;
+    padding: 14px 16px;
+    border-radius: 10px;
+    border: 1px solid rgba(15, 23, 42, 0.08);
+    background: rgba(15, 23, 42, 0.92);
+    color: #e8ecf2;
     font-family: "SF Mono", Monaco, Consolas, monospace;
-    font-size: 12px;
-    line-height: 1.55;
+    font-size: 12.5px;
+    line-height: 1.6;
     overflow-x: auto;
     white-space: pre;
   }
@@ -1782,60 +1796,66 @@ export const getStyles = () => `
     background: transparent;
     color: inherit;
     padding: 0;
+    font-size: inherit;
   }
 
   .mole-answer blockquote {
-    margin: 10px 0 0;
-    padding: 9px 12px;
-    border-left: 3px solid rgba(22, 119, 255, 0.42);
-    border-radius: 0 12px 12px 0;
-    background: rgba(22, 119, 255, 0.06);
-    color: #314863;
+    margin: 12px 0 4px;
+    padding: 10px 14px;
+    border-left: 3px solid rgba(109, 40, 217, 0.35);
+    border-radius: 0 10px 10px 0;
+    background: rgba(109, 40, 217, 0.04);
+    color: #3b4963;
   }
 
   .mole-answer hr {
     border: none;
     height: 1px;
-    background: rgba(219, 227, 238, 0.6);
-    margin: 14px 0;
+    background: rgba(219, 227, 238, 0.5);
+    margin: 18px 0;
   }
 
   .mole-answer table {
     width: 100%;
     border-collapse: collapse;
-    margin: 10px 0;
-    font-size: 12.5px;
+    margin: 12px 0;
+    font-size: 13px;
   }
 
   .mole-answer th, .mole-answer td {
-    padding: 6px 10px;
+    padding: 7px 12px;
     border: 1px solid rgba(219, 227, 238, 0.7);
     text-align: left;
   }
 
   .mole-answer th {
-    background: rgba(22, 119, 255, 0.06);
+    background: rgba(109, 40, 217, 0.05);
     font-weight: 600;
     color: #111112;
   }
 
   .mole-answer tr:nth-child(even) td {
-    background: rgba(248, 250, 253, 0.5);
+    background: rgba(248, 250, 253, 0.4);
   }
 
   .mole-answer strong {
-    font-weight: 600;
+    font-weight: 650;
     color: var(--ec-text);
   }
 
   .mole-answer a {
-    color: var(--ec-primary-strong);
+    color: #6d28d9;
     text-decoration: underline;
-    text-underline-offset: 2px;
+    text-decoration-color: rgba(109, 40, 217, 0.3);
+    text-underline-offset: 3px;
+    transition: text-decoration-color 0.15s;
+  }
+  .mole-answer a:hover {
+    text-decoration-color: rgba(109, 40, 217, 0.7);
   }
   .mole-answer del {
     text-decoration: line-through;
-    opacity: 0.6;
+    opacity: 0.55;
   }
   .mole-answer em {
     font-style: italic;

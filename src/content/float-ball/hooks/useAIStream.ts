@@ -67,7 +67,14 @@ export const useAIStream = (resultRef: React.RefObject<HTMLDivElement | null>) =
           const parsed = JSON.parse(content || '{}');
           const funcName = parsed?.name || '';
           const icon = FUNCTION_ICONS[funcName] || '';
-          const label = FUNCTION_LABELS[funcName] || funcName || '操作执行';
+          let label = FUNCTION_LABELS[funcName] || funcName || '操作执行';
+          // skill/site_workflow 工具：从 arguments 中提取具体的 workflow 名称
+          if ((funcName === 'skill' || funcName === 'site_workflow') && parsed?.arguments) {
+            try {
+              const args = typeof parsed.arguments === 'string' ? JSON.parse(parsed.arguments) : parsed.arguments;
+              if (args?.name) label = `${label}：${args.name}`;
+            } catch { /* 忽略 */ }
+          }
           const intentText = buildToolIntentText(funcName, parsed?.summary || '');
           const userSummary = buildUserFacingActionSummary(funcName, parsed?.summary || '', label);
           dispatch({
