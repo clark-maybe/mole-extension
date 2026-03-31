@@ -1410,9 +1410,12 @@ export const getStyles = () => `
   .mole-call-status {
     margin-left: auto;
     font-size: 10px;
-    padding-top: 1px;
-    color: var(--ec-text-muted);
+    color: rgba(18, 183, 106, 0.6);
     flex-shrink: 0;
+  }
+  .mole-call-status.running {
+    color: var(--ec-text-muted);
+    letter-spacing: 1px;
   }
 
   .mole-call-main {

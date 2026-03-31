@@ -53,8 +53,8 @@ const CallsGroup: React.FC<{
                     <span className="mole-call-intent">{call.userSummary}</span>
                   )}
                 </span>
-                <span className="mole-call-status">
-                  {isRunning && idx === calls.length - 1 ? '执行中' : '完成'}
+                <span className={`mole-call-status${isRunning && idx === calls.length - 1 ? ' running' : ''}`}>
+                  {isRunning && idx === calls.length - 1 ? '···' : '✓'}
                 </span>
               </div>
             </div>
