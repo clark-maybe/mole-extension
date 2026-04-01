@@ -104,7 +104,9 @@
       "Bash(sed 's/\\\\.ts$//')",
       "Bash(find /Users/clark/MySpace/mole-extension/.trellis/tasks -name task.json -path */archive/* -mtime -30)",
       "Bash(npx vitepress:*)",
-      "Bash(grep:*)"
+      "Bash(grep:*)",
+      "Bash(find /Users/clark/MySpace/mole-extension/src -name *.ts -o -name *.tsx)",
+      "Bash(git pull:*)"
     ],
     "deny": [],
     "ask": []

@@ -37,3 +37,5 @@ docs/.vitepress/cache
 
 # Trellis (AI dev workflow)
 .trellis/
+
+/cc-src-learning
