@@ -18,11 +18,13 @@ export const initFloatBallReact = async () => {
     const stored = await new Promise<Record<string, unknown>>(resolve => {
       chrome.storage.local.get(DISABLED_DOMAINS_KEY, resolve);
     });
-    const disabledData = stored[DISABLED_DOMAINS_KEY] as { domains?: string[] } | undefined;
+    const disabledData = stored[DISABLED_DOMAINS_KEY] as { domains?: (string | { hostname: string })[] } | undefined;
     if (disabledData && Array.isArray(disabledData.domains)) {
-      if (disabledData.domains.includes(window.location.hostname)) {
-        return;
-      }
+      const host = window.location.hostname;
+      const isDisabled = disabledData.domains.some((d) =>
+        typeof d === 'string' ? d === host : d.hostname === host,
+      );
+      if (isDisabled) return;
     }
   } catch {
     // 读取失败时不阻塞初始化

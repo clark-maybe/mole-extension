@@ -655,6 +655,69 @@ export const getStyles = () => `
     color: var(--ec-primary-strong);
   }
 
+  .mole-close-menu-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    border-radius: 5px;
+    background: rgba(15, 23, 42, 0.06);
+    font-size: 10px;
+    margin-right: 8px;
+    flex-shrink: 0;
+  }
+
+  .mole-close-menu-divider {
+    height: 1px;
+    background: var(--ec-border-soft);
+    margin: 4px 8px;
+  }
+
+  .mole-close-menu-domain {
+    display: flex !important;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .mole-close-menu-favicon {
+    width: 16px;
+    height: 16px;
+    border-radius: 4px;
+    flex-shrink: 0;
+  }
+
+  .mole-close-menu-domain-info {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    min-width: 0;
+  }
+
+  .mole-close-menu-domain-label {
+    font-size: 13px;
+    line-height: 1.3;
+  }
+
+  .mole-close-menu-domain-host {
+    font-size: 11px;
+    color: var(--ec-text-muted);
+    line-height: 1.2;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 180px;
+  }
+
+  .mole-close-menu-item:hover .mole-close-menu-domain-host {
+    color: var(--ec-primary);
+  }
+
+  .mole-close-menu-item:hover .mole-close-menu-icon {
+    background: rgba(22, 119, 255, 0.12);
+    color: var(--ec-primary);
+  }
+
   .mole-trigger.side-right.booting .mole-pill {
     animation: mole-pill-enter-right 560ms cubic-bezier(0.22, 1, 0.36, 1);
   }
@@ -835,7 +898,6 @@ export const getStyles = () => `
   /* 分割线 */
   .mole-divider {
     height: 1px;
-    background: rgba(219, 227, 238, 0.5);
     margin: 0 18px;
   }
 
@@ -940,6 +1002,7 @@ export const getStyles = () => `
     border: none;
     background: rgba(248, 250, 253, 0.6);
     overflow: hidden;
+    margin-bottom: 16px;
   }
 
   .mole-agent-state-title {

@@ -4,8 +4,8 @@
  */
 
 import { useCallback, useEffect, useState } from 'react';
-import { Button, Space, Table, Typography, App, Popconfirm } from 'antd';
-import { ReloadOutlined, DeleteOutlined } from '@ant-design/icons';
+import { Button, Space, Table, Typography, App, Popconfirm, Avatar } from 'antd';
+import { ReloadOutlined, DeleteOutlined, GlobalOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import { OptionsPageLayout, OptionsSectionCard } from '../components/PageLayout';
 
@@ -13,37 +13,62 @@ const { Text } = Typography;
 
 const DISABLED_DOMAINS_KEY = 'mole_disabled_domains_v1';
 
+/** 域名条目 */
+interface DomainEntry {
+  hostname: string;
+  title?: string;
+  favicon?: string;
+  disabledAt?: number;
+}
+
 interface DisabledDomainsStore {
   version: 1;
   updatedAt: number;
-  domains: string[];
+  domains: (string | DomainEntry)[];
 }
 
+/** 将旧格式（纯字符串）统一转为 DomainEntry */
+const normalizeDomain = (d: string | DomainEntry): DomainEntry => {
+  if (typeof d === 'string') return { hostname: d };
+  return d;
+};
+
 /** 从 storage 读取黑名单域名列表 */
-const readBlockedDomains = async (): Promise<string[]> => {
+const readBlockedDomains = async (): Promise<DomainEntry[]> => {
   const result = await new Promise<Record<string, unknown>>((resolve) => {
     chrome.storage.local.get(DISABLED_DOMAINS_KEY, resolve);
   });
   const raw = result[DISABLED_DOMAINS_KEY] as DisabledDomainsStore | undefined;
   if (!raw || !Array.isArray(raw.domains)) return [];
-  return raw.domains;
+  return raw.domains.map(normalizeDomain);
 };
 
 /** 保存黑名单域名列表到 storage */
-const persistBlockedDomains = async (domains: string[]): Promise<void> => {
+const persistBlockedDomains = async (entries: DomainEntry[]): Promise<void> => {
   const payload: DisabledDomainsStore = {
     version: 1,
     updatedAt: Date.now(),
-    domains: [...domains].sort(),
+    domains: [...entries].sort((a, b) => a.hostname.localeCompare(b.hostname)),
   };
   await new Promise<void>((resolve) => {
     chrome.storage.local.set({ [DISABLED_DOMAINS_KEY]: payload }, resolve);
   });
 };
 
+/** 格式化相对时间 */
+const formatRelativeTime = (ts?: number): string => {
+  if (!ts) return '未知';
+  const diff = Date.now() - ts;
+  if (diff < 60_000) return '刚刚';
+  if (diff < 3_600_000) return `${Math.floor(diff / 60_000)} 分钟前`;
+  if (diff < 86_400_000) return `${Math.floor(diff / 3_600_000)} 小时前`;
+  if (diff < 2_592_000_000) return `${Math.floor(diff / 86_400_000)} 天前`;
+  return new Date(ts).toLocaleDateString('zh-CN');
+};
+
 export function BlocklistPage() {
   const { message } = App.useApp();
-  const [domains, setDomains] = useState<string[]>([]);
+  const [domains, setDomains] = useState<DomainEntry[]>([]);
   const [loading, setLoading] = useState(false);
 
   const loadData = useCallback(async () => {
@@ -63,11 +88,11 @@ export function BlocklistPage() {
   }, [loadData]);
 
   /* 删除单个域名 */
-  const handleRemove = async (domain: string) => {
-    const updated = domains.filter((d) => d !== domain);
+  const handleRemove = async (hostname: string) => {
+    const updated = domains.filter((d) => d.hostname !== hostname);
     await persistBlockedDomains(updated);
     setDomains(updated);
-    void message.success(`已移除 "${domain}"，该域名的悬浮球将在下次访问时恢复`);
+    void message.success(`已移除 "${hostname}"，该域名的悬浮球将在下次访问时恢复`);
   };
 
   /* 清空全部 */
@@ -77,18 +102,44 @@ export function BlocklistPage() {
     void message.success('域名黑名单已清空');
   };
 
-  const columns: ColumnsType<string> = [
+  const columns: ColumnsType<DomainEntry> = [
     {
-      title: '域名',
-      render: (_: unknown, domain: string) => (
-        <span style={{ fontFamily: 'monospace' }}>{domain}</span>
+      title: '站点',
+      dataIndex: 'hostname',
+      render: (_: unknown, entry: DomainEntry) => (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <Avatar
+            size={28}
+            src={entry.favicon}
+            icon={<GlobalOutlined />}
+            style={{ flexShrink: 0, background: '#f0f0f0', color: '#999' }}
+          />
+          <div style={{ minWidth: 0 }}>
+            <div style={{ fontFamily: 'monospace', fontSize: 13 }}>{entry.hostname}</div>
+            {entry.title && (
+              <Text type="secondary" style={{ fontSize: 12 }} ellipsis>
+                {entry.title}
+              </Text>
+            )}
+          </div>
+        </div>
+      ),
+    },
+    {
+      title: '禁用时间',
+      dataIndex: 'disabledAt',
+      width: 120,
+      render: (_: unknown, entry: DomainEntry) => (
+        <Text type="secondary" style={{ fontSize: 12 }}>
+          {formatRelativeTime(entry.disabledAt)}
+        </Text>
       ),
     },
     {
       title: '操作',
       width: 80,
-      render: (_: unknown, domain: string) => (
-        <Button type="link" size="small" danger onClick={() => void handleRemove(domain)}>
+      render: (_: unknown, entry: DomainEntry) => (
+        <Button type="link" size="small" danger onClick={() => void handleRemove(entry.hostname)}>
           删除
         </Button>
       ),
@@ -139,7 +190,7 @@ export function BlocklistPage() {
         description="以下域名的悬浮球已被禁用。删除某个域名后，该域名的悬浮球将在下次访问时恢复。"
       >
         <Table
-          rowKey={(domain) => domain}
+          rowKey={(entry) => entry.hostname}
           columns={columns}
           dataSource={domains}
           loading={loading}

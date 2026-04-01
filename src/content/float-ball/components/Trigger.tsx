@@ -171,26 +171,44 @@ export const Trigger: React.FC = () => {
   }, [isHovering, triggerRef]);
 
   // 关闭菜单
-  const handleCloseCurrent = useCallback(() => {
+  const handleCloseCurrent = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    dispatch({ type: 'TOGGLE_OPEN', payload: false });
+    dispatch({ type: 'SET_CLOSE_MENU', payload: false });
     dispatch({ type: 'SET_USER_DISMISSED', payload: true });
     const trigger = triggerRef.current;
     if (trigger) trigger.style.display = 'none';
-    dispatch({ type: 'SET_CLOSE_MENU', payload: false });
   }, [dispatch, triggerRef]);
 
-  const handleCloseDomain = useCallback(() => {
+  const handleCloseDomain = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    // 捕获当前页面元数据
+    const pageTitle = document.title || '';
+    const faviconEl = document.querySelector<HTMLLinkElement>('link[rel*="icon"]');
+    const favicon = faviconEl?.href || `https://www.google.com/s2/favicons?domain=${currentHostname}&sz=32`;
+
     chrome.storage.local.get(DISABLED_DOMAINS_KEY, (result) => {
-      const data = result[DISABLED_DOMAINS_KEY] as { domains?: string[] } | undefined;
+      const data = result[DISABLED_DOMAINS_KEY] as { domains?: (string | Record<string, unknown>)[] } | undefined;
       const domains = data?.domains || [];
-      if (!domains.includes(currentHostname)) {
-        domains.push(currentHostname);
+      // 兼容旧数据：检查是否已存在（字符串或对象）
+      const exists = domains.some((d) =>
+        typeof d === 'string' ? d === currentHostname : (d as any).hostname === currentHostname,
+      );
+      if (!exists) {
+        domains.push({
+          hostname: currentHostname,
+          title: pageTitle,
+          favicon,
+          disabledAt: Date.now(),
+        });
       }
-      chrome.storage.local.set({ [DISABLED_DOMAINS_KEY]: { domains } });
+      chrome.storage.local.set({ [DISABLED_DOMAINS_KEY]: { version: 1, updatedAt: Date.now(), domains } });
     });
+    dispatch({ type: 'TOGGLE_OPEN', payload: false });
+    dispatch({ type: 'SET_CLOSE_MENU', payload: false });
     dispatch({ type: 'SET_USER_DISMISSED', payload: true });
     const trigger = triggerRef.current;
     if (trigger) trigger.style.display = 'none';
-    dispatch({ type: 'SET_CLOSE_MENU', payload: false });
   }, [dispatch, currentHostname, triggerRef]);
 
   // 设置按钮
@@ -257,6 +275,7 @@ export const Trigger: React.FC = () => {
           type="button"
           title="关闭悬浮球"
           aria-label="关闭悬浮球"
+          onMouseDown={(e) => e.stopPropagation()}
           onClick={handleCloseClick}
           onMouseEnter={enterHover}
           onMouseLeave={leaveHover}
@@ -321,14 +340,24 @@ export const Trigger: React.FC = () => {
           type="button"
           onClick={handleCloseCurrent}
         >
-          仅当前关闭
+          <span className="mole-close-menu-icon">✕</span>
+          本次关闭
         </button>
+        <div className="mole-close-menu-divider" />
         <button
-          className="mole-close-menu-item"
+          className="mole-close-menu-item mole-close-menu-domain"
           type="button"
           onClick={handleCloseDomain}
         >
-          在 {currentHostname} 上禁用
+          <img
+            className="mole-close-menu-favicon"
+            src={`https://www.google.com/s2/favicons?domain=${currentHostname}&sz=32`}
+            alt=""
+          />
+          <span className="mole-close-menu-domain-info">
+            <span className="mole-close-menu-domain-label">不再显示</span>
+            <span className="mole-close-menu-domain-host">{currentHostname}</span>
+          </span>
         </button>
       </div>
     </div>
