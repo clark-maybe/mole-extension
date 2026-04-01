@@ -300,6 +300,7 @@ export const skillFunction: FunctionDefinition = {
   name: 'skill',
   description: '预定义技能工作流。支持 list（列出技能）、detail（查看指南）、run（执行工作流，默认）。',
   supportsParallel: false,
+  permissionLevel: 'interact',
   parameters: {
     type: 'object',
     properties: {

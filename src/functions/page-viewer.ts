@@ -21,8 +21,9 @@ const getActiveTabId = (): Promise<number | null> => {
 
 export const pageViewerFunction: FunctionDefinition = {
   name: 'page_viewer',
-  description: '获取用户当前正在浏览的网页信息。可获取页面URL、标题、meta信息、正文内容、链接列表、标题层级等。适用于：用户询问当前页面相关问题、需要理解用户浏览上下文、总结或分析当前页面内容时。',
+  description: '获取用户当前正在浏览的网页信息。可获取页面URL、标题、meta信息、正文内容、链接列表、标题层级等。适用于：用户询问当前页面相关问题、需要理解用户浏览上下文、总结或分析当前页面内容时。\n\n⚠️ 不要用此工具来：\n- 获取可交互元素的 element_id（用 page_snapshot）\n- 检查元素是否存在或可见（用 page_assert）\n- 了解页面布局结构（用 page_skeleton）',
   supportsParallel: true,
+  permissionLevel: 'read',
   parameters: {
     type: 'object',
     properties: {

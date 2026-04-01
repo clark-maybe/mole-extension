@@ -185,6 +185,7 @@ export const dataPipelineFunction: FunctionDefinition = {
   name: 'data_pipeline',
   description: '数据管道工具：缓冲、转换（过滤/排序/去重/字段选择）和导出（JSON/CSV/Markdown/TSV）',
   supportsParallel: false,
+  permissionLevel: 'read',
   parameters: {
     type: 'object',
     properties: {

@@ -13,6 +13,8 @@ export const storageKvFunction: FunctionDefinition = {
   name: 'storage_kv',
   description: '持久化键值存储，用于保存和读取数据。AI 可以用此工具记住用户偏好、保存临时数据、跨对话传递信息。支持：get(读取)、set(保存)、delete(删除)、list(列出所有键)。数据持久保存在浏览器中，跨会话可用。',
   supportsParallel: false,
+  permissionLevel: 'interact',
+  actionPermissions: { delete: 'sensitive' },
   parameters: {
     type: 'object',
     properties: {

@@ -94,6 +94,7 @@ export const timerFunction: FunctionDefinition = {
   name: 'timer',
   description: '定时器管理。支持 set_timeout(延时任务)、set_interval(周期任务)、set_schedule(定时调度：每天/每周)、update(修改定时器)、clear(取消)、list(列出)。到期后 AI 会自动执行指定操作并推送结果。',
   supportsParallel: false,
+  permissionLevel: 'interact',
   parameters: {
     type: 'object',
     properties: {

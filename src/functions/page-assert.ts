@@ -27,6 +27,7 @@ export const pageAssertFunction: FunctionDefinition = {
     '建议：关键动作后优先调用 page_assert，而不是直接假设动作已成功。',
   ].join(' '),
   supportsParallel: true,
+  permissionLevel: 'read',
   parameters: {
     type: 'object',
     properties: {

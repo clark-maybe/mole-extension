@@ -47,6 +47,7 @@ export const selectionContextFunction: FunctionDefinition = {
   name: 'selection_context',
   description: '获取用户在页面上选中（高亮）的文本内容。适用于：用户选中一段文字后让 AI 翻译、解释、总结、分析。如果用户没有选中任何文本则返回空。',
   supportsParallel: true,
+  permissionLevel: 'read',
   parameters: {
     type: 'object',
     properties: {},

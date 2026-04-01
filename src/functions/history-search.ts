@@ -9,6 +9,7 @@ export const historySearchFunction: FunctionDefinition = {
   name: 'history_search',
   description: '搜索浏览器历史记录。可以根据关键词搜索之前访问过的页面，或获取最近的浏览历史。适用于：找回之前看过的页面、回忆访问过的网站、了解用户近期浏览偏好。',
   supportsParallel: true,
+  permissionLevel: 'read',
   parameters: {
     type: 'object',
     properties: {

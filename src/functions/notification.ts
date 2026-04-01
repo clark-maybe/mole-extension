@@ -9,6 +9,7 @@ export const notificationFunction: FunctionDefinition = {
   name: 'notification',
   description: '发送浏览器桌面通知。适用于：提醒用户注意某事、通知任务完成、报告监控结果等。通知会显示在系统通知中心。',
   supportsParallel: true,
+  permissionLevel: 'interact',
   parameters: {
     type: 'object',
     properties: {

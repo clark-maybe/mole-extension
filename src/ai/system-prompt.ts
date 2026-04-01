@@ -198,22 +198,19 @@ export const buildSystemPrompt = (
 - 当你感觉上下文太长、重复信息太多、或需要为后续操作腾出空间时，可以调用 compact 工具主动压缩上下文
 - 系统也会自动在后台进行上下文清理，通常不需要你手动干预
 
-## 请求用户确认
+## 操作权限
 
-当你即将执行可能产生不可逆影响的操作时，先用 request_confirmation 工具请求用户确认：
+每个工具都有权限等级（read / interact / sensitive / dangerous）：
+- **read** 和 **interact**：自动执行，无需确认
+- **sensitive**：系统会自动弹出确认弹窗（如读写 Cookie、修改页面存储、修改页面内容），用户批准后同类操作可跳过确认
+- **dangerous**：每次都会弹出确认（如跳转当前页面、关闭标签页、清空存储），不可跳过
 
-**需要确认的场景：**
+系统会根据工具权限自动弹出确认弹窗，你不需要手动调用 request_confirmation 处理这些场景。
+
+**但对于工具权限未覆盖的敏感业务操作，仍需主动调用 request_confirmation：**
 - 下单付款、转账汇款
-- 删除内容、修改账户设置
 - 代替用户发表公开评论或评价
 - 任何你不确定用户是否真正想执行的操作
-
-**不需要确认的场景：**
-- 查看、搜索、截图等只读操作
-- 用户明确指示要执行的操作（如"帮我点击那个按钮"、"帮我发送"）
-- 用户明确要求的多步任务中的中间步骤和重复步骤（如"帮我聊几轮"中的每次发送）
-- 填写表单、发送消息——当用户已经明确要求你这样做时
-- 搜索提交
 
 用户拒绝后，根据用户附言调整方案。不要在拒绝后重复请求相同的确认。
 
@@ -298,7 +295,7 @@ export const buildSystemPrompt = (
 ${toolNames.join('、')}
 
 ## 权限
-你拥有所有工具的完整权限，已获用户授权，直接使用即可。${buildSkillSection(domainGuides, globalCatalog)}`;
+你可以使用所有工具。read/interact 级工具直接执行，sensitive/dangerous 级操作系统会自动弹窗确认。${buildSkillSection(domainGuides, globalCatalog)}`;
 };
 
 /**

@@ -8,8 +8,9 @@ import { sendToTabWithRetry, waitForAnySelector, waitForTabComplete, withHiddenT
 
 export const fetchUrlFunction: FunctionDefinition = {
   name: 'fetch_url',
-  description: '获取指定 URL 的网页内容。无需用户打开该页面，AI 可以在后台读取任意网页的标题、正文、链接、标题层级等信息。适用于：深入阅读搜索结果链接、对比多个网页内容、总结指定文章、获取远程页面信息。',
+  description: '获取指定 URL 的网页内容。无需用户打开该页面，AI 可以在后台读取任意网页的标题、正文、链接、标题层级等信息。适用于：深入阅读搜索结果链接、对比多个网页内容、总结指定文章、获取远程页面信息。\n\n⚠️ 不要用此工具来：\n- 获取用户当前浏览的页面内容（用 page_viewer，可获取更丰富的上下文）\n- 需要页面交互元素信息（用 page_snapshot）',
   supportsParallel: true,
+  permissionLevel: 'read',
   parameters: {
     type: 'object',
     properties: {

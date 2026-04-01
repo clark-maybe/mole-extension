@@ -20,6 +20,7 @@ export const cdpEmulationFunction: FunctionDefinition = {
   name: 'cdp_emulation',
   description: '设备与环境模拟工具。设置视口尺寸（模拟移动端）、覆盖 User-Agent、伪造地理位置、设置语言/时区、模拟网络条件（3G/离线等），以及重置所有模拟。',
   supportsParallel: true,
+  permissionLevel: 'interact',
   parameters: {
     type: 'object',
     properties: {

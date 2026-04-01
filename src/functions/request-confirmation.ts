@@ -18,6 +18,7 @@ export const requestConfirmationFunction: FunctionDefinition = {
   name: 'request_confirmation',
   description: '在执行敏感或重要操作前请求用户确认。用户会看到确认信息并选择批准或拒绝，拒绝时可附带理由。',
   supportsParallel: false,
+  permissionLevel: 'read',
   parameters: {
     type: 'object',
     properties: {

@@ -531,6 +531,7 @@ export const residentRuntimeFunction: FunctionDefinition = {
   name: 'resident_runtime',
   description: '常驻运行器。在指定 tab 上按固定间隔执行工作流，支持分层执行：检测层（Plan 直跑，零 token）+ AI 响应层（按需触发）。支持 start/stop/status/list/run_once。适合自动回复、定时巡检、持续监控。',
   supportsParallel: false,
+  permissionLevel: 'interact',
   parameters: {
     type: 'object',
     properties: {

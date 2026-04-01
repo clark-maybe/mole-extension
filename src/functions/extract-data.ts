@@ -431,8 +431,9 @@ const injectedExtractDispatcher = (
 
 export const extractDataFunction: FunctionDefinition = {
   name: 'extract_data',
-  description: '从当前页面提取结构化数据（表格、列表、重复元素等），支持自动识别和 Schema 精确提取',
+  description: '从当前页面提取结构化数据（表格、列表、重复元素等），支持自动识别和 Schema 精确提取\n\n⚠️ 不要用此工具来：\n- 获取单个元素的文本（用 cdp_dom 的 get_text）\n- 读取页面正文内容（用 page_viewer）\n- 适合提取表格、列表等批量结构化数据',
   supportsParallel: false,
+  permissionLevel: 'read',
   parameters: {
     type: 'object',
     properties: {

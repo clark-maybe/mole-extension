@@ -40,8 +40,9 @@ const resolveElementRect = async (
 
 export const screenshotFunction: FunctionDefinition = {
   name: 'screenshot',
-  description: '截取标签页截图。默认截取可见区域；支持区域截图（clip）、全页截图（full_page）、元素截图（element_id）。也支持先打开指定 URL 后截图。',
+  description: '截取标签页截图。默认截取可见区域；支持区域截图（clip）、全页截图（full_page）、元素截图（element_id）。也支持先打开指定 URL 后截图。\n\n⚠️ 不要用此工具来：\n- 只需要文本信息时（用 page_viewer，截图消耗 token 较多）\n- 获取可交互元素列表（用 page_snapshot）',
   supportsParallel: true,
+  permissionLevel: 'read',
   parameters: {
     type: 'object',
     properties: {

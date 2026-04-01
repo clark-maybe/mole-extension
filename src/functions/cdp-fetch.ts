@@ -20,6 +20,8 @@ export const cdpFetchFunction: FunctionDefinition = {
   name: 'cdp_fetch',
   description: '请求拦截与篡改工具（CDP Fetch 域）。拦截页面网络请求，可修改请求参数后放行、直接返回自定义响应（Mock）、或模拟请求失败。适用于注入认证 headers、Mock API 数据、绕过 CORS 等场景。注意：启用拦截后，被匹配的请求会被暂停，必须通过 continue/fulfill/fail 操作来处理，否则页面会卡住。',
   supportsParallel: false,
+  permissionLevel: 'sensitive',
+  approvalMessageTemplate: 'AI 正在请求拦截/篡改网络请求（{action}）',
   parameters: {
     type: 'object',
     properties: {

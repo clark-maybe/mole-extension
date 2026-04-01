@@ -4,7 +4,8 @@
  */
 
 import type { InputItem, OutputFunctionCallItem, AIStreamEvent, ToolSchema, MessageInputItem } from './types';
-import { mcpClient } from '../functions/registry';
+import type { PermissionLevel } from '../functions/types';
+import { mcpClient, getBuiltinFunction } from '../functions/registry';
 import { truncateToolResult, getTextContent } from './context-manager';
 import { requestConfirmationFunction } from '../functions/request-confirmation';
 
@@ -180,52 +181,41 @@ export const executeToolCalls = async (
 ): Promise<InputItem[]> => {
   const results: InputItem[] = [];
 
-  /** 高危操作：即使用户选了"本次不再询问"也必须每次确认（导航/关闭会销毁 content script） */
-  const isAlwaysConfirmOperation = (name: string, params: Record<string, any>): boolean => {
-    if (name === 'tab_navigate') {
-      const action = String(params.action || '');
-      return action === 'navigate' || action === 'close';
+  // ===== 元数据驱动的权限检查 =====
+
+  /** 获取工具+action 的实际权限等级（从 FunctionDefinition 元数据读取） */
+  const resolvePermissionLevel = (name: string, params: Record<string, any>): PermissionLevel => {
+    const def = getBuiltinFunction(name);
+    if (!def) return 'interact'; // 动态工具/未知工具默认 interact
+    const action = String(params.action || '');
+    // action 级覆盖优先
+    if (action && def.actionPermissions?.[action]) {
+      return def.actionPermissions[action];
     }
-    return false;
+    return def.permissionLevel || 'interact';
   };
 
-  /** 敏感操作检测：需要用户确认的工具+参数组合 */
-  const getSensitiveApprovalMessage = (name: string, params: Record<string, any>): string | null => {
+  /** 生成确认消息（根据工具元数据的 approvalMessageTemplate 或兜底） */
+  const buildApprovalMessage = (name: string, params: Record<string, any>): string | null => {
+    const level = resolvePermissionLevel(name, params);
+    if (level === 'read' || level === 'interact') return null;
+
+    const def = getBuiltinFunction(name);
     const action = String(params.action || '');
-    if (name === 'cdp_dom') {
-      const label = params.storage_type === 'session' ? 'sessionStorage' : 'localStorage';
-      if (action === 'storage_get_items' || action === 'storage_get_item') {
-        return `AI 正在请求读取页面的 ${label} 数据`;
-      }
-      if (action === 'storage_set_item') {
-        return `AI 正在请求写入页面 ${label}（key: ${params.key || '?'}）`;
-      }
-      if (action === 'storage_remove_item') {
-        return `AI 正在请求删除页面 ${label} 中的 "${params.key || '?'}"`;
-      }
-      if (action === 'storage_clear') {
-        return `AI 正在请求清空页面的 ${label}`;
-      }
+    const template = typeof def?.approvalMessageTemplate === 'string'
+      ? def.approvalMessageTemplate
+      : def?.approvalMessageTemplate?.[action];
+
+    if (template) {
+      return template.replace(/\{(\w+)\}/g, (_, key: string) => String(params[key] ?? '?'));
     }
-    if (name === 'cdp_network') {
-      if (action === 'get_cookies') return 'AI 正在请求读取页面 Cookie';
-      if (action === 'set_cookie') return `AI 正在请求设置 Cookie "${params.name || ''}"`;
-      if (action === 'delete_cookie') return `AI 正在请求删除 Cookie "${params.name || ''}"`;
-    }
-    // 页面导航：重定向/关闭当前页会中断用户操作
-    if (name === 'tab_navigate') {
-      if (action === 'navigate') return `AI 正在请求跳转当前页面到 ${params.url || '?'}`;
-      if (action === 'close') return 'AI 正在请求关闭当前标签页';
-    }
-    // DOM 内容修改：直接改页面会干扰用户正在查看/操作的内容
-    if (name === 'cdp_dom') {
-      if (action === 'set_html' || action === 'set_text' || action === 'insert_html') {
-        return `AI 正在请求修改页面内容（${action}）`;
-      }
-      if (action === 'remove_node') return 'AI 正在请求删除页面元素';
-      if (action === 'set_outer_html') return 'AI 正在请求替换页面元素';
-    }
-    return null;
+    // 兜底消息
+    return `AI 正在执行需要授权的操作: ${name}${action ? ` (${action})` : ''}`;
+  };
+
+  /** 判断是否每次必须确认（dangerous 级别不受 trustAll 影响） */
+  const isAlwaysConfirmOperation = (name: string, params: Record<string, any>): boolean => {
+    return resolvePermissionLevel(name, params) === 'dangerous';
   };
 
   /**
@@ -236,7 +226,7 @@ export const executeToolCalls = async (
     call: OutputFunctionCallItem,
   ): Promise<string | null> => {
     const params = safeParseArgs(call.arguments);
-    const approvalMessage = getSensitiveApprovalMessage(call.name, params);
+    const approvalMessage = buildApprovalMessage(call.name, params);
     if (!approvalMessage) return null;
     // 高危操作（导航/关闭标签页）始终需要确认，不受 trustAll 影响
     const alwaysConfirm = isAlwaysConfirmOperation(call.name, params);

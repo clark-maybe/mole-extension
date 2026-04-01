@@ -26,8 +26,13 @@ export const pageSkeletonFunction: FunctionDefinition = {
     '适合在操作前先获取全局结构，再用 page_snapshot 精确定位具体元素。',
     '交互元素会自动分配 element_id，可直接用于 cdp_input。',
     '支持 expand_selector 渐进展开特定区域。',
-  ].join(' '),
+    '\n\n⚠️ 不要用此工具来：',
+    '- 需要详细的元素信息或 element_id（用 page_snapshot）',
+    '- 需要页面正文内容（用 page_viewer）',
+    '- 仅用于快速了解页面整体布局和区域划分',
+  ].join('\n'),
   supportsParallel: true,
+  permissionLevel: 'read',
   parameters: {
     type: 'object',
     properties: {

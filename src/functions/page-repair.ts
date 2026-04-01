@@ -180,6 +180,7 @@ export const pageRepairFunction: FunctionDefinition = {
     '适合陌生网站恢复定位，不依赖硬编码站点规则。',
   ].join(' '),
   supportsParallel: false,
+  permissionLevel: 'read',
   parameters: {
     type: 'object',
     properties: {

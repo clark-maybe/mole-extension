@@ -27,6 +27,7 @@ export const downloadFileFunction: FunctionDefinition = {
   name: 'download_file',
   description: '下载文件到用户电脑。可以下载指定URL的文件，或将文本内容保存为文件。适用于：下载网页资源、保存AI整理的内容为文件、导出数据。',
   supportsParallel: true,
+  permissionLevel: 'interact',
   parameters: {
     type: 'object',
     properties: {

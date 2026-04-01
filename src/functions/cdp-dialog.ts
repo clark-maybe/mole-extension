@@ -20,6 +20,7 @@ export const cdpDialogFunction: FunctionDefinition = {
   name: 'cdp_dialog',
   description: '查询和处理 JavaScript 对话框（alert/confirm/prompt/beforeunload）。对话框会阻断页面操作，必须先处理才能继续自动化流程。支持查询、接受、拒绝对话框，以及设置自动处理策略。',
   supportsParallel: false,
+  permissionLevel: 'interact',
   parameters: {
     type: 'object',
     properties: {

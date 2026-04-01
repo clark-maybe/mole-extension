@@ -118,6 +118,7 @@ export const siteWorkflowFunction: FunctionDefinition = {
   name: 'site_workflow',
   description: '执行当前网站的预定义操作流程。根据当前页面 URL 自动匹配可用的工作流。',
   supportsParallel: false,
+  permissionLevel: 'interact',
   parameters: {
     type: 'object',
     properties: {

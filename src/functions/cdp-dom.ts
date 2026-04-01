@@ -203,8 +203,33 @@ export const cdpDomFunction: FunctionDefinition = {
     'CSS 样式（css_前缀）：css_get_computed_style/css_get_matched_rules/css_set_style/css_add_rule 等。',
     '页面存储（storage_前缀）：storage_get_items/storage_get_item/storage_set_item/storage_remove_item/storage_clear。',
     '定位方式：selector（CSS 选择器）或 node_id。',
-  ].join(' '),
+  ].join(' ') + '\n\n⚠️ 不要用此工具来：\n- 点击或输入操作（用 cdp_input）\n- 读取页面正文内容（用 page_viewer）',
   supportsParallel: true,
+  permissionLevel: 'interact',
+  actionPermissions: {
+    storage_get_items: 'sensitive',
+    storage_get_item: 'sensitive',
+    storage_set_item: 'sensitive',
+    storage_remove_item: 'sensitive',
+    storage_clear: 'dangerous',
+    set_html: 'sensitive',
+    set_text: 'sensitive',
+    insert_html: 'sensitive',
+    remove_node: 'sensitive',
+    set_outer_html: 'sensitive',
+  },
+  approvalMessageTemplate: {
+    storage_get_items: 'AI 正在请求读取页面 {storage_type}Storage 数据',
+    storage_get_item: 'AI 正在请求读取页面 {storage_type}Storage 数据',
+    storage_set_item: 'AI 正在请求写入页面 {storage_type}Storage（key: {key}）',
+    storage_remove_item: 'AI 正在请求删除页面 {storage_type}Storage 中的 "{key}"',
+    storage_clear: 'AI 正在请求清空页面的 {storage_type}Storage',
+    set_html: 'AI 正在请求修改页面内容（set_html）',
+    set_text: 'AI 正在请求修改页面内容（set_text）',
+    insert_html: 'AI 正在请求修改页面内容（insert_html）',
+    remove_node: 'AI 正在请求删除页面元素',
+    set_outer_html: 'AI 正在请求替换页面元素',
+  },
   parameters: {
     type: 'object',
     properties: {
@@ -1289,6 +1314,70 @@ const executeCSSAction = async (
 
 // ==================== Storage 操作组 ====================
 
+/** 通过 Runtime.evaluate 回退读取 storage（CDP DOMStorage 域不可用时的 fallback） */
+const storageGetItemsFallback = async (
+  tabId: number,
+  isLocalStorage: boolean,
+): Promise<FunctionResult> => {
+  const storageObj = isLocalStorage ? 'localStorage' : 'sessionStorage';
+  const storageLabel = isLocalStorage ? 'localStorage' : 'sessionStorage';
+  const result = await CDPSessionManager.sendCommand(tabId, 'Runtime.evaluate', {
+    expression: `(() => { try { const s = ${storageObj}; const items = {}; for (let i = 0; i < s.length; i++) { const k = s.key(i); items[k] = s.getItem(k); } return JSON.stringify({ ok: true, items, count: s.length }); } catch(e) { return JSON.stringify({ ok: false, error: e.message }); } })()`,
+    returnByValue: true,
+  });
+  if (!result.success) {
+    return { success: false, error: `Runtime fallback 失败: ${result.error}` };
+  }
+  try {
+    const parsed = JSON.parse(result.result?.result?.value || '{}');
+    if (!parsed.ok) return { success: false, error: parsed.error || `读取 ${storageLabel} 失败` };
+    return {
+      success: true,
+      data: {
+        storage_type: storageLabel,
+        items: parsed.items,
+        count: parsed.count,
+        message: `获取到 ${parsed.count} 个 ${storageLabel} 条目（fallback）`,
+      },
+    };
+  } catch {
+    return { success: false, error: `解析 ${storageLabel} 结果失败` };
+  }
+};
+
+const storageGetItemFallback = async (
+  tabId: number,
+  isLocalStorage: boolean,
+  key: string,
+): Promise<FunctionResult> => {
+  const storageObj = isLocalStorage ? 'localStorage' : 'sessionStorage';
+  const storageLabel = isLocalStorage ? 'localStorage' : 'sessionStorage';
+  const result = await CDPSessionManager.sendCommand(tabId, 'Runtime.evaluate', {
+    expression: `(() => { try { const v = ${storageObj}.getItem(${JSON.stringify(key)}); return JSON.stringify({ ok: true, value: v, exists: v !== null }); } catch(e) { return JSON.stringify({ ok: false, error: e.message }); } })()`,
+    returnByValue: true,
+  });
+  if (!result.success) {
+    return { success: false, error: `Runtime fallback 失败: ${result.error}` };
+  }
+  try {
+    const parsed = JSON.parse(result.result?.result?.value || '{}');
+    if (!parsed.ok) return { success: false, error: parsed.error || `读取 ${storageLabel} 失败` };
+    return {
+      success: true,
+      data: {
+        key,
+        value: parsed.value,
+        exists: parsed.exists,
+        message: parsed.exists
+          ? `获取 ${storageLabel}["${key}"] 成功（fallback）`
+          : `${storageLabel} 中不存在 key "${key}"`,
+      },
+    };
+  } catch {
+    return { success: false, error: `解析 ${storageLabel} 结果失败` };
+  }
+};
+
 const executeStorageAction = async (
   tabId: number,
   action: string,
@@ -1297,132 +1386,136 @@ const executeStorageAction = async (
 ): Promise<FunctionResult> => {
   const isLocalStorage = params.storage_type !== 'session';
 
-  // 确保 debugger 已 attach 并启用 DOMStorage 域
+  // 确保 debugger 已 attach
   const attachResult = await CDPSessionManager.attach(tabId);
   if (!attachResult.success) {
     return { success: false, error: `无法连接调试器: ${attachResult.error}` };
   }
-  await CDPSessionManager.sendCommand(tabId, 'DOMStorage.enable', {});
 
-  // 获取 securityOrigin
-  let origin = params.security_origin;
-  if (!origin) {
-    origin = await getSecurityOrigin(tabId);
-    if (!origin) {
-      return { success: false, error: '无法获取页面 origin，请手动指定 security_origin 参数' };
-    }
+  // 尝试启用 DOMStorage 域（某些页面可能不支持）
+  const enableResult = await CDPSessionManager.sendCommand(tabId, 'DOMStorage.enable', {});
+  const domStorageAvailable = enableResult.success;
+
+  // 获取 securityOrigin（DOMStorage 域操作需要）
+  let origin: string | null = null;
+  if (domStorageAvailable) {
+    origin = params.security_origin || await getSecurityOrigin(tabId);
   }
 
-  const storageId = buildStorageId(origin, isLocalStorage);
   const storageLabel = isLocalStorage ? 'localStorage' : 'sessionStorage';
+
+  // 构建 storageId（仅 DOMStorage 域可用且 origin 存在时有效）
+  const storageId = origin ? buildStorageId(origin, isLocalStorage) : null;
 
   switch (action) {
     case 'storage_get_items': {
-      const result = await CDPSessionManager.sendCommand(tabId, 'DOMStorage.getDOMStorageItems', {
-        storageId,
-      });
-      if (!result.success) {
-        return { success: false, error: `获取 ${storageLabel} 失败: ${result.error}` };
+      // 优先 CDP DOMStorage 域，失败则 fallback 到 Runtime.evaluate
+      if (storageId) {
+        const result = await CDPSessionManager.sendCommand(tabId, 'DOMStorage.getDOMStorageItems', { storageId });
+        if (result.success) {
+          const entries: Array<[string, string]> = result.result?.entries || [];
+          const items: Record<string, string> = {};
+          for (const [key, value] of entries) { items[key] = value; }
+          return {
+            success: true,
+            data: {
+              storage_type: storageLabel,
+              origin,
+              items,
+              count: Object.keys(items).length,
+              message: `获取到 ${Object.keys(items).length} 个 ${storageLabel} 条目`,
+            },
+          };
+        }
       }
-      const entries: Array<[string, string]> = result.result?.entries || [];
-      const items: Record<string, string> = {};
-      for (const [key, value] of entries) {
-        items[key] = value;
-      }
-      return {
-        success: true,
-        data: {
-          storage_type: storageLabel,
-          origin,
-          items,
-          count: Object.keys(items).length,
-          message: `获取到 ${Object.keys(items).length} 个 ${storageLabel} 条目`,
-        },
-      };
+      // fallback
+      return storageGetItemsFallback(tabId, isLocalStorage);
     }
 
     case 'storage_get_item': {
-      const result = await CDPSessionManager.sendCommand(tabId, 'DOMStorage.getDOMStorageItems', {
-        storageId,
-      });
-      if (!result.success) {
-        return { success: false, error: `获取 ${storageLabel} 失败: ${result.error}` };
+      if (storageId) {
+        const result = await CDPSessionManager.sendCommand(tabId, 'DOMStorage.getDOMStorageItems', { storageId });
+        if (result.success) {
+          const entries: Array<[string, string]> = result.result?.entries || [];
+          const found = entries.find(([k]) => k === params.key);
+          if (!found) {
+            return {
+              success: true,
+              data: { key: params.key, value: null, exists: false, message: `${storageLabel} 中不存在 key "${params.key}"` },
+            };
+          }
+          return {
+            success: true,
+            data: { key: params.key, value: found[1], exists: true, message: `获取 ${storageLabel}["${params.key}"] 成功` },
+          };
+        }
       }
-      const entries: Array<[string, string]> = result.result?.entries || [];
-      const found = entries.find(([k]) => k === params.key);
-      if (!found) {
-        return {
-          success: true,
-          data: {
-            key: params.key,
-            value: null,
-            exists: false,
-            message: `${storageLabel} 中不存在 key "${params.key}"`,
-          },
-        };
-      }
-      return {
-        success: true,
-        data: {
-          key: params.key,
-          value: found[1],
-          exists: true,
-          message: `获取 ${storageLabel}["${params.key}"] 成功`,
-        },
-      };
+      // fallback
+      return storageGetItemFallback(tabId, isLocalStorage, params.key);
     }
 
     case 'storage_set_item': {
-      const result = await CDPSessionManager.sendCommand(tabId, 'DOMStorage.setDOMStorageItem', {
-        storageId,
-        key: params.key,
-        value: params.value,
-      });
-      if (!result.success) {
-        return { success: false, error: `设置 ${storageLabel} 失败: ${result.error}` };
+      if (storageId) {
+        const result = await CDPSessionManager.sendCommand(tabId, 'DOMStorage.setDOMStorageItem', {
+          storageId, key: params.key, value: params.value,
+        });
+        if (result.success) {
+          return { success: true, data: { key: params.key, value: params.value, message: `${storageLabel}["${params.key}"] 已设置` } };
+        }
       }
-      return {
-        success: true,
-        data: {
-          key: params.key,
-          value: params.value,
-          message: `${storageLabel}["${params.key}"] 已设置`,
-        },
-      };
+      // fallback
+      const storageObj = isLocalStorage ? 'localStorage' : 'sessionStorage';
+      const fbResult = await CDPSessionManager.sendCommand(tabId, 'Runtime.evaluate', {
+        expression: `(() => { try { ${storageObj}.setItem(${JSON.stringify(params.key)}, ${JSON.stringify(String(params.value ?? ''))}); return JSON.stringify({ ok: true }); } catch(e) { return JSON.stringify({ ok: false, error: e.message }); } })()`,
+        returnByValue: true,
+      });
+      const fbParsed = (() => { try { return JSON.parse(fbResult.result?.result?.value || '{}'); } catch { return { ok: false, error: '解析失败' }; } })();
+      if (!fbResult.success || !fbParsed.ok) {
+        return { success: false, error: `设置 ${storageLabel} 失败: ${fbParsed.error || fbResult.error}` };
+      }
+      return { success: true, data: { key: params.key, value: params.value, message: `${storageLabel}["${params.key}"] 已设置（fallback）` } };
     }
 
     case 'storage_remove_item': {
-      const result = await CDPSessionManager.sendCommand(tabId, 'DOMStorage.removeDOMStorageItem', {
-        storageId,
-        key: params.key,
-      });
-      if (!result.success) {
-        return { success: false, error: `删除 ${storageLabel} 条目失败: ${result.error}` };
+      if (storageId) {
+        const result = await CDPSessionManager.sendCommand(tabId, 'DOMStorage.removeDOMStorageItem', {
+          storageId, key: params.key,
+        });
+        if (result.success) {
+          return { success: true, data: { key: params.key, message: `${storageLabel}["${params.key}"] 已删除` } };
+        }
       }
-      return {
-        success: true,
-        data: {
-          key: params.key,
-          message: `${storageLabel}["${params.key}"] 已删除`,
-        },
-      };
+      // fallback
+      const storageObj2 = isLocalStorage ? 'localStorage' : 'sessionStorage';
+      const fbResult2 = await CDPSessionManager.sendCommand(tabId, 'Runtime.evaluate', {
+        expression: `(() => { try { ${storageObj2}.removeItem(${JSON.stringify(params.key)}); return JSON.stringify({ ok: true }); } catch(e) { return JSON.stringify({ ok: false, error: e.message }); } })()`,
+        returnByValue: true,
+      });
+      const fbParsed2 = (() => { try { return JSON.parse(fbResult2.result?.result?.value || '{}'); } catch { return { ok: false, error: '解析失败' }; } })();
+      if (!fbResult2.success || !fbParsed2.ok) {
+        return { success: false, error: `删除 ${storageLabel} 条目失败: ${fbParsed2.error || fbResult2.error}` };
+      }
+      return { success: true, data: { key: params.key, message: `${storageLabel}["${params.key}"] 已删除（fallback）` } };
     }
 
     case 'storage_clear': {
-      const result = await CDPSessionManager.sendCommand(tabId, 'DOMStorage.clear', {
-        storageId,
-      });
-      if (!result.success) {
-        return { success: false, error: `清空 ${storageLabel} 失败: ${result.error}` };
+      if (storageId) {
+        const result = await CDPSessionManager.sendCommand(tabId, 'DOMStorage.clear', { storageId });
+        if (result.success) {
+          return { success: true, data: { storage_type: storageLabel, origin, message: `${storageLabel} 已清空` } };
+        }
       }
-      return {
-        success: true,
-        data: {
-          storage_type: storageLabel,
-          origin,
-          message: `${storageLabel} 已清空`,
-        },
-      };
+      // fallback
+      const storageObj3 = isLocalStorage ? 'localStorage' : 'sessionStorage';
+      const fbResult3 = await CDPSessionManager.sendCommand(tabId, 'Runtime.evaluate', {
+        expression: `(() => { try { ${storageObj3}.clear(); return JSON.stringify({ ok: true }); } catch(e) { return JSON.stringify({ ok: false, error: e.message }); } })()`,
+        returnByValue: true,
+      });
+      const fbParsed3 = (() => { try { return JSON.parse(fbResult3.result?.result?.value || '{}'); } catch { return { ok: false, error: '解析失败' }; } })();
+      if (!fbResult3.success || !fbParsed3.ok) {
+        return { success: false, error: `清空 ${storageLabel} 失败: ${fbParsed3.error || fbResult3.error}` };
+      }
+      return { success: true, data: { storage_type: storageLabel, message: `${storageLabel} 已清空（fallback）` } };
     }
 
     default:

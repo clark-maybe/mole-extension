@@ -976,8 +976,9 @@ export const cdpInputFunction: FunctionDefinition = {
     '等待：wait_for_element/wait_text/wait_navigation。',
     '其他：hover/drag/get_info。',
     '定位方式：element_id（来自 page_snapshot，优先）或 selector（CSS 选择器）或 x/y 坐标。',
-  ].join(' '),
+  ].join(' ') + '\n\n⚠️ 不要用此工具来：\n- 读取页面内容（用 page_viewer）\n- 检查元素是否存在（用 page_snapshot 或 page_assert）\n- 获取元素文本（用 cdp_dom 的 get_text）',
   supportsParallel: false,
+  permissionLevel: 'interact',
   parameters: {
     type: 'object',
     properties: {

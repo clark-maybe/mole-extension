@@ -20,8 +20,19 @@ const getActiveTabId = (): Promise<number | null> => {
 
 export const cdpNetworkFunction: FunctionDefinition = {
   name: 'cdp_network',
-  description: '网络请求监听与 Cookie 管理（CDP 增强版）。监听页面网络请求，获取完整请求/响应数据（包括 body 和 headers），统计汇总，以及跨域 Cookie 读写。',
+  description: '网络请求监听与 Cookie 管理（CDP 增强版）。监听页面网络请求，获取完整请求/响应数据（包括 body 和 headers），统计汇总，以及跨域 Cookie 读写。\n\n⚠️ 不要用此工具来：\n- 获取页面内容（用 page_viewer 或 fetch_url）\n- 仅用于调试 API 请求或管理 Cookie',
   supportsParallel: false,
+  permissionLevel: 'interact',
+  actionPermissions: {
+    get_cookies: 'sensitive',
+    set_cookie: 'sensitive',
+    delete_cookie: 'sensitive',
+  },
+  approvalMessageTemplate: {
+    get_cookies: 'AI 正在请求读取页面 Cookie',
+    set_cookie: 'AI 正在请求设置 Cookie "{name}"',
+    delete_cookie: 'AI 正在请求删除 Cookie "{name}"',
+  },
   parameters: {
     type: 'object',
     properties: {

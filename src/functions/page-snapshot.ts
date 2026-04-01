@@ -24,8 +24,13 @@ export const pageSnapshotFunction: FunctionDefinition = {
     '获取当前页面的语义化快照，返回可交互/可阅读元素候选列表。',
     '每个候选都会带 element_id、文本、标签、role、是否可点击/可编辑、可见性、位置和 selector 候选。',
     '适合陌生网站自动化：先用 page_snapshot(query=...) 找到候选元素，再用 cdp_input(element_id=...) 基于 element_id 执行动作。',
-  ].join(' '),
+    '\n\n⚠️ 不要用此工具来：',
+    '- 只需要页面纯文本内容时（用 page_viewer 更轻量）',
+    '- 验证操作结果是否符合预期（用 page_assert）',
+    '- 只需要了解页面整体布局（用 page_skeleton 更轻量）',
+  ].join('\n'),
   supportsParallel: true,
+  permissionLevel: 'read',
   parameters: {
     type: 'object',
     properties: {

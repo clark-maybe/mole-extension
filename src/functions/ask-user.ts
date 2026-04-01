@@ -18,6 +18,7 @@ export const askUserFunction: FunctionDefinition = {
   name: 'ask_user',
   description: '向用户提出问题，获取缺失信息或让用户做出选择。支持预设选项和/或自由文本输入。用户回答后继续执行任务。',
   supportsParallel: false,
+  permissionLevel: 'read',
   parameters: {
     type: 'object',
     properties: {

@@ -8,6 +8,7 @@ export const saveWorkflowFunction: FunctionDefinition = {
   name: 'save_workflow',
   description: '保存用户确认的工作流定义到 registry。仅在用户明确确认工作流内容后调用。将完整的 workflow JSON 对象序列化为字符串传入 workflow_json 参数。',
   supportsParallel: false,
+  permissionLevel: 'interact',
   parameters: {
     type: 'object',
     properties: {

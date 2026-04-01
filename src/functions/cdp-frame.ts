@@ -72,8 +72,9 @@ export const cdpFrameFunction: FunctionDefinition = {
     '支持 return 语句和 async/await。',
     '传 frame_id 时可在指定 iframe 中执行（跨域穿透）。',
     '其他操作：list=列出所有 frame，snapshot=获取 frame 文本内容。',
-  ].join(' '),
+  ].join(' ') + '\n\n⚠️ 不要用此工具来：\n- 读取 localStorage / sessionStorage（用 cdp_dom 的 storage_get_items）\n- 读取或操作 Cookie（用 cdp_network 的 get_cookies / set_cookie）\n- 执行简单 DOM 查询（用 cdp_dom 的 query_selector）\n- 点击或输入操作（用 cdp_input）\n- 禁止通过执行 JS 绕过敏感数据的专用工具，那些工具有用户授权流程\n- 仅在确实需要执行自定义 JavaScript 且无专用工具可用时使用',
   supportsParallel: true,
+  permissionLevel: 'interact',
   parameters: {
     type: 'object',
     properties: {

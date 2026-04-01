@@ -160,6 +160,9 @@ export const bookmarkOpsFunction: FunctionDefinition = {
     '- stats：收藏统计信息',
   ].join('\n'),
   supportsParallel: false,
+  permissionLevel: 'read',
+  actionPermissions: { delete: 'sensitive' },
+  approvalMessageTemplate: { delete: 'AI 正在请求删除收藏 "{title}"' },
   parameters: {
     type: 'object',
     properties: {

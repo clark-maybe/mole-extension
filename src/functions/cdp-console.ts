@@ -20,6 +20,7 @@ export const cdpConsoleFunction: FunctionDefinition = {
   name: 'cdp_console',
   description: '捕获页面控制台消息和未捕获异常。开始捕获后，自动收集 console.log/warn/error 输出以及 JavaScript 未捕获异常，帮助诊断页面问题。',
   supportsParallel: true,
+  permissionLevel: 'read',
   parameters: {
     type: 'object',
     properties: {

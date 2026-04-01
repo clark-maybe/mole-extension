@@ -109,7 +109,7 @@ Keep this managed block so 'openspec update' can refresh the instructions.
 #### 工具函数系统 (`src/functions/`)
 
 - `registry.ts` - 函数注册表，管理所有内置工具 + 动态扩展工具
-- `types.ts` - `FunctionDefinition` 和 `FunctionResult` 类型
+- `types.ts` - `FunctionDefinition`、`FunctionResult`、`PermissionLevel` 类型
 - `cdp-input.ts` - 页面交互操作（点击/输入/滚动/填写/等待/拖拽等 18 种 action，CDP 可信事件）
 - `cdp-dom.ts` - DOM 读写/CSS 样式/页面存储（query/get_text/set_html/add_class/css_*/storage_* 等 34 种 action）
 - `cdp-frame.ts` - JS 执行（主 frame + iframe 穿透，支持 return 语句和 async/await）
@@ -146,11 +146,32 @@ Keep this managed block so 'openspec update' can refresh the instructions.
 - **Fetch 拦截** — 监听 `Fetch.requestPaused` 事件，暂存被拦截的请求，支持修改/Mock/失败
 - **控制台捕获** — 监听 `Runtime.consoleAPICalled` 和 `Runtime.exceptionThrown`
 
+**工具权限体系（声明式元数据驱动）：**
+
+每个工具通过 `FunctionDefinition` 上的字段声明权限等级，`tool-executor.ts` 根据元数据自动决策是否弹窗确认：
+
+| 权限等级 | 含义 | 行为 |
+|---------|------|------|
+| `read` | 只读操作（page_viewer、screenshot 等） | 自动放行 |
+| `interact` | 页面交互（cdp_input、tab_navigate.open 等） | 自动放行 |
+| `sensitive` | 敏感数据/内容修改（Cookie、Storage 读写等） | 弹窗确认，可被 trustAll 跳过 |
+| `dangerous` | 高危不可逆操作（导航跳转、关闭标签页等） | 每次必须确认，不可跳过 |
+
+- `permissionLevel` — 工具整体权限等级（默认 `interact`）
+- `actionPermissions` — action 级别覆盖（如 `cdp_dom` 的 `storage_clear: 'dangerous'`）
+- `approvalMessageTemplate` — 确认消息模板（支持 `{key}`/`{url}` 等占位符）
+
+**工具负面边界描述：**
+
+重点工具的 `description` 末尾包含 `⚠️ 不要用此工具来：` 段落，明确告知 AI 不应使用该工具的场景及替代工具，防止工具误选。
+
 **扩展工具函数：**
 1. 在 `src/functions/` 下新建文件，导出 `FunctionDefinition`
-2. 在 `registry.ts` 中 import 并添加到 `BUILTIN_FUNCTIONS` 数组
-3. 在 `src/content/float-ball.ts` 中为新工具添加 `FUNCTION_ICONS`（SVG 图标）和 `FUNCTION_LABELS`（中文名称）**（必须）**
-4. 如有必要，在 `src/ai/orchestrator.ts` 的系统提示词中补充使用引导
+2. **声明 `permissionLevel`**，敏感操作需声明 `actionPermissions` 和 `approvalMessageTemplate`
+3. 在 `description` 末尾添加负面边界描述（如有容易混淆的工具）
+4. 在 `registry.ts` 中 import 并添加到 `BUILTIN_FUNCTIONS` 数组
+5. 在 `src/content/float-ball.ts` 中为新工具添加 `FUNCTION_ICONS`（SVG 图标）和 `FUNCTION_LABELS`（中文名称）**（必须）**
+6. 如有必要，在 `src/ai/orchestrator.ts` 的系统提示词中补充使用引导
 
 ### 悬浮球 UI (`src/content/float-ball.ts`)
 

@@ -71,6 +71,7 @@ export const cdpOverlayFunction: FunctionDefinition = {
   name: 'cdp_overlay',
   description: '视觉高亮标注工具（CDP Overlay 域）。高亮页面元素或指定区域，让用户直观看到 AI 正在操作的对象。支持自定义高亮颜色。适用于标注目标元素后截图、辅助用户定位元素、配合 cdp_input 进行可视化操作。',
   supportsParallel: true,
+  permissionLevel: 'read',
   parameters: {
     type: 'object',
     properties: {

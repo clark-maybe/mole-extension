@@ -7,8 +7,17 @@ import type { FunctionDefinition } from './types';
 
 export const tabNavigateFunction: FunctionDefinition = {
   name: 'tab_navigate',
-  description: '标签页导航控制。支持：打开/关闭/切换/列出/刷新/前进后退/复制标签页/固定标签页/静音标签页/移动标签页位置等操作。',
+  description: '标签页导航控制。支持：打开/关闭/切换/列出/刷新/前进后退/复制标签页/固定标签页/静音标签页/移动标签页位置等操作。\n\n⚠️ 不要用此工具来：\n- 不要用 navigate 跳转用户正在浏览的页面（用 open 打开新标签页代替）\n- close 前确认不会丢失用户正在进行的工作',
   supportsParallel: false,
+  permissionLevel: 'interact',
+  actionPermissions: {
+    navigate: 'dangerous',
+    close: 'dangerous',
+  },
+  approvalMessageTemplate: {
+    navigate: 'AI 正在请求跳转当前页面到 {url}',
+    close: 'AI 正在请求关闭标签页',
+  },
   parameters: {
     type: 'object',
     properties: {
