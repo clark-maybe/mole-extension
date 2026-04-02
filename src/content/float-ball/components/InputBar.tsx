@@ -37,6 +37,7 @@ export const InputBar: React.FC<InputBarProps> = ({ resultRef }) => {
   const inputRef = useRef<HTMLInputElement>(null);
   const task = state.currentTask;
   const isRunning = task?.status === 'running';
+  const isAuditing = state.isRecorderAuditing;
 
   // 面板打开时自动聚焦
   useEffect(() => {
@@ -200,6 +201,7 @@ export const InputBar: React.FC<InputBarProps> = ({ resultRef }) => {
 
   // 状态相关的 UI
   const placeholder = (() => {
+    if (isAuditing) return '正在整理录制的工作流...';
     if (!task) return '有什么想让我做的？';
     if (isRunning) return task.liveStatusText || `${task.title}...`;
     return '继续对话...';
@@ -217,7 +219,7 @@ export const InputBar: React.FC<InputBarProps> = ({ resultRef }) => {
         type="text"
         placeholder={placeholder}
         autoComplete="off"
-        disabled={isRunning}
+        disabled={isRunning || isAuditing}
         onKeyDown={handleKeyDown}
       />
       <span className="mole-input-hint" style={{ display: isRunning ? 'none' : '' }}>ESC</span>

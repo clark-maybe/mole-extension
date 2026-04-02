@@ -285,6 +285,7 @@ export function WorkflowsPage() {
       title: '标识',
       dataIndex: 'name',
       width: 160,
+      ellipsis: true,
       render: (name: string) => <code style={{ fontSize: 12, color: '#86868b' }}>{name}</code>,
     },
     {
@@ -308,6 +309,7 @@ export function WorkflowsPage() {
     {
       title: '操作',
       width: 120,
+      fixed: 'right' as const,
       render: (_: unknown, wf: WorkflowItem) => (
         <Space size="small">
           <Button type="link" size="small" onClick={() => openEditor(wf)}>编辑</Button>
@@ -372,6 +374,7 @@ export function WorkflowsPage() {
             loading={loading}
             pagination={false}
             size="small"
+            scroll={{ x: 700 }}
             rowSelection={{
               selectedRowKeys,
               onChange: (keys) => setSelectedRowKeys(keys as string[]),

@@ -81,6 +81,18 @@ export const initFloatBallReact = async () => {
   const root = ReactDOM.createRoot(reactRoot);
   root.render(<MoleRoot />);
 
+  // 截图时隐藏/恢复悬浮球（React 版补充，旧版 float-ball.ts 中有对应逻辑）
+  import('../lib/channel').then(({ default: Channel }) => {
+    Channel.on('__screenshot_hide', (_data: unknown, _sender: unknown, sendResponse?: (resp: unknown) => void) => {
+      host.style.display = 'none';
+      sendResponse?.({ ok: true });
+      return true;
+    });
+    Channel.on('__screenshot_show', () => {
+      host.style.display = '';
+    });
+  });
+
   // ---- 宿主文档上的全局事件监听 ----
   // 通过 window 上的自定义事件桥接给 React（closed Shadow DOM 内组件无法访问外部 DOM）
 

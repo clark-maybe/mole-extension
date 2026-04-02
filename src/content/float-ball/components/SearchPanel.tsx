@@ -15,7 +15,7 @@ import { RecorderBar } from './RecorderBar';
 import { BgTasksPanel } from './BgTasksPanel';
 import { formatClock, formatDuration } from '../text-utils';
 
-export const SearchPanel: React.FC = () => {
+export const SearchPanel: React.FC<{ stopRecording: () => void; cancelAuditing?: () => void }> = ({ stopRecording, cancelAuditing }) => {
   const { state, dispatch } = useMole();
   const resultRef = useRef<HTMLDivElement>(null);
   const overlayRef = useRef<HTMLDivElement>(null);
@@ -96,7 +96,7 @@ export const SearchPanel: React.FC = () => {
           />
         )}
         <div className="mole-divider mole-divider-bottom" />
-        <RecorderBar />
+        <RecorderBar onStop={stopRecording} onCancelAudit={cancelAuditing} />
         <BgTasksPanel />
         <div className="mole-footer">
           <span className="mole-footer-icon">✦</span>

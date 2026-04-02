@@ -126,19 +126,20 @@ export const getStyles = () => `
   .mole-trigger.task-running .mole-pill,
   .mole-trigger.task-done .mole-pill,
   .mole-trigger.task-error .mole-pill,
-  .mole-trigger.announce .mole-pill {
+  .mole-trigger.announce .mole-pill,
+  .mole-trigger.auditing .mole-pill {
     width: ${PILL_WIDTH}px;
     transform: translateX(0);
   }
 
-  .mole-trigger.side-right.hovering:not(.task-running):not(.task-done):not(.task-error):not(.announce) .mole-pill,
-  .mole-trigger.side-right.active:not(.task-running):not(.task-done):not(.task-error):not(.announce) .mole-pill {
+  .mole-trigger.side-right.hovering:not(.task-running):not(.task-done):not(.task-error):not(.announce):not(.auditing) .mole-pill,
+  .mole-trigger.side-right.active:not(.task-running):not(.task-done):not(.task-error):not(.announce):not(.auditing) .mole-pill {
     transform: translateX(${PILL_WIDTH - PILL_COMPACT_WIDTH}px);
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12);
   }
 
-  .mole-trigger.side-left.hovering:not(.task-running):not(.task-done):not(.task-error):not(.announce) .mole-pill,
-  .mole-trigger.side-left.active:not(.task-running):not(.task-done):not(.task-error):not(.announce) .mole-pill {
+  .mole-trigger.side-left.hovering:not(.task-running):not(.task-done):not(.task-error):not(.announce):not(.auditing) .mole-pill,
+  .mole-trigger.side-left.active:not(.task-running):not(.task-done):not(.task-error):not(.announce):not(.auditing) .mole-pill {
     transform: translateX(-${PILL_WIDTH - PILL_COMPACT_WIDTH}px);
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12);
   }
@@ -319,11 +320,11 @@ export const getStyles = () => `
     z-index: 1;
   }
 
-  .mole-trigger.side-right:not(.task-running):not(.task-done):not(.task-error):not(.announce)::after {
+  .mole-trigger.side-right:not(.task-running):not(.task-done):not(.task-error):not(.announce):not(.auditing)::after {
     left: calc(50% + ${PILL_WIDTH - PILL_COMPACT_WIDTH}px);
   }
 
-  .mole-trigger.side-left:not(.task-running):not(.task-done):not(.task-error):not(.announce)::after {
+  .mole-trigger.side-left:not(.task-running):not(.task-done):not(.task-error):not(.announce):not(.auditing)::after {
     left: calc(50% - ${PILL_WIDTH - PILL_COMPACT_WIDTH}px);
   }
 
@@ -354,11 +355,11 @@ export const getStyles = () => `
     z-index: 2;
   }
 
-  .mole-trigger.side-right:not(.task-running):not(.task-done):not(.task-error):not(.announce) .mole-settings-btn {
+  .mole-trigger.side-right:not(.task-running):not(.task-done):not(.task-error):not(.announce):not(.auditing) .mole-settings-btn {
     left: calc(50% + ${PILL_WIDTH - PILL_COMPACT_WIDTH}px);
   }
 
-  .mole-trigger.side-left:not(.task-running):not(.task-done):not(.task-error):not(.announce) .mole-settings-btn {
+  .mole-trigger.side-left:not(.task-running):not(.task-done):not(.task-error):not(.announce):not(.auditing) .mole-settings-btn {
     left: calc(50% - ${PILL_WIDTH - PILL_COMPACT_WIDTH}px);
   }
 
@@ -726,11 +727,11 @@ export const getStyles = () => `
     animation: mole-pill-enter-left 560ms cubic-bezier(0.22, 1, 0.36, 1);
   }
 
-  .mole-trigger.side-right.snapping:not(.task-running):not(.announce) .mole-pill {
+  .mole-trigger.side-right.snapping:not(.task-running):not(.announce):not(.auditing) .mole-pill {
     animation: mole-pill-snap-right 480ms cubic-bezier(0.2, 1.18, 0.32, 1);
   }
 
-  .mole-trigger.side-left.snapping:not(.task-running):not(.announce) .mole-pill {
+  .mole-trigger.side-left.snapping:not(.task-running):not(.announce):not(.auditing) .mole-pill {
     animation: mole-pill-snap-left 480ms cubic-bezier(0.2, 1.18, 0.32, 1);
   }
 
@@ -2893,12 +2894,42 @@ export const getStyles = () => `
 
   /* ===== 工作流录制 ===== */
 
-  /* 录制按钮（hover 时出现在 settingsBtn 正下方） */
-  .mole-record-btn {
+  /* 录制按钮容器（hover 时出现在悬浮球上方） */
+  .mole-record-wrap {
     position: absolute;
-    top: calc(100% + 46px);
+    bottom: calc(100% + 8px);
     left: 50%;
-    transform: translate(-50%, -4px);
+    transform: translate(-50%, 4px);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease, transform 0.2s ease;
+    z-index: 2;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  .mole-trigger.side-right:not(.task-running):not(.task-done):not(.task-error):not(.announce):not(.auditing) .mole-record-wrap {
+    left: calc(50% + ${PILL_WIDTH - PILL_COMPACT_WIDTH}px);
+  }
+  .mole-trigger.side-left:not(.task-running):not(.task-done):not(.task-error):not(.announce):not(.auditing) .mole-record-wrap {
+    left: calc(50% - ${PILL_WIDTH - PILL_COMPACT_WIDTH}px);
+  }
+  .mole-trigger.hovering .mole-record-wrap,
+  .mole-trigger:focus-within .mole-record-wrap {
+    opacity: 1;
+    pointer-events: auto;
+    transform: translate(-50%, 0);
+  }
+  .mole-trigger.dragging .mole-record-wrap,
+  .mole-trigger.recording .mole-record-wrap,
+  .mole-trigger.auditing .mole-record-wrap,
+  .mole-trigger.active .mole-record-wrap {
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  /* 录制按钮 */
+  .mole-record-btn {
     width: 30px;
     height: 30px;
     border-radius: 50%;
@@ -2909,39 +2940,50 @@ export const getStyles = () => `
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    opacity: 0;
-    pointer-events: none;
     cursor: pointer;
-    transition: opacity 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
-    z-index: 2;
-  }
-  .mole-trigger.side-right:not(.task-running):not(.task-done):not(.task-error):not(.announce) .mole-record-btn {
-    left: calc(50% + ${PILL_WIDTH - PILL_COMPACT_WIDTH}px);
-  }
-  .mole-trigger.side-left:not(.task-running):not(.task-done):not(.task-error):not(.announce) .mole-record-btn {
-    left: calc(50% - ${PILL_WIDTH - PILL_COMPACT_WIDTH}px);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    position: relative;
   }
   .mole-record-btn svg {
     width: 14px;
     height: 14px;
   }
   .mole-record-btn:hover {
-    transform: translate(-50%, -6px);
+    transform: translateY(-4px);
     box-shadow: 0 12px 24px rgba(215, 0, 21, 0.2);
     color: #d70015;
   }
-  .mole-trigger.hovering .mole-record-btn,
-  .mole-trigger:focus-within .mole-record-btn {
-    opacity: 1;
-    pointer-events: auto;
-    transform: translate(-50%, 0);
-  }
-  .mole-trigger.dragging .mole-record-btn,
-  .mole-trigger.recording .mole-record-btn,
-  .mole-trigger.auditing .mole-record-btn,
-  .mole-trigger.active .mole-record-btn {
+
+  /* 录制按钮 tooltip */
+  .mole-record-tooltip {
+    position: absolute;
+    bottom: calc(100% + 6px);
+    left: 50%;
+    transform: translateX(-50%);
+    background: #fff;
+    color: #333;
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 1;
+    padding: 6px 10px;
+    border-radius: 6px;
+    white-space: nowrap;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12);
     opacity: 0;
     pointer-events: none;
+    transition: opacity 0.15s ease;
+  }
+  .mole-record-tooltip::after {
+    content: '';
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border: 5px solid transparent;
+    border-top-color: #fff;
+  }
+  .mole-record-btn:hover + .mole-record-tooltip {
+    opacity: 1;
   }
 
   /* 录制中状态 - footer 录制状态栏 */
@@ -2979,6 +3021,16 @@ export const getStyles = () => `
     background: rgba(215, 0, 21, 0.08);
   }
 
+  /* 审计中状态 */
+  .mole-recorder-bar.auditing {
+    background: var(--ec-primary-soft);
+    border-color: rgba(22, 119, 255, 0.15);
+  }
+  .mole-recorder-bar-dot.auditing {
+    background: var(--ec-primary);
+    animation: mole-rec-pulse 1.2s ease-in-out infinite;
+  }
+
   /* 胶囊录制状态 */
   .mole-trigger.recording .mole-pill {
     border-color: rgba(215, 0, 21, 0.3);
@@ -3013,6 +3065,111 @@ export const getStyles = () => `
     animation: mole-breathe 1.4s ease-in-out infinite;
     opacity: 1;
     z-index: 2;
+  }
+
+  /* ===== 录制确认 Modal ===== */
+  .mole-record-modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2147483647;
+    pointer-events: auto;
+    backdrop-filter: blur(2px);
+  }
+
+  .mole-record-modal {
+    background: var(--ec-surface-strong);
+    border: 1px solid var(--ec-border);
+    border-radius: 16px;
+    padding: 28px 32px 24px;
+    width: 420px;
+    max-width: 90vw;
+    box-shadow: var(--ec-shadow);
+  }
+
+  .mole-record-modal-title {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--ec-text);
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .mole-record-modal-title::before {
+    content: '';
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--ec-danger);
+    animation: mole-rec-pulse 1.5s ease-in-out infinite;
+  }
+
+  .mole-record-modal-hints {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 24px;
+  }
+
+  .mole-record-modal-hint {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    font-size: 14px;
+    line-height: 1.6;
+    color: var(--ec-text-muted);
+  }
+
+  .mole-record-modal-hint-icon {
+    flex-shrink: 0;
+    font-size: 16px;
+    line-height: 1.6;
+  }
+
+  .mole-record-modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+  }
+
+  .mole-record-modal-btn {
+    padding: 8px 22px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border: none;
+    outline: none;
+  }
+
+  .mole-record-modal-btn.cancel {
+    background: transparent;
+    border: 1px solid var(--ec-border);
+    color: var(--ec-text-muted);
+  }
+  .mole-record-modal-btn.cancel:hover {
+    background: var(--ec-surface-soft);
+    border-color: var(--ec-border-soft);
+  }
+
+  .mole-record-modal-btn.confirm {
+    background: var(--ec-danger);
+    color: #fff;
+  }
+  .mole-record-modal-btn.confirm:hover {
+    background: #c0241c;
+  }
+
+  @keyframes mole-rec-pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
   }
 
 `;

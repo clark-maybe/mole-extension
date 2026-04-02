@@ -5,9 +5,13 @@
 
 import Channel from '../lib/channel';
 import { chatComplete } from '../ai/llm-client';
+import { ArtifactStore } from '../lib/artifact-store';
 import type { InputItem, AIStreamEvent, Session, SessionSyncPayload } from '../ai/types';
 
 // ============ 类型定义 ============
+
+/** 最大录制步数 */
+const MAX_RECORDER_STEPS = 10;
 
 /** 录制步骤 */
 export interface RecorderStep {
@@ -20,6 +24,8 @@ export interface RecorderStep {
     value?: string;
     url: string;
     timestamp: number;
+    /** 该步骤对应的截图 artifact ID */
+    screenshotArtifactId?: string;
 }
 
 /** 录制状态 */
@@ -160,7 +166,48 @@ export function setupRecorderHandlers(deps: RecorderDeps): void {
         return true;
     });
 
-    /** 接收录制步骤（fire-and-forget） */
+    /** 截图串行队列，防止并发截图冲突 */
+    let screenshotQueue: Promise<void> = Promise.resolve();
+
+    /** 对指定步骤执行截图并关联 artifact */
+    const captureStepScreenshot = async (step: RecorderStep, tabId: number): Promise<void> => {
+        try {
+            // 等待 DOM 稳定
+            await new Promise(r => setTimeout(r, 500));
+
+            // 隐藏悬浮球和录制 overlay
+            await new Promise<void>((resolve) => {
+                Channel.sendToTab(tabId, '__screenshot_hide', {}, () => resolve());
+                setTimeout(resolve, 150); // 超时兜底
+            });
+
+            // 截图
+            const [activeTab] = await chrome.tabs.query({ active: true, currentWindow: true });
+            const windowId = activeTab?.windowId;
+            if (windowId !== undefined) {
+                const dataUrl = await chrome.tabs.captureVisibleTab(windowId, {
+                    format: 'jpeg',
+                    quality: 70,
+                });
+                const base64 = dataUrl.split(',')[1] || '';
+                const sizeKB = Math.round((base64.length * 3) / 4 / 1024);
+                const artifact = await ArtifactStore.saveScreenshot(dataUrl, 'jpeg', sizeKB);
+
+                // 关联截图到步骤
+                step.screenshotArtifactId = artifact.id;
+                void saveRecorderState();
+            }
+
+            // 恢复悬浮球和录制 overlay
+            Channel.sendToTab(tabId, '__screenshot_show', {});
+        } catch (err) {
+            console.warn('[Mole] 录制步骤截图失败:', err);
+            // 确保恢复显示
+            try { Channel.sendToTab(tabId, '__screenshot_show', {}); } catch { /* 忽略 */ }
+        }
+    };
+
+    /** 接收录制步骤 + 异步截图 */
     Channel.on('__recorder_step', (data) => {
         if (!recorderState?.active || !data) return;
 
@@ -178,11 +225,34 @@ export function setupRecorderHandlers(deps: RecorderDeps): void {
 
         recorderState.steps.push(step);
         void saveRecorderState();
+
+        // 10 步兜底：达到上限时通知 content 自动停止
+        if (recorderState.steps.length >= MAX_RECORDER_STEPS) {
+            recorderState.active = false;
+            void saveRecorderState();
+            unregisterRecorderNavListener();
+            Channel.sendToTab(recorderState.tabId, '__recorder_auto_stop', {});
+        }
+
+        // 串行队列截图（不阻塞消息处理）
+        const tabId = recorderState.tabId;
+        screenshotQueue = screenshotQueue.then(() => captureStepScreenshot(step, tabId));
     });
 
     /** 查询当前录制状态 */
     Channel.on('__recorder_state', (_data, _sender, sendResponse) => {
         sendResponse?.(recorderState);
+        return true;
+    });
+
+    /** 取消审计：清理录制状态，释放 AI 处理 */
+    let auditCancelled = false;
+    Channel.on('__recorder_cancel_audit', (_data, _sender, sendResponse) => {
+        auditCancelled = true;
+        recorderState = null;
+        void saveRecorderState();
+        console.log('[Mole] 工作流录制审计已取消');
+        sendResponse?.({ success: true });
         return true;
     });
 
@@ -197,14 +267,22 @@ export function setupRecorderHandlers(deps: RecorderDeps): void {
         const startUrl = recorderState.startUrl;
         const tabId = recorderState.tabId;
 
+        // 重置取消标志
+        auditCancelled = false;
+
         // 异步执行 AI 审计
         void (async () => {
             try {
                 // 构建 AI 审计 prompt
+                // 审计时只传必要字段，去掉 screenshotArtifactId 等内部字段
+                const cleanSteps = steps.map(({ seq, action, selector, semanticHint, tag, value, url }) => ({
+                    seq, action, selector, semanticHint, tag, ...(value !== undefined ? { value } : {}), url,
+                }));
+
                 const prompt = [
                     '你是一个工作流审计助手。以下是用户在浏览器中录制的一系列操作步骤：',
                     '',
-                    JSON.stringify(steps, null, 2),
+                    JSON.stringify(cleanSteps, null, 2),
                     '',
                     `起始 URL: ${startUrl}`,
                     '',
@@ -256,6 +334,13 @@ export function setupRecorderHandlers(deps: RecorderDeps): void {
                 ];
 
                 const result = await chatComplete(input);
+
+                // 检查是否已取消
+                if (auditCancelled) {
+                    console.log('[Mole] 工作流审计已被用户取消，丢弃结果');
+                    sendResponse?.({ success: false, error: '用户已取消' });
+                    return;
+                }
 
                 // 从 AI 返回中提取 JSON
                 let workflowJson: any = null;

@@ -102,7 +102,7 @@ const PillActionCard: React.FC<{
   );
 };
 
-export const Trigger: React.FC = () => {
+export const Trigger: React.FC<{ onRecordClick: () => void }> = ({ onRecordClick }) => {
   const { state, dispatch } = useMole();
   const { side, currentY, savePosition, getTriggerX } = usePosition();
   const [isHovering, setIsHovering] = useState(false);
@@ -235,17 +235,23 @@ export const Trigger: React.FC = () => {
 
   // 状态文本
   const pillState = task ? task.status : 'idle';
-  const statusText = task ? buildTaskTitle(task.title || task.query) : '';
+  const statusText = state.isRecorderAuditing
+    ? '整理工作流中...'
+    : task ? buildTaskTitle(task.title || task.query) : '';
   const elapsed = isTaskRunning ? Math.max(0, Date.now() - task.startedAt) : 0;
-  const metaText = isTaskRunning
-    ? `已运行 ${formatDuration(elapsed)}`
-    : `${SHORTCUT_TEXT} 打开`;
+  const metaText = state.isRecorderAuditing
+    ? '录制完成，AI 处理中'
+    : isTaskRunning
+      ? `已运行 ${formatDuration(elapsed)}`
+      : `${SHORTCUT_TEXT} 打开`;
 
   // CSS class 拼接
   const triggerClass = [
     'mole-trigger',
     `side-${side}`,
     state.isOpen ? 'active' : '',
+    state.isRecording ? 'recording' : '',
+    state.isRecorderAuditing ? 'auditing' : '',
     pillState === 'running' ? 'task-running' : '',
     pillState === 'done' ? 'task-done' : '',
     pillState === 'error' ? 'task-error' : '',
@@ -306,19 +312,23 @@ export const Trigger: React.FC = () => {
         </svg>
       </button>
 
-      {/* 录制按钮 */}
-      <button
-        className="mole-record-btn"
-        type="button"
-        title="录制流程"
-        aria-label="录制流程"
-        onMouseEnter={enterHover}
-        onMouseLeave={leaveHover}
-      >
-        <svg viewBox="0 0 24 24" aria-hidden="true">
-          <circle cx="12" cy="12" r="6" fill="currentColor" />
-        </svg>
-      </button>
+      {/* 录制按钮 + tooltip */}
+      <div className="mole-record-wrap">
+        <button
+          className="mole-record-btn"
+          type="button"
+          aria-label="录制工作流"
+          onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
+          onClick={(e) => { e.preventDefault(); e.stopPropagation(); onRecordClick(); }}
+          onMouseEnter={enterHover}
+          onMouseLeave={leaveHover}
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <circle cx="12" cy="12" r="6" fill="currentColor" />
+          </svg>
+        </button>
+        <span className="mole-record-tooltip">录制工作流</span>
+      </div>
 
       {/* 迷你操作卡片 */}
       <PillActionCard
