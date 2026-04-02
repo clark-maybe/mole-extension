@@ -39,3 +39,5 @@ docs/.vitepress/cache
 .trellis/
 
 /cc-src-learning
+/.claude
+/.cursor

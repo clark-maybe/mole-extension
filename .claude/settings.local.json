@@ -107,7 +107,8 @@
       "Bash(grep:*)",
       "Bash(find /Users/clark/MySpace/mole-extension/src -name *.ts -o -name *.tsx)",
       "Bash(git pull:*)",
-      "WebSearch"
+      "WebSearch",
+      "Bash(claude:*)"
     ],
     "deny": [],
     "ask": []
