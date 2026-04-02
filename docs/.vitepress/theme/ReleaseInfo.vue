@@ -68,7 +68,7 @@ function formatSize(bytes: number) {
       {{ isZh ? '暂无发布版本，你可以从源码构建安装。' : 'No releases yet. You can install by building from source.' }}
     </p>
     <a
-      :href="isZh ? '/zh/guide/getting-started' : '/guide/getting-started'"
+      :href="isZh ? '/guide/getting-started' : '/en/guide/getting-started'"
       class="source-link"
     >
       {{ isZh ? '查看源码构建指南 →' : 'Build from Source Guide →' }}
