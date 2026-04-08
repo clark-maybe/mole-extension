@@ -123,24 +123,22 @@ export const getStyles = () => `
     background: radial-gradient(circle at 14% 50%, rgba(22, 119, 255, 0.16), rgba(22, 119, 255, 0));
   }
 
-  .mole-trigger.task-running .mole-pill,
-  .mole-trigger.task-done .mole-pill,
-  .mole-trigger.task-error .mole-pill,
   .mole-trigger.announce .mole-pill,
   .mole-trigger.auditing .mole-pill {
     width: ${PILL_WIDTH}px;
     transform: translateX(0);
   }
 
-  .mole-trigger.side-right.hovering:not(.task-running):not(.task-done):not(.task-error):not(.announce):not(.auditing) .mole-pill,
-  .mole-trigger.side-right.active:not(.task-running):not(.task-done):not(.task-error):not(.announce):not(.auditing) .mole-pill {
-    transform: translateX(${PILL_WIDTH - PILL_COMPACT_WIDTH}px);
+  /* hover / active：略微滑出，露出完整 logo + 一点文字 */
+  .mole-trigger.side-right.hovering:not(.announce):not(.auditing) .mole-pill,
+  .mole-trigger.side-right.active:not(.announce):not(.auditing) .mole-pill {
+    transform: translateX(${TUCK_OFFSET - 56}px);
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12);
   }
 
-  .mole-trigger.side-left.hovering:not(.task-running):not(.task-done):not(.task-error):not(.announce):not(.auditing) .mole-pill,
-  .mole-trigger.side-left.active:not(.task-running):not(.task-done):not(.task-error):not(.announce):not(.auditing) .mole-pill {
-    transform: translateX(-${PILL_WIDTH - PILL_COMPACT_WIDTH}px);
+  .mole-trigger.side-left.hovering:not(.announce):not(.auditing) .mole-pill,
+  .mole-trigger.side-left.active:not(.announce):not(.auditing) .mole-pill {
+    transform: translateX(-${TUCK_OFFSET - 56}px);
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12);
   }
 
@@ -162,7 +160,9 @@ export const getStyles = () => `
   .mole-trigger.dragging .mole-pill-info {
     opacity: 0;
     width: 0;
+    flex: 0;
     margin: 0;
+    padding: 0;
     overflow: hidden;
     transition: opacity 0.12s ease;
   }
@@ -242,35 +242,29 @@ export const getStyles = () => `
   }
 
   .mole-trigger.task-running .mole-pill {
-    box-shadow: 0 2px 12px rgba(0, 113, 227, 0.18);
+    box-shadow: 0 0 20px rgba(22, 119, 255, 0.5), 0 0 8px rgba(124, 58, 237, 0.3);
+    animation: mole-pill-glow 2s ease-in-out infinite;
+  }
+
+  @keyframes mole-pill-glow {
+    0%, 100% {
+      box-shadow: 0 0 18px rgba(22, 119, 255, 0.45), 0 0 6px rgba(124, 58, 237, 0.25);
+    }
+    50% {
+      box-shadow: 0 0 36px rgba(22, 119, 255, 0.7), 0 0 14px rgba(124, 58, 237, 0.45);
+    }
   }
 
   .mole-trigger.task-running .mole-pill-meta {
     color: var(--ec-primary-strong);
   }
 
-  .mole-trigger.task-done .mole-shortcut {
-    color: var(--ec-success);
-  }
-
   .mole-trigger.task-done .mole-pill {
-    box-shadow: 0 2px 12px rgba(36, 138, 61, 0.18);
-  }
-
-  .mole-trigger.task-done .mole-pill-meta {
-    color: var(--ec-success);
-  }
-
-  .mole-trigger.task-error .mole-shortcut {
-    color: var(--ec-danger);
+    box-shadow: 0 0 10px rgba(18, 183, 106, 0.3), 0 2px 8px rgba(0, 0, 0, 0.06);
   }
 
   .mole-trigger.task-error .mole-pill {
-    box-shadow: 0 2px 12px rgba(215, 0, 21, 0.18);
-  }
-
-  .mole-trigger.task-error .mole-pill-meta {
-    color: var(--ec-danger);
+    box-shadow: 0 0 10px rgba(239, 68, 68, 0.3), 0 2px 8px rgba(0, 0, 0, 0.06);
   }
 
   .mole-pill-notice {
@@ -320,12 +314,20 @@ export const getStyles = () => `
     z-index: 1;
   }
 
-  .mole-trigger.side-right:not(.task-running):not(.task-done):not(.task-error):not(.announce):not(.auditing)::after {
-    left: calc(50% + ${PILL_WIDTH - PILL_COMPACT_WIDTH}px);
+  .mole-trigger.side-right:not(.announce):not(.auditing)::after {
+    left: calc(50% + ${TUCK_OFFSET}px);
+    transition: left 0.36s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .mole-trigger.side-right.hovering:not(.announce):not(.auditing)::after {
+    left: calc(50% + ${TUCK_OFFSET - 56}px);
   }
 
-  .mole-trigger.side-left:not(.task-running):not(.task-done):not(.task-error):not(.announce):not(.auditing)::after {
-    left: calc(50% - ${PILL_WIDTH - PILL_COMPACT_WIDTH}px);
+  .mole-trigger.side-left:not(.announce):not(.auditing)::after {
+    left: calc(50% - ${TUCK_OFFSET}px);
+    transition: left 0.36s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .mole-trigger.side-left.hovering:not(.announce):not(.auditing)::after {
+    left: calc(50% - ${TUCK_OFFSET - 56}px);
   }
 
   .mole-trigger.notice-visible .mole-pill-notice {
@@ -355,12 +357,20 @@ export const getStyles = () => `
     z-index: 2;
   }
 
-  .mole-trigger.side-right:not(.task-running):not(.task-done):not(.task-error):not(.announce):not(.auditing) .mole-settings-btn {
-    left: calc(50% + ${PILL_WIDTH - PILL_COMPACT_WIDTH}px);
+  .mole-trigger.side-right:not(.announce):not(.auditing) .mole-settings-btn {
+    left: calc(50% + ${TUCK_OFFSET}px);
+    transition: opacity 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease, left 0.36s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .mole-trigger.side-right.hovering:not(.announce):not(.auditing) .mole-settings-btn {
+    left: calc(50% + ${TUCK_OFFSET - 56}px);
   }
 
-  .mole-trigger.side-left:not(.task-running):not(.task-done):not(.task-error):not(.announce):not(.auditing) .mole-settings-btn {
-    left: calc(50% - ${PILL_WIDTH - PILL_COMPACT_WIDTH}px);
+  .mole-trigger.side-left:not(.announce):not(.auditing) .mole-settings-btn {
+    left: calc(50% - ${TUCK_OFFSET}px);
+    transition: opacity 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease, left 0.36s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .mole-trigger.side-left.hovering:not(.announce):not(.auditing) .mole-settings-btn {
+    left: calc(50% - ${TUCK_OFFSET - 56}px);
   }
 
   .mole-settings-btn svg {
@@ -813,7 +823,7 @@ export const getStyles = () => `
     backdrop-filter: blur(28px) saturate(155%);
     -webkit-backdrop-filter: blur(28px) saturate(155%);
     border: 1px solid rgba(219, 227, 238, 0.6);
-    border-radius: 22px;
+    border-radius: 30px;
     box-shadow: 0 16px 48px rgba(15, 23, 42, 0.12), 0 4px 16px rgba(15, 23, 42, 0.06);
     overflow: hidden;
 
@@ -828,12 +838,66 @@ export const getStyles = () => `
     opacity: 1;
   }
 
+  /* ---- 流光边框 wrapper ---- */
+  .mole-searchbox-wrap {
+    position: relative;
+    border-radius: 32px;
+    overflow: hidden;
+    padding: 2px;
+    background: transparent;
+    transition: box-shadow 0.4s ease;
+  }
+
+  .mole-searchbox-wrap::before {
+    content: '';
+    position: absolute;
+    /* 始终保持正方形，以宽度为基准，确保任何高度下旋转都均匀 */
+    left: 50%;
+    top: 50%;
+    width: 150%;
+    aspect-ratio: 1;
+    transform: translate(-50%, -50%);
+    background: conic-gradient(
+      from 0deg,
+      transparent 0deg,
+      transparent 80deg,
+      rgba(22, 119, 255, 0.35) 140deg,
+      rgba(124, 58, 237, 0.25) 180deg,
+      rgba(22, 119, 255, 0.35) 220deg,
+      transparent 280deg,
+      transparent 360deg
+    );
+    opacity: 0;
+    transition: opacity 0.4s ease;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .mole-searchbox-wrap.state-running::before {
+    opacity: 1;
+    animation: mole-glow-spin 2.8s linear infinite;
+  }
+
+  .mole-searchbox-wrap.state-running {
+    box-shadow: 0 0 20px -6px rgba(22, 119, 255, 0.1);
+  }
+
+  /* searchbox 需要在伪元素之上，自带背景遮住中间区域 */
+  .mole-searchbox-wrap > .mole-searchbox {
+    position: relative;
+    z-index: 1;
+  }
+
+  @keyframes mole-glow-spin {
+    to { transform: translate(-50%, -50%) rotate(360deg); }
+  }
+
   .mole-searchbox.state-running {
-    border-color: rgba(22, 119, 255, 0.18);
+    border-color: transparent;
   }
 
   .mole-searchbox.state-done {
-    border-color: rgba(18, 183, 106, 0.18);
+    border-color: rgba(18, 183, 106, 0.45);
   }
 
   .mole-searchbox.state-error {
@@ -881,8 +945,31 @@ export const getStyles = () => `
   }
 
   .mole-input:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
+    opacity: 1;
+    cursor: default;
+  }
+
+  /* 运行态扫光 placeholder */
+  .state-running .mole-input::placeholder {
+    background: linear-gradient(
+      90deg,
+      var(--ec-text-muted) 0%,
+      var(--ec-text-muted) 35%,
+      rgba(22, 119, 255, 0.85) 50%,
+      var(--ec-text-muted) 65%,
+      var(--ec-text-muted) 100%
+    );
+    background-size: 250% 100%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    animation: mole-shimmer-text 2.4s ease-in-out infinite;
+    opacity: 1;
+  }
+
+  @keyframes mole-shimmer-text {
+    0% { background-position: 100% center; }
+    100% { background-position: -50% center; }
   }
 
   .mole-input-hint {
@@ -1446,7 +1533,35 @@ export const getStyles = () => `
   }
 
   .mole-call-item.tone-action .mole-call-header {
-    background: rgba(124, 58, 237, 0.05);
+    background: rgba(22, 119, 255, 0.06);
+    animation: mole-call-bg-pulse 1.8s ease-in-out infinite;
+  }
+
+  .mole-call-item.tone-action .mole-task-runtime-step-dot {
+    background: rgba(22, 119, 255, 0.7);
+    box-shadow: 0 0 0 0 rgba(22, 119, 255, 0.4);
+    animation: mole-dot-pulse 1.8s ease-in-out infinite;
+  }
+
+  .mole-call-item.tone-action .mole-call-status.running {
+    color: var(--ec-primary);
+    animation: mole-loader-fade 1.2s ease-in-out infinite;
+  }
+
+  @keyframes mole-call-bg-pulse {
+    0%, 100% { background: rgba(22, 119, 255, 0.04); }
+    50% { background: rgba(22, 119, 255, 0.1); }
+  }
+
+  @keyframes mole-dot-pulse {
+    0%, 100% {
+      box-shadow: 0 0 0 0 rgba(22, 119, 255, 0.35);
+      transform: scale(1);
+    }
+    50% {
+      box-shadow: 0 0 0 4px rgba(22, 119, 255, 0);
+      transform: scale(1.15);
+    }
   }
 
   .mole-call-item.tone-issue .mole-call-header {
@@ -2908,11 +3023,19 @@ export const getStyles = () => `
     flex-direction: column;
     align-items: center;
   }
-  .mole-trigger.side-right:not(.task-running):not(.task-done):not(.task-error):not(.announce):not(.auditing) .mole-record-wrap {
-    left: calc(50% + ${PILL_WIDTH - PILL_COMPACT_WIDTH}px);
+  .mole-trigger.side-right:not(.announce):not(.auditing) .mole-record-wrap {
+    left: calc(50% + ${TUCK_OFFSET}px);
+    transition: opacity 0.2s ease, transform 0.2s ease, left 0.36s cubic-bezier(0.22, 1, 0.36, 1);
   }
-  .mole-trigger.side-left:not(.task-running):not(.task-done):not(.task-error):not(.announce):not(.auditing) .mole-record-wrap {
-    left: calc(50% - ${PILL_WIDTH - PILL_COMPACT_WIDTH}px);
+  .mole-trigger.side-right.hovering:not(.announce):not(.auditing) .mole-record-wrap {
+    left: calc(50% + ${TUCK_OFFSET - 56}px);
+  }
+  .mole-trigger.side-left:not(.announce):not(.auditing) .mole-record-wrap {
+    left: calc(50% - ${TUCK_OFFSET}px);
+    transition: opacity 0.2s ease, transform 0.2s ease, left 0.36s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .mole-trigger.side-left.hovering:not(.announce):not(.auditing) .mole-record-wrap {
+    left: calc(50% - ${TUCK_OFFSET - 56}px);
   }
   .mole-trigger.hovering .mole-record-wrap,
   .mole-trigger:focus-within .mole-record-wrap {

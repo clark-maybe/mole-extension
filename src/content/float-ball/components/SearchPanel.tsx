@@ -73,35 +73,37 @@ export const SearchPanel: React.FC<{ stopRecording: () => void; cancelAuditing?:
       ref={overlayRef}
       onMouseDown={handleOverlayClick}
     >
-      <div className={`mole-searchbox ${boxState}`}>
-        <InputBar resultRef={resultRef} />
-        <div className="mole-divider" />
-        <ResultView />
-        {/* 审批卡片（独立于 ResultView，不依赖 currentTask） */}
-        {state.approvalRequest && (
-          <ApprovalCard
-            key={state.approvalRequest.requestId}
-            requestId={state.approvalRequest.requestId}
-            message={state.approvalRequest.message}
-          />
-        )}
-        {/* 提问卡片 */}
-        {state.askUserRequest && (
-          <AskUserCard
-            key={state.askUserRequest.requestId}
-            requestId={state.askUserRequest.requestId}
-            question={state.askUserRequest.question}
-            options={state.askUserRequest.options}
-            allowFreeText={state.askUserRequest.allowFreeText}
-          />
-        )}
-        <div className="mole-divider mole-divider-bottom" />
-        <RecorderBar onStop={stopRecording} onCancelAudit={cancelAuditing} />
-        <BgTasksPanel />
-        <div className="mole-footer">
-          <span className="mole-footer-icon">✦</span>
-          <span className="mole-footer-text">{getFooterText()}</span>
-          <span className="mole-footer-time">{getFooterTime()}</span>
+      <div className={`mole-searchbox-wrap ${boxState}`}>
+        <div className={`mole-searchbox ${boxState}`}>
+          <InputBar resultRef={resultRef} />
+          <div className="mole-divider" />
+          <ResultView />
+          {/* 审批卡片（独立于 ResultView，不依赖 currentTask） */}
+          {state.approvalRequest && (
+            <ApprovalCard
+              key={state.approvalRequest.requestId}
+              requestId={state.approvalRequest.requestId}
+              message={state.approvalRequest.message}
+            />
+          )}
+          {/* 提问卡片 */}
+          {state.askUserRequest && (
+            <AskUserCard
+              key={state.askUserRequest.requestId}
+              requestId={state.askUserRequest.requestId}
+              question={state.askUserRequest.question}
+              options={state.askUserRequest.options}
+              allowFreeText={state.askUserRequest.allowFreeText}
+            />
+          )}
+          <div className="mole-divider mole-divider-bottom" />
+          <RecorderBar onStop={stopRecording} onCancelAudit={cancelAuditing} />
+          <BgTasksPanel />
+          <div className="mole-footer">
+            <span className="mole-footer-icon">✦</span>
+            <span className="mole-footer-text">{getFooterText()}</span>
+            <span className="mole-footer-time">{getFooterTime()}</span>
+          </div>
         </div>
       </div>
     </div>

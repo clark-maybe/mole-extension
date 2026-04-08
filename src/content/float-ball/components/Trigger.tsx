@@ -8,8 +8,6 @@ import { SHORTCUT_TEXT, DISABLED_DOMAINS_KEY } from '../constants';
 import { useMole } from '../context/useMole';
 import { useDrag } from '../hooks/useDrag';
 import { usePosition } from '../hooks/usePosition';
-import { useSecondTick } from '../hooks/useGlobalEvents';
-import { buildTaskTitle, formatDuration } from '../text-utils';
 import Channel from '../../../lib/channel';
 
 /** 迷你操作卡片：悬浮球上方的审批/提问快捷卡 */
@@ -228,22 +226,16 @@ export const Trigger: React.FC<{ onRecordClick: () => void }> = ({ onRecordClick
     dispatch({ type: 'SET_CLOSE_MENU', payload: !state.closeMenuVisible });
   }, [dispatch, state.closeMenuVisible]);
 
-  // 稳定的每秒计时器（仅运行中时激活）
   const task = state.currentTask;
-  const isTaskRunning = task?.status === 'running';
-  useSecondTick(isTaskRunning === true);
 
   // 状态文本
   const pillState = task ? task.status : 'idle';
   const statusText = state.isRecorderAuditing
     ? '整理工作流中...'
-    : task ? buildTaskTitle(task.title || task.query) : '';
-  const elapsed = isTaskRunning ? Math.max(0, Date.now() - task.startedAt) : 0;
+    : '';
   const metaText = state.isRecorderAuditing
     ? '录制完成，AI 处理中'
-    : isTaskRunning
-      ? `已运行 ${formatDuration(elapsed)}`
-      : `${SHORTCUT_TEXT} 打开`;
+    : `${SHORTCUT_TEXT} 打开`;
 
   // CSS class 拼接
   const triggerClass = [
