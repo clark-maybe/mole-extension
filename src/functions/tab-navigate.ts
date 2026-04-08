@@ -7,7 +7,7 @@ import type { FunctionDefinition } from './types';
 
 export const tabNavigateFunction: FunctionDefinition = {
   name: 'tab_navigate',
-  description: '标签页导航控制。支持：打开/关闭/切换/列出/刷新/前进后退/复制标签页/固定标签页/静音标签页/移动标签页位置等操作。\n\n⚠️ 不要用此工具来：\n- 不要用 navigate 跳转用户正在浏览的页面（用 open 打开新标签页代替）\n- close 前确认不会丢失用户正在进行的工作',
+  description: 'Tab navigation control. Supports: open/close/switch/list/reload/go back & forward/duplicate/pin/mute/move tab position.\n\n⚠️ Do NOT use this tool for:\n- Do not use navigate to redirect the page the user is currently browsing (use open to create a new tab instead)\n- Before close, make sure it will not lose the user\'s ongoing work',
   supportsParallel: false,
   permissionLevel: 'interact',
   actionPermissions: {
@@ -24,50 +24,50 @@ export const tabNavigateFunction: FunctionDefinition = {
       action: {
         type: 'string',
         enum: ['open', 'navigate', 'close', 'switch', 'list', 'current', 'reload', 'duplicate', 'pin', 'mute', 'move', 'go_back', 'go_forward'],
-        description: '操作类型：open(新标签页)/navigate(当前标签页内跳转)/close/switch/list/current/reload/duplicate/pin/mute/move/go_back/go_forward',
+        description: 'Action type: open(new tab)/navigate(navigate within current tab)/close/switch/list/current/reload/duplicate/pin/mute/move/go_back/go_forward',
       },
       url: {
         type: 'string',
-        description: '打开新标签页或当前标签页内跳转的 URL（action=open/navigate 时必传）',
+        description: 'URL to open in a new tab or navigate within the current tab (required when action=open/navigate)',
       },
       tab_id: {
         type: 'number',
-        description: '目标标签页 ID（action=close/switch 时使用）',
+        description: 'Target tab ID (used when action=close/switch)',
       },
       active: {
         type: 'boolean',
-        description: '是否激活（聚焦）标签页。默认 false（后台打开，不打扰用户）。仅当用户明确要求跳转/查看时才设为 true',
+        description: 'Whether to activate (focus) the tab. Default false (opens in background without disturbing the user). Only set to true when the user explicitly requests to navigate/view',
       },
       bypass_cache: {
         type: 'boolean',
-        description: '刷新标签页时是否跳过缓存（action=reload）',
+        description: 'Whether to bypass cache when reloading the tab (action=reload)',
       },
       pinned: {
         type: 'boolean',
-        description: '是否固定标签页（action=pin）。默认 true',
+        description: 'Whether to pin the tab (action=pin). Default true',
       },
       muted: {
         type: 'boolean',
-        description: '是否静音标签页（action=mute）。默认 true',
+        description: 'Whether to mute the tab (action=mute). Default true',
       },
       index: {
         type: 'number',
-        description: '移动到的目标位置（action=move，0 为最左）',
+        description: 'Target position to move to (action=move, 0 is leftmost)',
       },
       keep_alive: {
         type: 'boolean',
-        description: '默认 false（任务结束自动关闭）。几乎不需要设为 true。仅当用户明确说"打开给我看"/"帮我打开这个网页"等需要保留页面的场景才设为 true。工作过程中打开的临时标签页（搜索、查资料、采集数据）绝对不要设为 true',
+        description: 'Default false (auto-close when task ends). Almost never needs to be true. Only set to true when the user explicitly says "open it for me" / "show me this page" and wants the page to persist. Temporary tabs opened during work (searching, researching, data collection) should NEVER be set to true',
       },
     },
     required: ['action'],
   },
   validate: (params: { action?: string; url?: string; tab_id?: number; index?: number }) => {
     const action = params.action;
-    if (!action) return '缺少 action';
-    if (action === 'open' && !params.url) return 'open 需要提供 url';
-    if (action === 'navigate' && !params.url) return 'navigate 需要提供 url';
-    if (action === 'switch' && typeof params.tab_id !== 'number') return 'switch 需要提供 tab_id';
-    if (action === 'move' && typeof params.index !== 'number') return 'move 需要提供 index';
+    if (!action) return 'Missing action';
+    if (action === 'open' && !params.url) return 'open requires url';
+    if (action === 'navigate' && !params.url) return 'navigate requires url';
+    if (action === 'switch' && typeof params.tab_id !== 'number') return 'switch requires tab_id';
+    if (action === 'move' && typeof params.index !== 'number') return 'move requires index';
     return null;
   },
   execute: async (

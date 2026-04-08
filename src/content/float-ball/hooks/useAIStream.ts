@@ -72,7 +72,7 @@ export const useAIStream = (resultRef: React.RefObject<HTMLDivElement | null>) =
           if (parsed?.arguments) {
             try {
               const args = typeof parsed.arguments === 'string' ? JSON.parse(parsed.arguments) : parsed.arguments;
-              if (funcName === 'skill' || funcName === 'site_workflow') {
+              if (funcName === 'skill') {
                 if (args?.name) label = `${label}：${args.name}`;
               } else if (funcName === 'todo') {
                 const action = args?.action;

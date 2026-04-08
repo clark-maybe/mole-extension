@@ -92,7 +92,7 @@ export const computeNextScheduleRun = (rule: string): number => {
 
 export const timerFunction: FunctionDefinition = {
   name: 'timer',
-  description: '定时器管理。支持 set_timeout(延时任务)、set_interval(周期任务)、set_schedule(定时调度：每天/每周)、update(修改定时器)、clear(取消)、list(列出)。到期后 AI 会自动执行指定操作并推送结果。',
+  description: 'Timer management. Supports set_timeout (delayed task), set_interval (periodic task), set_schedule (scheduled: daily/weekly), update (modify timer), clear (cancel), list (list all). When a timer fires, AI automatically executes the specified action and pushes the result.',
   supportsParallel: false,
   permissionLevel: 'interact',
   parameters: {
@@ -101,111 +101,111 @@ export const timerFunction: FunctionDefinition = {
       action: {
         type: 'string',
         enum: ['set_timeout', 'set_interval', 'set_schedule', 'update', 'clear', 'list'],
-        description: '操作类型：set_timeout(延时任务)、set_interval(周期任务)、set_schedule(定时调度)、update(修改定时器)、clear(取消)、list(列出)',
+        description: 'Action type: set_timeout (delayed task), set_interval (periodic task), set_schedule (scheduled task), update (modify timer), clear (cancel), list (list all)',
       },
       name: {
         type: 'string',
-        description: '任务友好名称（如"每日天气"、"价格监控"），在后台任务面板中显示',
+        description: 'Friendly task name (e.g. "daily weather", "price monitor"), displayed in the background task panel',
       },
       // set_timeout / set_interval / set_schedule 共用
       task_action: {
         type: 'string',
-        description: '到期时要执行的操作描述（action=set_timeout/set_interval 时必填）。会作为新一轮 AI 对话的输入。例如："搜索今天的天气预报并告诉用户"',
+        description: 'Action description to execute when the timer fires (required for set_timeout/set_interval). Used as input for a new AI conversation. E.g. "Search today\'s weather forecast and tell the user"',
       },
       // set_timeout 专用
       delay_ms: {
         type: 'number',
-        description: '延迟毫秒数（可小于1分钟）。可与 delay_seconds / delay_minutes 叠加使用；与 execute_at 二选一',
+        description: 'Delay in milliseconds (can be less than 1 minute). Can be combined with delay_seconds/delay_minutes; mutually exclusive with execute_at',
       },
       delay_seconds: {
         type: 'number',
-        description: '延迟秒数。可与 delay_ms / delay_minutes 叠加使用；与 execute_at 二选一',
+        description: 'Delay in seconds. Can be combined with delay_ms/delay_minutes; mutually exclusive with execute_at',
       },
       delay_minutes: {
         type: 'number',
-        description: '延迟分钟数。可与 delay_ms / delay_seconds 叠加使用；与 execute_at 二选一',
+        description: 'Delay in minutes. Can be combined with delay_ms/delay_seconds; mutually exclusive with execute_at',
       },
       execute_at: {
         type: 'string',
-        description: '执行时间，ISO 8601 格式。与 delay_* 二选一',
+        description: 'Execution time in ISO 8601 format. Mutually exclusive with delay_*',
       },
       // set_interval 专用
       interval_ms: {
         type: 'number',
-        description: '执行间隔（毫秒），可与 interval_seconds / interval_minutes 叠加',
+        description: 'Execution interval in milliseconds, can be combined with interval_seconds/interval_minutes',
       },
       interval_seconds: {
         type: 'number',
-        description: '执行间隔（秒），可与 interval_ms / interval_minutes 叠加',
+        description: 'Execution interval in seconds, can be combined with interval_ms/interval_minutes',
       },
       interval_minutes: {
         type: 'number',
-        description: '执行间隔（分钟），可与 interval_ms / interval_seconds 叠加',
+        description: 'Execution interval in minutes, can be combined with interval_ms/interval_seconds',
       },
       max_count: {
         type: 'number',
-        description: '最大执行次数，达到后自动停止。默认10次，最大100次',
+        description: 'Maximum execution count, auto-stops when reached. Default 10, max 100',
       },
       // set_schedule 专用
       daily_at: {
         type: 'string',
-        description: '每天执行时间，HH:MM 格式（如 "09:00"、"14:30"）。仅 set_schedule 使用，与 weekly_at 二选一',
+        description: 'Daily execution time in HH:MM format (e.g. "09:00", "14:30"). Only for set_schedule, mutually exclusive with weekly_at',
       },
       weekly_at: {
         type: 'string',
-        description: '每周执行时间，"Day HH:MM" 格式（如 "Mon 09:00"、"Fri 18:00"）。Day 支持 Mon/Tue/Wed/Thu/Fri/Sat/Sun。仅 set_schedule 使用，与 daily_at 二选一',
+        description: 'Weekly execution time in "Day HH:MM" format (e.g. "Mon 09:00", "Fri 18:00"). Day supports Mon/Tue/Wed/Thu/Fri/Sat/Sun. Only for set_schedule, mutually exclusive with daily_at',
       },
       // clear / update 专用
       timer_id: {
         type: 'string',
-        description: '要操作的定时器 ID（action=clear/update 时必填）',
+        description: 'Timer ID to operate on (required for action=clear/update)',
       },
     },
     required: ['action'],
   },
   validate: (params: any) => {
-    if (!params?.action) return '缺少 action';
+    if (!params?.action) return 'Missing action';
 
     if (params.action === 'set_timeout') {
-      if (!params.task_action || !params.task_action.trim()) return 'task_action 不能为空';
+      if (!params.task_action || !params.task_action.trim()) return 'task_action must not be empty';
       // 复用原 setTimeoutFunction 的校验逻辑
       const hasDelay = ['delay_ms', 'delay_seconds', 'delay_minutes'].some((field) => {
         const value = (params as Record<string, unknown>)[field];
         return typeof value === 'number' && Number.isFinite(value);
       });
       const hasExecuteAt = typeof params.execute_at === 'string' && params.execute_at.trim().length > 0;
-      if (!hasDelay && !hasExecuteAt) return '需要提供 delay_ms/delay_seconds/delay_minutes 或 execute_at';
-      if (hasDelay && hasExecuteAt) return 'execute_at 与 delay_* 不能同时提供';
+      if (!hasDelay && !hasExecuteAt) return 'Must provide delay_ms/delay_seconds/delay_minutes or execute_at';
+      if (hasDelay && hasExecuteAt) return 'execute_at and delay_* cannot be used together';
     }
 
     if (params.action === 'set_interval') {
-      if (!params.task_action || !params.task_action.trim()) return 'task_action 不能为空';
+      if (!params.task_action || !params.task_action.trim()) return 'task_action must not be empty';
       const hasInterval = ['interval_ms', 'interval_seconds', 'interval_minutes'].some((field) => {
         const value = (params as Record<string, unknown>)[field];
         return typeof value === 'number' && Number.isFinite(value);
       });
-      if (!hasInterval) return '需要提供 interval_ms/interval_seconds/interval_minutes 之一';
-      if (typeof params.max_count === 'number' && params.max_count <= 0) return 'max_count 必须大于 0';
+      if (!hasInterval) return 'Must provide one of interval_ms/interval_seconds/interval_minutes';
+      if (typeof params.max_count === 'number' && params.max_count <= 0) return 'max_count must be greater than 0';
     }
 
     if (params.action === 'set_schedule') {
-      if (!params.task_action || !params.task_action.trim()) return 'task_action 不能为空';
+      if (!params.task_action || !params.task_action.trim()) return 'task_action must not be empty';
       const hasDaily = typeof params.daily_at === 'string' && params.daily_at.trim().length > 0;
       const hasWeekly = typeof params.weekly_at === 'string' && params.weekly_at.trim().length > 0;
-      if (!hasDaily && !hasWeekly) return '需要提供 daily_at 或 weekly_at';
-      if (hasDaily && hasWeekly) return 'daily_at 与 weekly_at 不能同时提供';
-      if (hasDaily && !/^\d{1,2}:\d{2}$/.test(params.daily_at.trim())) return 'daily_at 格式应为 HH:MM';
+      if (!hasDaily && !hasWeekly) return 'Must provide daily_at or weekly_at';
+      if (hasDaily && hasWeekly) return 'daily_at and weekly_at cannot be used together';
+      if (hasDaily && !/^\d{1,2}:\d{2}$/.test(params.daily_at.trim())) return 'daily_at format should be HH:MM';
       if (hasWeekly && !/^(Mon|Tue|Wed|Thu|Fri|Sat|Sun)\s+\d{1,2}:\d{2}$/i.test(params.weekly_at.trim())) {
-        return 'weekly_at 格式应为 "Day HH:MM"，如 "Mon 09:00"';
+        return 'weekly_at format should be "Day HH:MM", e.g. "Mon 09:00"';
       }
     }
 
     if (params.action === 'update') {
-      if (!params.timer_id || !params.timer_id.trim()) return 'timer_id 不能为空';
+      if (!params.timer_id || !params.timer_id.trim()) return 'timer_id must not be empty';
     }
 
     if (params.action === 'clear') {
-      if (!params.timer_id || !params.timer_id.trim()) return 'timer_id 不能为空';
+      if (!params.timer_id || !params.timer_id.trim()) return 'timer_id must not be empty';
     }
 
     return null;

@@ -198,12 +198,12 @@ const evaluateDOMByNodeId = async (
 export const cdpDomFunction: FunctionDefinition = {
   name: 'cdp_dom',
   description: [
-    '读写页面 DOM 元素、CSS 样式和页面存储。',
-    'DOM 操作：query_selector/get_text/set_text/get_html/set_html/insert_html/set_attribute/remove_node/add_class/remove_class/set_inline_style/clone_element/wait_for 等。',
-    'CSS 样式（css_前缀）：css_get_computed_style/css_get_matched_rules/css_set_style/css_add_rule 等。',
-    '页面存储（storage_前缀）：storage_get_items/storage_get_item/storage_set_item/storage_remove_item/storage_clear。',
-    '定位方式：selector（CSS 选择器）或 node_id。',
-  ].join(' ') + '\n\n⚠️ 不要用此工具来：\n- 点击或输入操作（用 cdp_input）\n- 读取页面正文内容（用 page_viewer）',
+    'Read and write page DOM elements, CSS styles, and page storage.',
+    'DOM operations: query_selector/get_text/set_text/get_html/set_html/insert_html/set_attribute/remove_node/add_class/remove_class/set_inline_style/clone_element/wait_for, etc.',
+    'CSS styles (css_ prefix): css_get_computed_style/css_get_matched_rules/css_set_style/css_add_rule, etc.',
+    'Page storage (storage_ prefix): storage_get_items/storage_get_item/storage_set_item/storage_remove_item/storage_clear.',
+    'Targeting: selector (CSS selector) or node_id.',
+  ].join(' ') + '\n\n⚠️ Do NOT use this tool for:\n- Click or input operations (use cdp_input)\n- Reading page body content (use page_viewer)',
   supportsParallel: true,
   permissionLevel: 'interact',
   actionPermissions: {
@@ -236,108 +236,108 @@ export const cdpDomFunction: FunctionDefinition = {
       action: {
         type: 'string',
         enum: [...ALL_ACTIONS],
-        description: '操作类型。DOM 操作：query_selector/query_selector_all/get_outer_html/get_attributes/get_box_model/set_attribute/remove_attribute/set_outer_html/remove_node/get_document/get_text/set_text/get_html/set_html/insert_html/set_inline_style/get_computed_style_simple/add_class/remove_class/toggle_class/clone_element/wait_for。CSS 样式：css_get_computed_style/css_get_matched_rules/css_set_style/css_add_rule/css_get_stylesheets/css_get_stylesheet/css_set_stylesheet。页面存储：storage_get_items/storage_get_item/storage_set_item/storage_remove_item/storage_clear。',
+        description: 'Action type. DOM operations: query_selector/query_selector_all/get_outer_html/get_attributes/get_box_model/set_attribute/remove_attribute/set_outer_html/remove_node/get_document/get_text/set_text/get_html/set_html/insert_html/set_inline_style/get_computed_style_simple/add_class/remove_class/toggle_class/clone_element/wait_for. CSS styles: css_get_computed_style/css_get_matched_rules/css_set_style/css_add_rule/css_get_stylesheets/css_get_stylesheet/css_set_stylesheet. Page storage: storage_get_items/storage_get_item/storage_set_item/storage_remove_item/storage_clear.',
       },
       selector: {
         type: 'string',
-        description: 'CSS 选择器（query_selector/query_selector_all 必填，其他 action 可替代 node_id）',
+        description: 'CSS selector (required for query_selector/query_selector_all, can substitute node_id for other actions)',
       },
       node_id: {
         type: 'number',
-        description: '目标节点 ID（通过 query_selector 获取）。大部分 action 也支持 selector 替代。',
+        description: 'Target node ID (obtained via query_selector). Most actions also support selector as alternative.',
       },
       name: {
         type: 'string',
-        description: 'set_attribute/remove_attribute 的属性名',
+        description: 'Attribute name for set_attribute/remove_attribute',
       },
       value: {
         type: 'string',
-        description: '多用途值参数：set_attribute 的属性值 / set_text/set_html/insert_html 的内容 / add_class/remove_class/toggle_class 的类名（空格分隔） / storage_set_item 的值',
+        description: 'Multi-purpose value parameter: attribute value for set_attribute / content for set_text/set_html/insert_html / class names (space-separated) for add_class/remove_class/toggle_class / value for storage_set_item',
       },
       outer_html: {
         type: 'string',
-        description: 'set_outer_html 的新 HTML 内容',
+        description: 'New HTML content for set_outer_html',
       },
       depth: {
         type: 'number',
-        description: 'get_document 时的遍历深度，默认 2（-1 表示完整遍历）',
+        description: 'Traversal depth for get_document, default 2 (-1 for full traversal)',
       },
       all: {
         type: 'boolean',
-        description: '批量操作标志。get_text/set_text/get_html/set_html/insert_html/set_inline_style/add_class/remove_class/toggle_class 时操作所有匹配元素，默认 false',
+        description: 'Batch operation flag. Operates on all matching elements for get_text/set_text/get_html/set_html/insert_html/set_inline_style/add_class/remove_class/toggle_class, default false',
       },
       outer: {
         type: 'boolean',
-        description: 'get_html 是否返回 outerHTML（含元素本身标签），默认 false（返回 innerHTML）',
+        description: 'Whether get_html returns outerHTML (including the element tag itself), default false (returns innerHTML)',
       },
       position: {
         type: 'string',
         enum: ['beforebegin', 'afterbegin', 'beforeend', 'afterend'],
-        description: 'insert_html/clone_element 的插入位置，默认 beforeend',
+        description: 'Insertion position for insert_html/clone_element, default beforeend',
       },
       new_id: {
         type: 'string',
-        description: 'clone_element 时为克隆体指定新 ID（避免重复）',
+        description: 'New ID for clone_element to assign to the clone (to avoid duplicates)',
       },
       styles: {
         type: 'object',
-        description: 'set_inline_style 的样式对象，如 {"color":"red","display":"none"}',
+        description: 'Style object for set_inline_style, e.g. {"color":"red","display":"none"}',
       },
       property: {
         type: 'string',
-        description: 'get_computed_style_simple 的 CSS 属性名（必填）',
+        description: 'CSS property name for get_computed_style_simple (required)',
       },
       limit: {
         type: 'number',
-        description: 'query 操作的结果限制，默认 20',
+        description: 'Result limit for query operations, default 20',
       },
       timeout: {
         type: 'number',
-        description: 'wait_for 的超时时间（毫秒），默认 5000',
+        description: 'Timeout in milliseconds for wait_for, default 5000',
       },
       // CSS 域参数
       properties: {
         type: 'array',
         items: { type: 'string' },
-        description: 'css_get_computed_style 时仅返回指定属性（如 ["color", "font-size"]），不传则返回全部',
+        description: 'Return only specified properties for css_get_computed_style (e.g. ["color", "font-size"]), returns all if not provided',
       },
       style_text: {
         type: 'string',
-        description: 'css_set_style 的 CSS 文本（如 "color: red; font-size: 16px;"）',
+        description: 'CSS text for css_set_style (e.g. "color: red; font-size: 16px;")',
       },
       rule_selector: {
         type: 'string',
-        description: 'css_add_rule 的 CSS 选择器（如 ".my-class"、"#my-id"）',
+        description: 'CSS selector for css_add_rule (e.g. ".my-class", "#my-id")',
       },
       rule_text: {
         type: 'string',
-        description: 'css_add_rule 的 CSS 规则文本（如 "color: red; display: none;"）',
+        description: 'CSS rule text for css_add_rule (e.g. "color: red; display: none;")',
       },
       stylesheet_id: {
         type: 'string',
-        description: '样式表 ID（从 css_get_matched_rules 或 css_get_stylesheets 获取）',
+        description: 'Stylesheet ID (obtained from css_get_matched_rules or css_get_stylesheets)',
       },
       stylesheet_text: {
         type: 'string',
-        description: 'css_set_stylesheet 的新样式表内容',
+        description: 'New stylesheet content for css_set_stylesheet',
       },
       // Storage 域参数
       storage_type: {
         type: 'string',
         enum: ['local', 'session'],
-        description: '存储类型：local=localStorage（默认），session=sessionStorage',
+        description: 'Storage type: local=localStorage (default), session=sessionStorage',
       },
       key: {
         type: 'string',
-        description: 'storage_get_item/storage_set_item/storage_remove_item 的键名',
+        description: 'Key name for storage_get_item/storage_set_item/storage_remove_item',
       },
       security_origin: {
         type: 'string',
-        description: '目标页面的 origin（如 "https://example.com"），不传则自动获取',
+        description: 'Target page origin (e.g. "https://example.com"), auto-detected if not provided',
       },
       tab_id: {
         type: 'number',
-        description: '目标标签页 ID，不传则使用当前活动标签页',
+        description: 'Target tab ID, uses current active tab if not provided',
       },
     },
     required: ['action'],
@@ -345,83 +345,83 @@ export const cdpDomFunction: FunctionDefinition = {
 
   validate: (params: any): string | null => {
     const { action } = params || {};
-    if (!action) return '缺少 action 参数';
+    if (!action) return 'Missing action parameter';
     if (!(ALL_ACTIONS as readonly string[]).includes(action)) {
-      return `不支持的 action: ${action}`;
+      return `Unsupported action: ${action}`;
     }
 
     // 原有 DOM 域操作校验
     if (['query_selector', 'query_selector_all'].includes(action) && !params.selector) {
-      return `${action} 需要 selector 参数`;
+      return `${action} requires selector parameter`;
     }
     if (['get_outer_html', 'get_attributes', 'get_box_model', 'set_attribute', 'remove_attribute', 'set_outer_html', 'remove_node'].includes(action)) {
       if (typeof params.node_id !== 'number') {
-        return `${action} 需要 node_id 参数（数字类型）`;
+        return `${action} requires node_id parameter (number type)`;
       }
     }
     if (action === 'set_attribute') {
-      if (!params.name) return 'set_attribute 需要 name 参数';
-      if (params.value === undefined) return 'set_attribute 需要 value 参数';
+      if (!params.name) return 'set_attribute requires name parameter';
+      if (params.value === undefined) return 'set_attribute requires value parameter';
     }
     if (action === 'remove_attribute' && !params.name) {
-      return 'remove_attribute 需要 name 参数';
+      return 'remove_attribute requires name parameter';
     }
     if (action === 'set_outer_html' && !params.outer_html) {
-      return 'set_outer_html 需要 outer_html 参数';
+      return 'set_outer_html requires outer_html parameter';
     }
 
     // 新增 DOM 操作组校验（需要 selector 或 node_id）
     if (['get_text', 'set_text', 'get_html', 'set_html', 'insert_html', 'set_inline_style', 'get_computed_style_simple', 'add_class', 'remove_class', 'toggle_class', 'clone_element'].includes(action)) {
       if (!params.selector && typeof params.node_id !== 'number') {
-        return `${action} 需要 selector 或 node_id 参数`;
+        return `${action} requires selector or node_id parameter`;
       }
     }
     if (action === 'insert_html' && params.value === undefined) {
-      return 'insert_html 需要 value 参数（HTML 内容）';
+      return 'insert_html requires value parameter (HTML content)';
     }
     if (action === 'set_inline_style') {
       if (!params.styles || typeof params.styles !== 'object') {
-        return 'set_inline_style 需要 styles 参数（对象格式）';
+        return 'set_inline_style requires styles parameter (object format)';
       }
     }
     if (action === 'get_computed_style_simple' && !params.property) {
-      return 'get_computed_style_simple 需要 property 参数';
+      return 'get_computed_style_simple requires property parameter';
     }
     if (['add_class', 'remove_class', 'toggle_class'].includes(action) && !params.value) {
-      return `${action} 需要 value 参数（空格分隔的类名）`;
+      return `${action} requires value parameter (space-separated class names)`;
     }
     if (action === 'wait_for' && !params.selector) {
-      return 'wait_for 需要 selector 参数';
+      return 'wait_for requires selector parameter';
     }
 
     // CSS 域操作校验
     if (['css_get_computed_style', 'css_get_matched_rules', 'css_set_style'].includes(action)) {
       if (typeof params.node_id !== 'number' && !params.selector) {
-        return `${action} 需要 node_id 或 selector 参数`;
+        return `${action} requires node_id or selector parameter`;
       }
     }
     if (action === 'css_set_style' && !params.style_text) {
-      return 'css_set_style 需要 style_text 参数';
+      return 'css_set_style requires style_text parameter';
     }
     if (action === 'css_add_rule') {
-      if (!params.rule_selector) return 'css_add_rule 需要 rule_selector 参数';
-      if (!params.rule_text) return 'css_add_rule 需要 rule_text 参数';
+      if (!params.rule_selector) return 'css_add_rule requires rule_selector parameter';
+      if (!params.rule_text) return 'css_add_rule requires rule_text parameter';
     }
     if (action === 'css_get_stylesheet' && !params.stylesheet_id) {
-      return 'css_get_stylesheet 需要 stylesheet_id 参数';
+      return 'css_get_stylesheet requires stylesheet_id parameter';
     }
     if (action === 'css_set_stylesheet') {
-      if (!params.stylesheet_id) return 'css_set_stylesheet 需要 stylesheet_id 参数';
-      if (!params.stylesheet_text) return 'css_set_stylesheet 需要 stylesheet_text 参数';
+      if (!params.stylesheet_id) return 'css_set_stylesheet requires stylesheet_id parameter';
+      if (!params.stylesheet_text) return 'css_set_stylesheet requires stylesheet_text parameter';
     }
 
     // Storage 域操作校验
     if (['storage_get_item', 'storage_remove_item'].includes(action) && !params.key) {
-      return `${action} 需要 key 参数`;
+      return `${action} requires key parameter`;
     }
     if (action === 'storage_set_item') {
-      if (!params.key) return 'storage_set_item 需要 key 参数';
-      if (params.value === undefined) return 'storage_set_item 需要 value 参数';
+      if (!params.key) return 'storage_set_item requires key parameter';
+      if (params.value === undefined) return 'storage_set_item requires value parameter';
     }
 
     return null;

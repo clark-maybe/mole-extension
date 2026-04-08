@@ -26,7 +26,7 @@ const inferMimeType = (filename?: string): string => {
 
 export const downloadFileFunction: FunctionDefinition = {
   name: 'download_file',
-  description: '下载文件到用户电脑。可以下载指定URL的文件，或将文本内容保存为文件。适用于：下载网页资源、保存AI整理的内容为文件、导出数据。',
+  description: 'Download a file to the user\'s computer. Can download a file from a given URL, or save text content as a file. Use cases: download web resources, save AI-organized content as a file, export data.',
   supportsParallel: true,
   permissionLevel: 'interact',
   parameters: {
@@ -34,19 +34,19 @@ export const downloadFileFunction: FunctionDefinition = {
     properties: {
       url: {
         type: 'string',
-        description: '要下载的文件 URL。与 content/artifact_id 三选一',
+        description: 'File URL to download. Mutually exclusive with content/artifact_id',
       },
       content: {
         type: 'string',
-        description: '要保存为文件的文本内容。与 url/artifact_id 三选一',
+        description: 'Text content to save as a file. Mutually exclusive with url/artifact_id',
       },
       artifact_id: {
         type: 'string',
-        description: '截图 artifact ID（由 screenshot 工具返回）。传入后自动从本地存储取出图片并下载',
+        description: 'Screenshot artifact ID (returned by the screenshot tool). Automatically retrieves the image from local storage and downloads it',
       },
       filename: {
         type: 'string',
-        description: '保存的文件名（如 "report.txt"、"data.json"、"screenshot.png"）。不传则自动推断',
+        description: 'Filename to save as (e.g. "report.txt", "data.json", "screenshot.png"). Auto-inferred if omitted',
       },
     },
     required: [],
@@ -54,13 +54,13 @@ export const downloadFileFunction: FunctionDefinition = {
   validate: (params: { url?: string; content?: string; artifact_id?: string }) => {
     const sources = [params.url, params.content, params.artifact_id].filter(Boolean).length;
     if (sources === 0) {
-      return '需要提供 url、content 或 artifact_id 其中之一';
+      return 'One of url, content, or artifact_id is required';
     }
     if (sources > 1) {
-      return 'url、content、artifact_id 只能三选一';
+      return 'Only one of url, content, or artifact_id can be provided';
     }
     if (params.url && !/^https?:\/\//i.test(params.url)) {
-      return 'url 必须是 http/https 链接';
+      return 'url must be an http/https link';
     }
     return null;
   },

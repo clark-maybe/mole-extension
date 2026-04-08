@@ -431,7 +431,7 @@ const injectedExtractDispatcher = (
 
 export const extractDataFunction: FunctionDefinition = {
   name: 'extract_data',
-  description: '从当前页面提取结构化数据（表格、列表、重复元素等），支持自动识别和 Schema 精确提取\n\n⚠️ 不要用此工具来：\n- 获取单个元素的文本（用 cdp_dom 的 get_text）\n- 读取页面正文内容（用 page_viewer）\n- 适合提取表格、列表等批量结构化数据',
+  description: 'Extract structured data from the current page (tables, lists, repeated elements, etc.), supports auto-detection and Schema-based precise extraction.\n\n⚠️ Do NOT use this tool for:\n- Getting text of a single element (use cdp_dom get_text)\n- Reading page body content (use page_viewer)\n- Best suited for extracting batch structured data like tables and lists',
   supportsParallel: false,
   permissionLevel: 'read',
   parameters: {
@@ -440,36 +440,36 @@ export const extractDataFunction: FunctionDefinition = {
       mode: {
         type: 'string',
         enum: ['auto', 'table', 'list', 'repeat', 'schema'],
-        description: '提取模式。auto=自动识别（table→repeat→list），table=提取表格，list=提取列表，repeat=检测重复元素，schema=按 Schema 精确提取',
+        description: 'Extraction mode. auto=auto-detect (table->repeat->list), table=extract tables, list=extract lists, repeat=detect repeated elements, schema=precise extraction via Schema',
       },
       scope: {
         type: 'string',
-        description: '限定提取范围的 CSS 选择器（可选），如 "#content"、".main-area"',
+        description: 'CSS selector to limit extraction scope (optional), e.g. "#content", ".main-area"',
       },
       schema: {
         type: 'object',
-        description: 'Schema 定义（mode=schema 时必填）',
+        description: 'Schema definition (required when mode=schema)',
         properties: {
           item_selector: {
             type: 'string',
-            description: '单条数据的容器选择器（重复元素）',
+            description: 'Container selector for a single data item (repeated element)',
           },
           fields: {
             type: 'array',
-            description: '字段定义列表',
+            description: 'Field definition list',
             items: {
               type: 'object',
               properties: {
-                name: { type: 'string', description: '字段名' },
-                selector: { type: 'string', description: '字段在容器内的 CSS 选择器' },
+                name: { type: 'string', description: 'Field name' },
+                selector: { type: 'string', description: 'CSS selector for the field within the container' },
                 attribute: {
                   type: 'string',
-                  description: '提取内容类型，默认 textContent。可选：textContent/innerText/href/src/value 或任意属性名',
+                  description: 'Content extraction type, default textContent. Options: textContent/innerText/href/src/value or any attribute name',
                 },
                 type: {
                   type: 'string',
                   enum: ['string', 'number', 'boolean'],
-                  description: '数据类型转换',
+                  description: 'Data type conversion',
                 },
               },
               required: ['name', 'selector'],
@@ -480,15 +480,15 @@ export const extractDataFunction: FunctionDefinition = {
       },
       max_items: {
         type: 'number',
-        description: '最大提取条数，默认 100，上限 500',
+        description: 'Maximum number of items to extract, default 100, max 500',
       },
       buffer_id: {
         type: 'string',
-        description: '提取后直接写入缓冲区（旁路 LLM），仅返回统计摘要。传入已有缓冲区 ID 则追加，传入新 ID 则自动创建',
+        description: 'Write extracted data directly to buffer (bypassing LLM), returns only summary stats. Pass an existing buffer ID to append, or a new ID to auto-create',
       },
       tab_id: {
         type: 'number',
-        description: '目标标签页 ID。不传则操作当前活动标签页。',
+        description: 'Target tab ID. Operates on the current active tab if omitted.',
       },
     },
     required: ['mode'],

@@ -175,9 +175,9 @@ const runSnapshotStep = async (
 export const pageRepairFunction: FunctionDefinition = {
   name: 'page_repair',
   description: [
-    '在页面动作失败或断言未通过后执行通用修复策略。',
-    '会尝试多 query 语义快照、向下/向上滚动、整页扩展快照，并将候选元素合并重排。',
-    '适合陌生网站恢复定位，不依赖硬编码站点规则。',
+    'Execute a generic repair strategy after a page action fails or an assertion does not pass.',
+    'Tries multi-query semantic snapshots, scrolling down/up, full-page expanded snapshots, and merges/re-ranks candidate elements.',
+    'Suitable for recovering element location on unfamiliar websites without relying on hardcoded site rules.',
   ].join(' '),
   supportsParallel: false,
   permissionLevel: 'read',
@@ -186,19 +186,19 @@ export const pageRepairFunction: FunctionDefinition = {
     properties: {
       target_hint: {
         type: 'string',
-        description: '目标提示词，如“搜索框”“发送按钮”“登录”。会用于重新定位候选元素，并自动扩展相近词。',
+        description: 'Target hint, e.g. “search box”, “send button”, “login”. Used to re-locate candidate elements with automatic synonym expansion.',
       },
       scope_selector: {
         type: 'string',
-        description: '可选：将修复范围限制在某个区域。',
+        description: 'Optional: limit the repair scope to a specific region.',
       },
       attempts: {
         type: 'number',
-        description: '最多执行几层修复策略，范围 1-5，默认 5。',
+        description: 'Maximum number of repair strategy layers to execute. Range: 1-5, default: 5.',
       },
       scroll_amount: {
         type: 'number',
-        description: '滚动像素量，默认 720。',
+        description: 'Scroll amount in pixels. Default: 720.',
       },
     },
     required: [],

@@ -22,9 +22,9 @@ const getActiveTabId = (): Promise<number | null> => {
 export const pageAssertFunction: FunctionDefinition = {
   name: 'page_assert',
   description: [
-    '验证当前页面是否满足某些条件，适合在点击、输入、跳转、提交后做结果核验。',
-    '支持 URL、标题、文本、selector 是否存在/可见、selector 文本是否包含等断言。',
-    '建议：关键动作后优先调用 page_assert，而不是直接假设动作已成功。',
+    'Verify whether the current page meets certain conditions. Ideal for result validation after click, input, navigation, or form submission.',
+    'Supports assertions for URL, title, text, selector existence/visibility, and selector text content.',
+    'Recommendation: call page_assert after critical actions instead of assuming the action succeeded.',
   ].join(' '),
   supportsParallel: true,
   permissionLevel: 'read',
@@ -34,30 +34,30 @@ export const pageAssertFunction: FunctionDefinition = {
       mode: {
         type: 'string',
         enum: ['all', 'any'],
-        description: '断言模式。all=全部通过才算成功；any=任一通过即可。默认 all。',
+        description: 'Assertion mode. all=all must pass to succeed; any=pass if any one succeeds. Default: all.',
       },
       scope_selector: {
         type: 'string',
-        description: '可选：将文本断言限制在某个 DOM 范围中。',
+        description: 'Optional: limit text assertions to a specific DOM scope.',
       },
       assertions: {
         type: 'array',
-        description: '断言列表。',
+        description: 'List of assertions.',
         items: {
           type: 'object',
           properties: {
             type: {
               type: 'string',
               enum: ['url_includes', 'title_includes', 'text_includes', 'selector_exists', 'selector_visible', 'selector_text_includes'],
-              description: '断言类型。',
+              description: 'Assertion type.',
             },
             value: {
               type: 'string',
-              description: 'url_includes/title_includes/text_includes 使用的匹配值。',
+              description: 'Match value used by url_includes/title_includes/text_includes.',
             },
             selector: {
               type: 'string',
-              description: 'selector_exists/selector_visible/selector_text_includes 使用的 CSS selector。',
+              description: 'CSS selector used by selector_exists/selector_visible/selector_text_includes.',
             },
           },
           required: ['type'],
@@ -68,19 +68,19 @@ export const pageAssertFunction: FunctionDefinition = {
   },
   validate: (params: { assertions?: Array<{ type?: string; selector?: string; value?: string }> }) => {
     if (!Array.isArray(params?.assertions) || params.assertions.length === 0) {
-      return 'assertions 不能为空';
+      return 'assertions cannot be empty';
     }
     for (const assertion of params.assertions) {
       const type = String(assertion?.type || '');
-      if (!type) return 'assertion.type 不能为空';
+      if (!type) return 'assertion.type cannot be empty';
       if (['url_includes', 'title_includes', 'text_includes'].includes(type) && !assertion?.value) {
-        return `${type} 需要 value`;
+        return `${type} requires value`;
       }
       if (['selector_exists', 'selector_visible', 'selector_text_includes'].includes(type) && !assertion?.selector) {
-        return `${type} 需要 selector`;
+        return `${type} requires selector`;
       }
       if (type === 'selector_text_includes' && !assertion?.value) {
-        return 'selector_text_includes 需要 value';
+        return 'selector_text_includes requires value';
       }
     }
     return null;
@@ -103,7 +103,7 @@ export const pageAssertFunction: FunctionDefinition = {
     }
 
     if (!tabId) {
-      return { success: false, error: '无法获取当前标签页' };
+      return { success: false, error: 'Unable to get current tab' };
     }
 
     try {
@@ -114,11 +114,11 @@ export const pageAssertFunction: FunctionDefinition = {
         {
           signal: context?.signal,
           deadlineMs: 12000,
-          timeoutMessage: '等待 page_assert 响应超时',
+          timeoutMessage: 'Timed out waiting for page_assert response',
         },
       );
       if (!response?.success) {
-        return { success: false, error: response?.error || 'page_assert 执行失败' };
+        return { success: false, error: response?.error || 'page_assert execution failed' };
       }
       if (response.data?.passed === true) {
         const domain = await resolveSiteExperienceDomain(context);
@@ -126,7 +126,7 @@ export const pageAssertFunction: FunctionDefinition = {
       }
       return { success: true, data: response.data };
     } catch (err: any) {
-      return { success: false, error: err.message || 'page_assert 执行失败' };
+      return { success: false, error: err.message || 'page_assert execution failed' };
     }
   },
 };

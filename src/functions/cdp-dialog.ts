@@ -18,7 +18,7 @@ const getActiveTabId = (): Promise<number | null> => {
 
 export const cdpDialogFunction: FunctionDefinition = {
   name: 'cdp_dialog',
-  description: '查询和处理 JavaScript 对话框（alert/confirm/prompt/beforeunload）。对话框会阻断页面操作，必须先处理才能继续自动化流程。支持查询、接受、拒绝对话框，以及设置自动处理策略。',
+  description: 'Query and handle JavaScript dialogs (alert/confirm/prompt/beforeunload). Dialogs block page operations and must be handled before automation can continue. Supports querying, accepting, dismissing dialogs, and setting auto-handling policies.',
   supportsParallel: false,
   permissionLevel: 'interact',
   parameters: {
@@ -27,20 +27,20 @@ export const cdpDialogFunction: FunctionDefinition = {
       action: {
         type: 'string',
         enum: ['query', 'accept', 'dismiss', 'set_auto'],
-        description: '操作类型：query=查询待处理对话框, accept=接受对话框, dismiss=拒绝/关闭对话框, set_auto=设置自动处理策略',
+        description: 'Action type: query=query pending dialogs, accept=accept dialog, dismiss=dismiss/close dialog, set_auto=set auto-handling policy',
       },
       prompt_text: {
         type: 'string',
-        description: '当 action=accept 且对话框类型为 prompt 时，输入到 prompt 输入框的文本',
+        description: 'Text to enter into the prompt input when action=accept and dialog type is prompt',
       },
       policy: {
         type: 'string',
         enum: ['manual', 'auto_accept', 'auto_dismiss'],
-        description: '自动处理策略（仅 action=set_auto）：manual=手动处理, auto_accept=自动接受, auto_dismiss=自动拒绝',
+        description: 'Auto-handling policy (only for action=set_auto): manual=handle manually, auto_accept=auto accept, auto_dismiss=auto dismiss',
       },
       tab_id: {
         type: 'number',
-        description: '目标标签页 ID。不传则使用当前活动标签页。',
+        description: 'Target tab ID. Uses the current active tab if not provided.',
       },
     },
     required: ['action'],
@@ -48,14 +48,14 @@ export const cdpDialogFunction: FunctionDefinition = {
 
   validate: (params: any): string | null => {
     const { action } = params || {};
-    if (!action) return '缺少 action 参数';
+    if (!action) return 'Missing action parameter';
     if (!['query', 'accept', 'dismiss', 'set_auto'].includes(action)) {
-      return `不支持的 action: ${action}`;
+      return `Unsupported action: ${action}`;
     }
     if (action === 'set_auto') {
       const { policy } = params;
       if (!policy || !['manual', 'auto_accept', 'auto_dismiss'].includes(policy)) {
-        return 'set_auto 操作需要 policy 参数（manual/auto_accept/auto_dismiss）';
+        return 'set_auto action requires policy parameter (manual/auto_accept/auto_dismiss)';
       }
     }
     return null;

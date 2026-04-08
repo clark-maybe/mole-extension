@@ -643,7 +643,7 @@ const initElementHandleAction = () => {
 
       const target = resolveActionTarget(data);
       if (!target) {
-        sendResponse?.({ success: false, error: '未找到 element_id 对应元素，请重新调用 page_snapshot 获取最新句柄' });
+        sendResponse?.({ success: false, error: '未找到 element_id 对应元素，请重新调用 page(action="snapshot") 获取最新句柄' });
         return true;
       }
 
@@ -908,7 +908,7 @@ export const initPageGrounding = () => {
       const el = elementHandleMap.get(elementId);
       if (!el || !el.isConnected) {
         if (el) elementHandleMap.delete(elementId);
-        sendResponse?.({ success: false, error: '元素已失效，请重新调用 page_snapshot 获取最新句柄' });
+        sendResponse?.({ success: false, error: '元素已失效，请重新调用 page(action="snapshot") 获取最新句柄' });
         return true;
       }
       const rect = (el as HTMLElement).getBoundingClientRect();

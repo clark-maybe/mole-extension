@@ -68,11 +68,11 @@ const wrapExpressionIfNeeded = (code: string): string => {
 export const cdpFrameFunction: FunctionDefinition = {
   name: 'cdp_frame',
   description: [
-    '在页面中执行 JavaScript 代码并返回结果。代码在页面上下文中运行，可访问 DOM 和全局变量。',
-    '支持 return 语句和 async/await。',
-    '传 frame_id 时可在指定 iframe 中执行（跨域穿透）。',
-    '其他操作：list=列出所有 frame，snapshot=获取 frame 文本内容。',
-  ].join(' ') + '\n\n⚠️ 不要用此工具来：\n- 读取 localStorage / sessionStorage（用 cdp_dom 的 storage_get_items）\n- 读取或操作 Cookie（用 cdp_network 的 get_cookies / set_cookie）\n- 执行简单 DOM 查询（用 cdp_dom 的 query_selector）\n- 点击或输入操作（用 cdp_input）\n- 禁止通过执行 JS 绕过敏感数据的专用工具，那些工具有用户授权流程\n- 仅在确实需要执行自定义 JavaScript 且无专用工具可用时使用',
+    'Execute JavaScript code in the page and return the result. Code runs in the page context with access to the DOM and global variables.',
+    'Supports return statements and async/await.',
+    'When frame_id is provided, executes in the specified iframe (cross-origin penetration).',
+    'Other operations: list=list all frames, snapshot=get frame text content.',
+  ].join(' ') + '\n\n⚠️ Do NOT use this tool for:\n- Reading localStorage / sessionStorage (use cdp_dom storage_get_items)\n- Reading or manipulating Cookies (use cdp_network get_cookies / set_cookie)\n- Simple DOM queries (use cdp_dom query_selector)\n- Click or input operations (use cdp_input)\n- Do not bypass dedicated tools for sensitive data by executing JS; those tools have user authorization flows\n- Only use when custom JavaScript execution is truly needed and no dedicated tool is available',
   supportsParallel: true,
   permissionLevel: 'interact',
   parameters: {
@@ -81,27 +81,27 @@ export const cdpFrameFunction: FunctionDefinition = {
       action: {
         type: 'string',
         enum: ['list', 'evaluate', 'snapshot'],
-        description: '操作类型：list=列出所有 frame, evaluate=执行 JS 代码（默认主 frame，传 frame_id 可指定 iframe）, snapshot=获取 frame 文本内容',
+        description: 'Action type: list=list all frames, evaluate=execute JS code (main frame by default, provide frame_id to target an iframe), snapshot=get frame text content',
       },
       frame_id: {
         type: 'string',
-        description: 'frame ID（由 list 操作返回）。evaluate 不传时在主 frame 执行。snapshot 必填。',
+        description: 'Frame ID (returned by the list action). If not provided for evaluate, executes in the main frame. Required for snapshot.',
       },
       expression: {
         type: 'string',
-        description: '要执行的 JavaScript 代码。支持 return 语句（自动包装为 IIFE）。如 "return document.title" 或 "return document.querySelectorAll(\'a\').length"',
+        description: 'JavaScript code to execute. Supports return statements (auto-wrapped as IIFE). e.g. "return document.title" or "return document.querySelectorAll(\'a\').length"',
       },
       code: {
         type: 'string',
-        description: 'expression 的别名，与 expression 等价。两者都传时优先 expression。',
+        description: 'Alias for expression, equivalent to expression. When both are provided, expression takes priority.',
       },
       max_length: {
         type: 'number',
-        description: 'snapshot 返回文本的最大长度（字符数），默认 3000。',
+        description: 'Maximum length (in characters) of text returned by snapshot, default 3000.',
       },
       tab_id: {
         type: 'number',
-        description: '目标标签页 ID。不传则使用当前活动标签页。',
+        description: 'Target tab ID. Uses the current active tab if not provided.',
       },
     },
     required: ['action'],
@@ -109,16 +109,16 @@ export const cdpFrameFunction: FunctionDefinition = {
 
   validate: (params: any): string | null => {
     const { action } = params || {};
-    if (!action) return '缺少 action 参数';
+    if (!action) return 'Missing action parameter';
     if (!['list', 'evaluate', 'snapshot'].includes(action)) {
-      return `不支持的 action: ${action}`;
+      return `Unsupported action: ${action}`;
     }
     if (action === 'evaluate') {
       // expression 和 code 都可以，至少一个
-      if (!params.expression && !params.code) return 'evaluate 操作需要 expression 或 code 参数';
+      if (!params.expression && !params.code) return 'evaluate action requires expression or code parameter';
     }
     if (action === 'snapshot') {
-      if (!params.frame_id) return 'snapshot 操作需要 frame_id 参数';
+      if (!params.frame_id) return 'snapshot action requires frame_id parameter';
     }
     return null;
   },

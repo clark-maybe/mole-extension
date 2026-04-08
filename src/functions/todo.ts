@@ -18,7 +18,7 @@ import type { TodoManager } from '../ai/todo-manager';
 /** 创建 todo 工具的工厂函数 */
 export const createTodoFunction = (getTodoManager: () => TodoManager): FunctionDefinition => ({
   name: 'todo',
-  description: '任务规划与进度追踪。多步任务中，先用 create 制定计划，执行每步前用 update 标记 in_progress，完成后标记 completed。同一时间只能有一个任务进行中。最多 20 项。',
+  description: 'Task planning and progress tracking. For multi-step tasks, use create to define a plan first, mark each step as in_progress with update before executing, then mark as completed when done. Only one task can be in_progress at a time. Maximum 20 items.',
   supportsParallel: false,
   parameters: {
     type: 'object',
@@ -26,29 +26,29 @@ export const createTodoFunction = (getTodoManager: () => TodoManager): FunctionD
       action: {
         type: 'string',
         enum: ['create', 'update', 'add', 'remove', 'list'],
-        description: 'create: 批量创建初始计划（传 items）；update: 更新状态（传 id + status）；add: 追加新项（传 title）；remove: 删除待办项（传 id）；list: 查看进度',
+        description: 'create: batch create initial plan (pass items); update: update status (pass id + status); add: append new item (pass title); remove: delete pending item (pass id); list: view progress',
       },
       items: {
         type: 'array',
         items: { type: 'string' },
-        description: 'action=create 时使用：任务标题列表，按执行顺序排列',
+        description: 'Used with action=create: list of task titles in execution order.',
       },
       id: {
         type: 'number',
-        description: 'action=update/remove 时使用：目标任务的 ID 编号',
+        description: 'Used with action=update/remove: target task ID.',
       },
       status: {
         type: 'string',
         enum: ['in_progress', 'completed'],
-        description: 'action=update 时使用：新状态',
+        description: 'Used with action=update: new status.',
       },
       title: {
         type: 'string',
-        description: 'action=add 时使用：新任务的标题',
+        description: 'Used with action=add: title of the new task.',
       },
       result: {
         type: 'string',
-        description: 'action=update 且 status=completed 时可选：简要记录此步产出',
+        description: 'Optional when action=update and status=completed: briefly record the output of this step.',
       },
     },
     required: ['action'],
@@ -57,16 +57,16 @@ export const createTodoFunction = (getTodoManager: () => TodoManager): FunctionD
   validate: (params: any) => {
     const action = String(params.action || '');
     if (action === 'create' && (!Array.isArray(params.items) || params.items.length === 0)) {
-      return 'create 操作需要提供非空的 items 数组';
+      return 'create action requires a non-empty items array';
     }
     if (action === 'update' && (params.id == null || !params.status)) {
-      return 'update 操作需要提供 id 和 status';
+      return 'update action requires id and status';
     }
     if (action === 'add' && !params.title) {
-      return 'add 操作需要提供 title';
+      return 'add action requires title';
     }
     if (action === 'remove' && params.id == null) {
-      return 'remove 操作需要提供 id';
+      return 'remove action requires id';
     }
     return null;
   },
@@ -86,7 +86,7 @@ export const createTodoFunction = (getTodoManager: () => TodoManager): FunctionD
       case 'create': {
         const titles = params.items || [];
         if (mgr.active) {
-          return { success: false, error: '已有任务计划存在。用 add 追加新项，或先完成/删除现有项' };
+          return { success: false, error: 'A task plan already exists. Use add to append new items, or complete/remove existing ones first.' };
         }
         const created = mgr.addBatch(titles);
         if (created.length < titles.length) {
@@ -115,12 +115,12 @@ export const createTodoFunction = (getTodoManager: () => TodoManager): FunctionD
         const updated = mgr.update(id, status, params.result);
         if (!updated) {
           const item = mgr.all.find(i => i.id === id);
-          if (!item) return { success: false, error: `ID #${id} 不存在` };
-          if (item.status === 'completed') return { success: false, error: `#${id} 已完成，不能修改` };
+          if (!item) return { success: false, error: `ID #${id} does not exist` };
+          if (item.status === 'completed') return { success: false, error: `#${id} is already completed and cannot be modified` };
           if (status === 'in_progress' && mgr.current) {
-            return { success: false, error: `不能同时进行多个任务。当前进行中：#${mgr.current.id} ${mgr.current.title}。请先完成它` };
+            return { success: false, error: `Cannot have multiple tasks in progress. Currently in progress: #${mgr.current.id} ${mgr.current.title}. Please complete it first.` };
           }
-          return { success: false, error: '状态转换不合法' };
+          return { success: false, error: 'Invalid status transition' };
         }
         return {
           success: true,
@@ -135,7 +135,7 @@ export const createTodoFunction = (getTodoManager: () => TodoManager): FunctionD
       case 'add': {
         const item = mgr.add(params.title!);
         if (!item) {
-          return { success: false, error: '已达上限 20 项' };
+          return { success: false, error: 'Maximum limit of 20 items reached' };
         }
         return {
           success: true,
@@ -150,7 +150,7 @@ export const createTodoFunction = (getTodoManager: () => TodoManager): FunctionD
       case 'remove': {
         const removed = mgr.remove(Number(params.id));
         if (!removed) {
-          return { success: false, error: `无法删除 #${params.id}（不存在或非 pending 状态）` };
+          return { success: false, error: `Cannot delete #${params.id} (does not exist or is not in pending status)` };
         }
         return {
           success: true,
@@ -176,7 +176,7 @@ export const createTodoFunction = (getTodoManager: () => TodoManager): FunctionD
       }
 
       default:
-        return { success: false, error: `不支持的操作: ${action}` };
+        return { success: false, error: `Unsupported action: ${action}` };
     }
   },
 });

@@ -16,7 +16,7 @@ let requestCounter = 0;
 
 export const askUserFunction: FunctionDefinition = {
   name: 'ask_user',
-  description: '向用户提出问题，获取缺失信息或让用户做出选择。支持预设选项和/或自由文本输入。用户回答后继续执行任务。',
+  description: 'Ask the user a question to obtain missing information or let the user make a choice. Supports preset options and/or free-text input. Continues the task after the user responds.',
   supportsParallel: false,
   permissionLevel: 'read',
   parameters: {
@@ -24,16 +24,16 @@ export const askUserFunction: FunctionDefinition = {
     properties: {
       question: {
         type: 'string',
-        description: '向用户展示的问题，简洁明确地说清楚需要什么信息',
+        description: 'The question to present to the user. Be concise and clearly state what information is needed.',
       },
       options: {
         type: 'array',
         items: { type: 'string' },
-        description: '可选，预设选项列表（1-6 个），用户可点选',
+        description: 'Optional preset option list (1-6 items) for the user to select from.',
       },
       allow_free_text: {
         type: 'boolean',
-        description: '是否允许自由文本输入，默认 true',
+        description: 'Whether to allow free-text input. Default: true.',
       },
     },
     required: ['question'],
@@ -45,7 +45,7 @@ export const askUserFunction: FunctionDefinition = {
   ): Promise<FunctionResult> => {
     const question = String(params.question || '').trim();
     if (!question) {
-      return { success: false, error: '缺少问题内容' };
+      return { success: false, error: 'Missing question content' };
     }
 
     // 规范化参数
@@ -56,7 +56,7 @@ export const askUserFunction: FunctionDefinition = {
 
     // 校验：如果没有选项也不允许文本输入，则无法交互
     if (options.length === 0 && !allowFreeText) {
-      return { success: false, error: '参数错误：options 为空且 allow_free_text 为 false，用户无法回答' };
+      return { success: false, error: 'Invalid params: options is empty and allow_free_text is false, user cannot respond' };
     }
 
     const requestId = `ask_${Date.now()}_${++requestCounter}`;
@@ -104,7 +104,7 @@ export const askUserFunction: FunctionDefinition = {
         if (settled) return;
         cleanup();
         Channel.broadcast('__ask_user_cancel', { requestId });
-        resolve({ success: false, error: '任务已取消' });
+        resolve({ success: false, error: 'Task cancelled' });
       };
 
       Channel.on('__ask_user_response', handler);

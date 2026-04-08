@@ -7,7 +7,7 @@ import type { FunctionDefinition } from './types';
 
 export const historySearchFunction: FunctionDefinition = {
   name: 'history_search',
-  description: '搜索浏览器历史记录。可以根据关键词搜索之前访问过的页面，或获取最近的浏览历史。适用于：找回之前看过的页面、回忆访问过的网站、了解用户近期浏览偏好。',
+  description: 'Search browser history. Search previously visited pages by keyword, or retrieve recent browsing history. Use cases: find a previously viewed page, recall visited websites, understand recent browsing preferences.',
   supportsParallel: true,
   permissionLevel: 'read',
   parameters: {
@@ -15,15 +15,15 @@ export const historySearchFunction: FunctionDefinition = {
     properties: {
       query: {
         type: 'string',
-        description: '搜索关键词。不传则返回最近的浏览历史',
+        description: 'Search keyword. If omitted, returns recent browsing history',
       },
       max_results: {
         type: 'number',
-        description: '最大返回数量，默认20，最大100',
+        description: 'Maximum number of results, default 20, max 100',
       },
       days_back: {
         type: 'number',
-        description: '搜索多少天内的历史，默认7天',
+        description: 'Number of days to search back, default 7',
       },
     },
     required: [],

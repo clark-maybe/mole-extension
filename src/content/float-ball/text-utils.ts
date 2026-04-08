@@ -12,8 +12,9 @@ import { FUNCTION_LABELS } from './icons';
 export const replaceInternalToolTerms = (raw: string): string => {
   return raw
     .replace(/(page_snapshot|page_viewer|fetch_url)/gi, '查看页面内容')
-    .replace(/(cdp_input|cdp_frame|tab_navigate)/gi, '执行页面操作')
+    .replace(/(cdp_input|cdp_frame|cdp_debug|tab_navigate)/gi, '执行页面操作')
     .replace(/page_assert/gi, '确认操作结果')
+    .replace(/\bpage\b/gi, '查看页面内容')
     .replace(/screenshot/gi, '截图查看')
     .replace(/retry_action/gi, '重试操作')
     .replace(/replay_candidate/gi, '尝试备用方案')
@@ -50,7 +51,7 @@ export const inferFriendlyRuntimeText = (raw: string, mode: RuntimeTextMode): st
   if (/(cdp_input|cdp_frame|执行页面操作|点击|输入|填写|导航|act|execute)/i.test(text)) {
     return choose('我正在页面里执行关键操作', '接下来我会继续执行页面操作', '我已完成一个页面操作', '页面操作没有完全成功，我正在重试', '暂时不需要你补充，我先继续操作');
   }
-  if (/(page_snapshot|page_viewer|fetch_url|查看页面|观察|定位|证据|线索|explore|observe)/i.test(text)) {
+  if (/(page_snapshot|page_viewer|\bpage\b|fetch_url|查看页面|观察|定位|证据|线索|explore|observe)/i.test(text)) {
     return choose('我正在查看页面内容并确认线索', '接下来我会先查看页面内容并确认线索', '我已确认一批页面线索', '线索还不够清晰，我正在继续查看页面', '暂时不需要你补充，我先继续查看页面');
   }
   if (/(规划|分析问题|理解需求|plan|步骤)/i.test(text)) {
@@ -152,7 +153,7 @@ export const toLiveActionText = (toolName: string, summary?: string): string => 
 
   if (toolName === 'cdp_input') return '我正在执行页面操作';
   if (toolName === 'cdp_dom') return '我正在定位页面上的目标元素';
-  if (toolName === 'page_viewer' || toolName === 'page_snapshot' || toolName === 'fetch_url') return '我正在查看页面内容';
+  if (toolName === 'page' || toolName === 'page_viewer' || toolName === 'page_snapshot' || toolName === 'fetch_url') return '我正在查看页面内容';
   if (toolName === 'screenshot') return '我正在查看当前页面画面';
   if (toolName === 'tab_navigate') return '我正在切换页面继续处理';
   if (toolName === 'cdp_frame') return '我正在执行页面内的辅助操作';
@@ -205,7 +206,7 @@ export const buildUserFacingActionSummary = (toolName: string, summary?: string,
     }
     return `我已执行：${clipIntentText(cleanSummary, 42)}`;
   }
-  if (toolName === 'page_snapshot' || toolName === 'page_viewer' || toolName === 'fetch_url') return '我已查看当前页面内容';
+  if (toolName === 'page' || toolName === 'page_snapshot' || toolName === 'page_viewer' || toolName === 'fetch_url') return '我已查看当前页面内容';
   if (toolName === 'cdp_input') return '我已在页面上尝试执行关键操作';
   if (toolName === 'cdp_dom') return '我已查找页面上的相关元素';
   if (toolName === 'screenshot') return '我已记录当前页面画面';

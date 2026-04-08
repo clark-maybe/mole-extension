@@ -11,7 +11,7 @@ const MAX_VALUE_SIZE = 10240; // 10KB per value
 
 export const storageKvFunction: FunctionDefinition = {
   name: 'storage_kv',
-  description: '持久化键值存储，用于保存和读取数据。AI 可以用此工具记住用户偏好、保存临时数据、跨对话传递信息。支持：get(读取)、set(保存)、delete(删除)、list(列出所有键)。数据持久保存在浏览器中，跨会话可用。',
+  description: 'Persistent key-value storage for saving and reading data. AI can use this tool to remember user preferences, save temporary data, and pass information across conversations. Supports: get (read), set (save), delete (remove), list (list all keys). Data is persisted in the browser and available across sessions.',
   supportsParallel: false,
   permissionLevel: 'interact',
   actionPermissions: { delete: 'sensitive' },
@@ -21,15 +21,15 @@ export const storageKvFunction: FunctionDefinition = {
       action: {
         type: 'string',
         enum: ['get', 'set', 'delete', 'list'],
-        description: '操作类型：get(读取)、set(保存)、delete(删除)、list(列出所有键)',
+        description: 'Action type: get (read), set (save), delete (remove), list (list all keys)',
       },
       key: {
         type: 'string',
-        description: '键名（action=get/set/delete 时使用）',
+        description: 'Key name (used for action=get/set/delete)',
       },
       value: {
         type: 'string',
-        description: '要保存的值（action=set 时必传）。建议使用 JSON 字符串存储结构化数据',
+        description: 'Value to save (required when action=set). JSON strings recommended for structured data',
       },
     },
     required: ['action'],

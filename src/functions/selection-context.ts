@@ -45,7 +45,7 @@ const sendAndWait = <T = any>(tabId: number, type: string, data: any, signal?: A
 
 export const selectionContextFunction: FunctionDefinition = {
   name: 'selection_context',
-  description: '获取用户在页面上选中（高亮）的文本内容。适用于：用户选中一段文字后让 AI 翻译、解释、总结、分析。如果用户没有选中任何文本则返回空。',
+  description: 'Get the text content selected (highlighted) by the user on the page. Use cases: user selects text and asks AI to translate, explain, summarize, or analyze it. Returns empty if no text is selected.',
   supportsParallel: true,
   permissionLevel: 'read',
   parameters: {

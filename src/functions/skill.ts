@@ -54,10 +54,10 @@ const buildWorkflowDescription = (wf: WorkflowEntry): string => {
     const parts = Object.entries(paramProps as Record<string, any>).map(([key, schema]) => {
       const desc = (schema as any)?.description || '';
       const req = Array.isArray(wf.parameters?.required) && (wf.parameters.required as string[]).includes(key);
-      const def = (schema as any)?.default !== undefined ? `，默认${(schema as any).default}` : '';
-      return `${key}(${desc}${def}${req ? '，必填' : ''})`;
+      const def = (schema as any)?.default !== undefined ? `, default: ${(schema as any).default}` : '';
+      return `${key}(${desc}${def}${req ? ', required' : ''})`;
     });
-    if (parts.length > 0) paramHint = ` | 参数: ${parts.join(', ')}`;
+    if (parts.length > 0) paramHint = ` | params: ${parts.join(', ')}`;
   }
   return `- ${wf.name}: ${wf.description}${paramHint}`;
 };
@@ -119,16 +119,16 @@ export const buildSkillContext = async (tabUrl: string): Promise<{
 
   // description 中列出域级可直接 run 的 workflow + 提示全局需 detail
   const descParts: string[] = [
-    '预定义技能工作流。支持三种操作：',
+    'Predefined skill workflows. Supports three actions:',
     '',
-    '**action=run**（默认）：执行工作流，速度快。',
-    '**action=detail**：查看某个技能的完整指南和工作流清单。',
-    '**action=list**：列出所有可用技能。',
+    '**action=run** (default): Execute a workflow, fast.',
+    '**action=detail**: View the full guide and workflow list of a skill.',
+    '**action=list**: List all available skills.',
   ];
 
   if (limited.length > 0) {
     descParts.push('');
-    descParts.push('当前页面可直接 run 的工作流：');
+    descParts.push('Workflows available for direct run on the current page:');
     for (const { wf } of limited) {
       descParts.push(buildWorkflowDescription(wf));
     }
@@ -136,9 +136,9 @@ export const buildSkillContext = async (tabUrl: string): Promise<{
 
   if (globalCatalog.length > 0) {
     descParts.push('');
-    descParts.push('基础技能（用 detail 查看详情后再 run）：');
+    descParts.push('Base skills (use detail to view details before run):');
     for (const cat of globalCatalog) {
-      descParts.push(`- ${cat.name}: ${cat.description}（${cat.workflowCount} 个工作流）`);
+      descParts.push(`- ${cat.name}: ${cat.description} (${cat.workflowCount} workflows)`);
     }
   }
 
@@ -155,20 +155,20 @@ export const buildSkillContext = async (tabUrl: string): Promise<{
         action: {
           type: 'string',
           enum: ['run', 'detail', 'list'],
-          description: '操作类型。run=执行工作流（默认），detail=查看技能详情，list=列出所有技能',
+          description: 'Action type. run=execute workflow (default), detail=view skill details, list=list all skills',
         },
         name: {
           type: 'string',
           ...(domainWfNames.length > 0 ? {} : {}), // 不设 enum，允许全局 workflow 名称
-          description: 'action=run 时为工作流名称，action=detail 时为技能名称',
+          description: 'Workflow name when action=run, skill name when action=detail.',
         },
         params: {
           type: 'object',
-          description: 'action=run 时传给工作流的参数对象',
+          description: 'Parameter object passed to the workflow when action=run.',
         },
         tab_id: {
           type: 'number',
-          description: '目标标签页 ID。不传则使用当前活动标签页。',
+          description: 'Target tab ID. Uses the current active tab if omitted.',
         },
       },
       required: ['name'],
@@ -203,7 +203,7 @@ const handleList = async (tabUrl?: string): Promise<FunctionResult> => {
     data: {
       totalSkills: result.length,
       skills: result,
-      hint: '使用 skill(action="detail", name="技能名") 查看具体技能的完整指南和参数说明',
+      hint: 'Use skill(action="detail", name="skill_name") to view the full guide and parameter details of a specific skill.',
     },
   };
 };
@@ -213,7 +213,7 @@ const handleDetail = async (skillName: string): Promise<FunctionResult> => {
   await ensureSkillRegistryReady();
   const skill = await getSkill(skillName);
   if (!skill) {
-    return { success: false, error: `技能不存在：${skillName}` };
+    return { success: false, error: `Skill not found: ${skillName}` };
   }
 
   const workflowDetails = skill.workflows.map(wf => ({
@@ -230,9 +230,9 @@ const handleDetail = async (skillName: string): Promise<FunctionResult> => {
       label: skill.label,
       description: skill.description,
       scope: skill.scope,
-      guide: skill.guide || '（无指南）',
+      guide: skill.guide || '(no guide)',
       workflows: workflowDetails,
-      hint: '使用 skill(name="工作流名称", params={...}) 执行具体工作流',
+      hint: 'Use skill(name="workflow_name", params={...}) to execute a specific workflow.',
     },
   };
 };
@@ -244,7 +244,7 @@ const handleRun = async (
 ): Promise<FunctionResult> => {
   const workflowName = String(rawParams?.name || '').trim();
   if (!workflowName) {
-    return { success: false, error: '缺少 workflow 名称' };
+    return { success: false, error: 'Missing workflow name' };
   }
 
   // 在所有 Skill 中查找 workflow
@@ -262,7 +262,7 @@ const handleRun = async (
   }
 
   if (!targetWorkflow) {
-    return { success: false, error: `工作流不存在：${workflowName}。请先用 skill(action="list") 查看可用工作流` };
+    return { success: false, error: `Workflow not found: ${workflowName}. Use skill(action="list") to view available workflows.` };
   }
 
   // 合并参数：schema 默认值 < 顶层参数 < params 嵌套参数
@@ -298,7 +298,7 @@ const handleRun = async (
  */
 export const skillFunction: FunctionDefinition = {
   name: 'skill',
-  description: '预定义技能工作流。支持 list（列出技能）、detail（查看指南）、run（执行工作流，默认）。',
+  description: 'Predefined skill workflows. Supports list (list skills), detail (view guide), run (execute workflow, default).',
   supportsParallel: false,
   permissionLevel: 'interact',
   parameters: {
@@ -307,19 +307,19 @@ export const skillFunction: FunctionDefinition = {
       action: {
         type: 'string',
         enum: ['run', 'detail', 'list'],
-        description: '操作类型。默认 run',
+        description: 'Action type. Default: run.',
       },
       name: {
         type: 'string',
-        description: 'run 时为工作流名称，detail 时为技能名称',
+        description: 'Workflow name for run, skill name for detail.',
       },
       params: {
         type: 'object',
-        description: 'run 时传给工作流的参数',
+        description: 'Parameters passed to the workflow for run.',
       },
       tab_id: {
         type: 'number',
-        description: '目标标签页 ID',
+        description: 'Target tab ID.',
       },
     },
     required: ['name'],
@@ -337,7 +337,7 @@ export const skillFunction: FunctionDefinition = {
 
       case 'detail': {
         const skillName = String(rawParams?.name || '').trim();
-        if (!skillName) return { success: false, error: '缺少技能名称' };
+        if (!skillName) return { success: false, error: 'Missing skill name' };
         return handleDetail(skillName);
       }
 

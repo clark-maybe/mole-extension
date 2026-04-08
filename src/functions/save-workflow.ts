@@ -6,7 +6,7 @@ import { getBuiltinFunction } from './registry';
 // 保存用户确认的工作流
 export const saveWorkflowFunction: FunctionDefinition = {
   name: 'save_workflow',
-  description: '保存用户确认的工作流定义到 registry。仅在用户明确确认工作流内容后调用。将完整的 workflow JSON 对象序列化为字符串传入 workflow_json 参数。',
+  description: 'Save a user-confirmed workflow definition to the registry. Only call this after the user has explicitly confirmed the workflow content. Pass the complete workflow JSON object serialized as a string to the workflow_json parameter.',
   supportsParallel: false,
   permissionLevel: 'interact',
   parameters: {
@@ -14,7 +14,7 @@ export const saveWorkflowFunction: FunctionDefinition = {
     properties: {
       workflow_json: {
         type: 'string',
-        description: '完整的 workflow 定义 JSON 字符串，必须包含 name 和 plan 字段。示例：{"name":"search_product","label":"搜索商品","plan":{"steps":[...]}}',
+        description: 'Complete workflow definition as a JSON string. Must contain name and plan fields. Example: {"name":"search_product","label":"Search Product","plan":{"steps":[...]}}',
       },
     },
     required: ['workflow_json'],
@@ -26,7 +26,7 @@ export const saveWorkflowFunction: FunctionDefinition = {
       const raw = params.workflow_json || params.workflow || params;
       workflow = typeof raw === 'string' ? JSON.parse(raw) : raw;
     } catch {
-      return { success: false, error: 'workflow_json 不是有效的 JSON 字符串' };
+      return { success: false, error: 'workflow_json is not a valid JSON string' };
     }
 
     // 兼容嵌套传参
@@ -35,7 +35,7 @@ export const saveWorkflowFunction: FunctionDefinition = {
     }
 
     if (!workflow.name || !workflow.plan) {
-      return { success: false, error: '缺少必要的 workflow 字段（name、plan）' };
+      return { success: false, error: 'Missing required workflow fields (name, plan)' };
     }
 
     // 校验 plan.steps 中每个 action 是否为合法的内置工具名称
@@ -46,7 +46,7 @@ export const saveWorkflowFunction: FunctionDefinition = {
         if (!action || !getBuiltinFunction(action)) {
           return {
             success: false,
-            error: `步骤 ${i + 1} 的 action "${action || '(空)'}" 不是合法的内置工具名称`,
+            error: `Step ${i + 1} action "${action || '(empty)'}" is not a valid built-in tool name`,
           };
         }
       }

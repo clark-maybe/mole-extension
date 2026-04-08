@@ -18,7 +18,7 @@ const getActiveTabId = (): Promise<number | null> => {
 
 export const cdpEmulationFunction: FunctionDefinition = {
   name: 'cdp_emulation',
-  description: '设备与环境模拟工具。设置视口尺寸（模拟移动端）、覆盖 User-Agent、伪造地理位置、设置语言/时区、模拟网络条件（3G/离线等），以及重置所有模拟。',
+  description: 'Device and environment emulation tool. Set viewport size (simulate mobile), override User-Agent, fake geolocation, set locale/timezone, simulate network conditions (3G/offline, etc.), and reset all emulations.',
   supportsParallel: true,
   permissionLevel: 'interact',
   parameters: {
@@ -27,77 +27,77 @@ export const cdpEmulationFunction: FunctionDefinition = {
       action: {
         type: 'string',
         enum: ['set_viewport', 'set_user_agent', 'set_geolocation', 'set_locale', 'set_network_conditions', 'reset'],
-        description: '操作类型',
+        description: 'Action type',
       },
       // set_viewport
       width: {
         type: 'number',
-        description: '视口宽度（像素），如 375（iPhone）、1920（桌面）',
+        description: 'Viewport width in pixels, e.g. 375 (iPhone), 1920 (desktop)',
       },
       height: {
         type: 'number',
-        description: '视口高度（像素），如 812（iPhone X）',
+        description: 'Viewport height in pixels, e.g. 812 (iPhone X)',
       },
       device_scale_factor: {
         type: 'number',
-        description: '设备像素比，如 2（Retina）、3（高分手机），默认 1',
+        description: 'Device pixel ratio, e.g. 2 (Retina), 3 (high-DPI phone), default 1',
       },
       mobile: {
         type: 'boolean',
-        description: '是否模拟移动设备（影响触摸事件和 meta viewport），默认 false',
+        description: 'Whether to emulate a mobile device (affects touch events and meta viewport), default false',
       },
       // set_user_agent
       user_agent: {
         type: 'string',
-        description: '要覆盖的 User-Agent 字符串',
+        description: 'User-Agent string to override',
       },
       platform: {
         type: 'string',
-        description: 'navigator.platform 值（如 "Linux armv8l"、"Win32"）',
+        description: 'navigator.platform value (e.g. "Linux armv8l", "Win32")',
       },
       // set_geolocation
       latitude: {
         type: 'number',
-        description: '纬度（-90 到 90）',
+        description: 'Latitude (-90 to 90)',
       },
       longitude: {
         type: 'number',
-        description: '经度（-180 到 180）',
+        description: 'Longitude (-180 to 180)',
       },
       accuracy: {
         type: 'number',
-        description: '定位精度（米），默认 100',
+        description: 'Location accuracy in meters, default 100',
       },
       // set_locale
       locale: {
         type: 'string',
-        description: '语言区域（如 "zh-CN"、"en-US"、"ja-JP"）',
+        description: 'Locale (e.g. "zh-CN", "en-US", "ja-JP")',
       },
       timezone: {
         type: 'string',
-        description: '时区 ID（如 "Asia/Shanghai"、"America/New_York"、"Europe/London"）',
+        description: 'Timezone ID (e.g. "Asia/Shanghai", "America/New_York", "Europe/London")',
       },
       // set_network_conditions
       offline: {
         type: 'boolean',
-        description: '是否模拟离线状态',
+        description: 'Whether to simulate offline state',
       },
       latency: {
         type: 'number',
-        description: '额外延迟（毫秒），如 100（3G）、20（4G）',
+        description: 'Additional latency in milliseconds, e.g. 100 (3G), 20 (4G)',
       },
       download_throughput: {
         type: 'number',
-        description: '下载带宽（字节/秒），如 750000（3G ~6Mbps）、4000000（4G ~32Mbps）。-1 表示不限制。',
+        description: 'Download throughput in bytes/sec, e.g. 750000 (3G ~6Mbps), 4000000 (4G ~32Mbps). -1 means no limit.',
       },
       upload_throughput: {
         type: 'number',
-        description: '上传带宽（字节/秒），如 250000（3G ~2Mbps）。-1 表示不限制。',
+        description: 'Upload throughput in bytes/sec, e.g. 250000 (3G ~2Mbps). -1 means no limit.',
       },
       // 通用
       tab_id: {
         type: 'number',
-        description: '目标标签页 ID，不传则使用当前活动标签页',
+        description: 'Target tab ID, uses current active tab if not provided',
       },
     },
     required: ['action'],
@@ -105,24 +105,24 @@ export const cdpEmulationFunction: FunctionDefinition = {
 
   validate: (params: any): string | null => {
     const { action } = params || {};
-    if (!action) return '缺少 action 参数';
+    if (!action) return 'Missing action parameter';
     const validActions = ['set_viewport', 'set_user_agent', 'set_geolocation', 'set_locale', 'set_network_conditions', 'reset'];
     if (!validActions.includes(action)) {
-      return `不支持的 action: ${action}`;
+      return `Unsupported action: ${action}`;
     }
     if (action === 'set_viewport') {
-      if (!params.width || !params.height) return 'set_viewport 需要 width 和 height 参数';
+      if (!params.width || !params.height) return 'set_viewport requires width and height parameters';
     }
     if (action === 'set_user_agent') {
-      if (!params.user_agent) return 'set_user_agent 需要 user_agent 参数';
+      if (!params.user_agent) return 'set_user_agent requires user_agent parameter';
     }
     if (action === 'set_geolocation') {
       if (params.latitude === undefined || params.longitude === undefined) {
-        return 'set_geolocation 需要 latitude 和 longitude 参数';
+        return 'set_geolocation requires latitude and longitude parameters';
       }
     }
     if (action === 'set_locale') {
-      if (!params.locale && !params.timezone) return 'set_locale 需要 locale 或 timezone 参数';
+      if (!params.locale && !params.timezone) return 'set_locale requires locale or timezone parameter';
     }
     return null;
   },

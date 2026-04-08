@@ -40,7 +40,7 @@ const resolveElementRect = async (
 
 export const screenshotFunction: FunctionDefinition = {
   name: 'screenshot',
-  description: '截取标签页截图。默认截取可见区域；支持区域截图（clip）、全页截图（full_page）、元素截图（element_id）。也支持先打开指定 URL 后截图。\n\n⚠️ 不要用此工具来：\n- 只需要文本信息时（用 page_viewer，截图消耗 token 较多）\n- 获取可交互元素列表（用 page_snapshot）',
+  description: 'Capture a tab screenshot. By default captures the visible area; supports region screenshot (clip), full page screenshot (full_page), and element screenshot (element_id). Also supports opening a specified URL before capturing.\n\n⚠️ Do NOT use this tool for:\n- When you only need text information (use page_viewer, screenshots consume more tokens)\n- Getting a list of interactive elements (use page_snapshot)',
   supportsParallel: true,
   permissionLevel: 'read',
   parameters: {
@@ -49,54 +49,54 @@ export const screenshotFunction: FunctionDefinition = {
       format: {
         type: 'string',
         enum: ['png', 'jpeg'],
-        description: '图片格式，默认 png',
+        description: 'Image format, default png',
       },
       quality: {
         type: 'number',
-        description: '图片质量（仅 jpeg 有效），0-100，默认 80',
+        description: 'Image quality (jpeg only), 0-100, default 80',
       },
       url: {
         type: 'string',
-        description: '可选：先打开该 URL 再截图。适合需要去新页面取证的任务。',
+        description: 'Optional: open this URL first, then capture. Suitable for tasks that need to capture evidence from a new page.',
       },
       tab_id: {
         type: 'number',
-        description: '可选：对指定 tab_id 截图（会临时切换到该标签页）。',
+        description: 'Optional: capture screenshot of the specified tab_id (will temporarily switch to that tab).',
       },
       wait_ms: {
         type: 'number',
-        description: '等待页面加载超时时间（毫秒），默认 15000。',
+        description: 'Page load timeout in milliseconds, default 15000.',
       },
       close_after_capture: {
         type: 'boolean',
-        description: '当通过 url 新开标签页截图时，截图后是否关闭该标签页。默认 true。',
+        description: 'Whether to close the tab after capturing when opened via url. Default true.',
       },
       preserve_focus: {
         type: 'boolean',
-        description: '截图后是否恢复到原先标签页焦点。默认 true。',
+        description: 'Whether to restore focus to the original tab after capturing. Default true.',
       },
       clip: {
         type: 'object',
         properties: {
-          x: { type: 'number', description: '左上角 x 坐标（视口坐标）' },
-          y: { type: 'number', description: '左上角 y 坐标（视口坐标）' },
-          width: { type: 'number', description: '截取宽度（像素）' },
-          height: { type: 'number', description: '截取高度（像素）' },
+          x: { type: 'number', description: 'Top-left x coordinate (viewport coordinates)' },
+          y: { type: 'number', description: 'Top-left y coordinate (viewport coordinates)' },
+          width: { type: 'number', description: 'Capture width (pixels)' },
+          height: { type: 'number', description: 'Capture height (pixels)' },
         },
         required: ['x', 'y', 'width', 'height'],
-        description: '截取指定区域（视口坐标）。使用 CDP 实现。',
+        description: 'Capture a specific region (viewport coordinates). Uses CDP.',
       },
       full_page: {
         type: 'boolean',
-        description: '是否截取完整页面（包括滚动区域）。使用 CDP 实现。默认 false。',
+        description: 'Whether to capture the full page (including scrollable area). Uses CDP. Default false.',
       },
       element_id: {
         type: 'string',
-        description: 'page_snapshot 返回的元素句柄，自动截取该元素区域。使用 CDP 实现。',
+        description: 'Element handle returned by page_snapshot, automatically captures that element region. Uses CDP.',
       },
       annotate: {
         type: 'boolean',
-        description: '是否在截图上标注可交互元素编号。开启后截图上会显示元素编号标记，并返回编号到 element_id 的映射表。适合首次进入复杂页面时使用，帮助精确定位元素。仅对可见区域截图有效。默认 false。',
+        description: 'Whether to annotate interactive elements with numbered labels on the screenshot. When enabled, element number markers are displayed on the screenshot and a mapping from numbers to element_id is returned. Useful when first entering a complex page to precisely locate elements. Only effective for visible area screenshots. Default false.',
       },
     },
     required: [],

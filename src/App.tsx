@@ -28,12 +28,12 @@ const getLLMStatus = (): Promise<LLMStatus> =>
     });
   });
 
-/** 从 chrome.storage.local 读取 workflow 数量 */
+/** 从 chrome.storage.local 读取 skill 数量（域级 Skill） */
 const getWorkflowCount = (): Promise<number> =>
   new Promise((resolve) => {
-    chrome.storage.local.get('mole_site_workflows_v1', (result) => {
-      const store = result.mole_site_workflows_v1 as { workflows?: unknown[] } | undefined;
-      resolve(Array.isArray(store?.workflows) ? store.workflows.length : 0);
+    chrome.storage.local.get('mole_skills', (result) => {
+      const skills = result.mole_skills as Array<unknown> | undefined;
+      resolve(Array.isArray(skills) ? skills.length : 0);
     });
   });
 
@@ -68,7 +68,7 @@ function App() {
   useEffect(() => {
     const handleStorageChange = (changes: { [key: string]: chrome.storage.StorageChange }, areaName: string) => {
       if (areaName !== 'local') return;
-      if (changes.mole_ai_settings || changes.mole_site_workflows_v1) {
+      if (changes.mole_ai_settings || changes.mole_skills) {
         void loadOverview();
       }
     };

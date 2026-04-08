@@ -8,7 +8,7 @@ import { sendToTabWithRetry, waitForAnySelector, waitForTabComplete, withHiddenT
 
 export const fetchUrlFunction: FunctionDefinition = {
   name: 'fetch_url',
-  description: '获取指定 URL 的网页内容。无需用户打开该页面，AI 可以在后台读取任意网页的标题、正文、链接、标题层级等信息。适用于：深入阅读搜索结果链接、对比多个网页内容、总结指定文章、获取远程页面信息。\n\n⚠️ 不要用此工具来：\n- 获取用户当前浏览的页面内容（用 page_viewer，可获取更丰富的上下文）\n- 需要页面交互元素信息（用 page_snapshot）',
+  description: 'Fetch the content of a specified URL. No need for the user to open the page — AI can read any webpage\'s title, body text, links, heading hierarchy, etc. in the background. Use cases: deep-reading search result links, comparing multiple webpages, summarizing articles, fetching remote page info.\n\n⚠️ Do NOT use this tool for:\n- Getting content of the page the user is currently browsing (use page_viewer for richer context)\n- When you need interactive element information (use page_snapshot)',
   supportsParallel: true,
   permissionLevel: 'read',
   parameters: {
@@ -16,23 +16,23 @@ export const fetchUrlFunction: FunctionDefinition = {
     properties: {
       url: {
         type: 'string',
-        description: '要获取的网页 URL，必须是完整的 http/https 链接',
+        description: 'The webpage URL to fetch, must be a full http/https link',
       },
       sections: {
         type: 'array',
         items: { type: 'string', enum: ['meta', 'content', 'links', 'headings'] },
-        description: '要获取的信息部分。不传则返回全部。',
+        description: 'Sections of information to retrieve. Returns all if omitted.',
       },
       max_content_length: {
         type: 'number',
-        description: '正文最大字符数，默认5000，范围500-10000',
+        description: 'Maximum character count for body text, default 5000, range 500-10000',
       },
     },
     required: ['url'],
   },
   validate: (params: { url?: string }) => {
-    if (!params.url) return '缺少 url';
-    if (!/^https?:\/\//i.test(params.url)) return 'url 必须是 http/https 链接';
+    if (!params.url) return 'Missing url';
+    if (!/^https?:\/\//i.test(params.url)) return 'url must be an http/https link';
     return null;
   },
   execute: async (

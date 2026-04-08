@@ -21,7 +21,7 @@ const getActiveTabId = (): Promise<number | null> => {
 
 export const pageViewerFunction: FunctionDefinition = {
   name: 'page_viewer',
-  description: '获取用户当前正在浏览的网页信息。可获取页面URL、标题、meta信息、正文内容、链接列表、标题层级等。适用于：用户询问当前页面相关问题、需要理解用户浏览上下文、总结或分析当前页面内容时。\n\n⚠️ 不要用此工具来：\n- 获取可交互元素的 element_id（用 page_snapshot）\n- 检查元素是否存在或可见（用 page_assert）\n- 了解页面布局结构（用 page_skeleton）',
+  description: 'Retrieve information about the web page the user is currently viewing. Can obtain page URL, title, meta info, body content, link list, heading hierarchy, etc. Use when: the user asks about the current page, you need to understand the browsing context, or summarize/analyze the current page content.\n\n⚠️ Do NOT use this tool for:\n- Getting element_id of interactive elements (use page_snapshot)\n- Checking whether an element exists or is visible (use page_assert)\n- Understanding page layout structure (use page_skeleton)',
   supportsParallel: true,
   permissionLevel: 'read',
   parameters: {
@@ -33,15 +33,15 @@ export const pageViewerFunction: FunctionDefinition = {
           type: 'string',
           enum: ['meta', 'content', 'links', 'headings'],
         },
-        description: '要获取的信息部分，可选值：meta(页面元信息)、content(正文内容)、links(链接列表)、headings(标题层级)。不传则返回全部信息。',
+        description: 'Sections to retrieve. Options: meta (page metadata), content (body text), links (link list), headings (heading hierarchy). Returns all sections if omitted.',
       },
       max_content_length: {
         type: 'number',
-        description: '正文内容的最大字符数，默认3000，范围500-10000',
+        description: 'Maximum character count for body content. Default: 3000, range: 500-10000.',
       },
       tab_id: {
         type: 'number',
-        description: '目标标签页 ID。不传则操作当前活动标签页。',
+        description: 'Target tab ID. Uses the current active tab if omitted.',
       },
     },
     required: [],
@@ -60,7 +60,7 @@ export const pageViewerFunction: FunctionDefinition = {
     } else {
       const activeTabId = await getActiveTabId();
       if (!activeTabId) {
-        return { success: false, error: '无法获取当前标签页' };
+        return { success: false, error: 'Unable to get current tab' };
       }
       tabId = activeTabId;
     }
@@ -77,11 +77,11 @@ export const pageViewerFunction: FunctionDefinition = {
       }, {
         signal: context?.signal,
         deadlineMs: 12000,
-        timeoutMessage: '等待页面内容解析超时',
+        timeoutMessage: 'Timed out waiting for page content parsing',
       });
 
       if (!response || !response.success) {
-        return { success: false, error: response?.error || '解析页面内容失败' };
+        return { success: false, error: response?.error || 'Failed to parse page content' };
       }
 
       return {
@@ -89,7 +89,7 @@ export const pageViewerFunction: FunctionDefinition = {
         data: response.data,
       };
     } catch (err: any) {
-      return { success: false, error: err.message || '网页查看执行失败' };
+      return { success: false, error: err.message || 'Page viewer execution failed' };
     }
   },
 };

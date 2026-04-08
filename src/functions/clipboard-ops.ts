@@ -45,7 +45,7 @@ const sendAndWait = <T = any>(tabId: number, type: string, data: any, signal?: A
 
 export const clipboardOpsFunction: FunctionDefinition = {
   name: 'clipboard_ops',
-  description: '读取或写入用户剪贴板。写入：将文本复制到剪贴板，方便用户粘贴到其他地方。读取：获取用户剪贴板中的内容作为输入。\n\n⚠️ 不要用此工具来：\n- 传递 AI 内部中间结果（直接在上下文中使用）\n- 仅在用户明确需要复制/粘贴时使用',
+  description: 'Read from or write to the user clipboard. Write: copy text to the clipboard so the user can paste it elsewhere. Read: retrieve clipboard content as input.\n\n⚠️ Do NOT use this tool to:\n- Pass intermediate AI results (use them directly in context)\n- Only use when the user explicitly needs copy/paste',
   supportsParallel: false,
   permissionLevel: 'interact',
   actionPermissions: { read: 'sensitive' },
@@ -56,11 +56,11 @@ export const clipboardOpsFunction: FunctionDefinition = {
       action: {
         type: 'string',
         enum: ['read', 'write'],
-        description: '操作类型：read(读取剪贴板)、write(写入到剪贴板)',
+        description: 'Action type: read (read clipboard), write (write to clipboard)',
       },
       text: {
         type: 'string',
-        description: '要写入剪贴板的文本（action=write 时必传）',
+        description: 'Text to write to clipboard (required when action=write)',
       },
     },
     required: ['action'],

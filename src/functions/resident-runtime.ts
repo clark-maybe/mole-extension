@@ -529,7 +529,7 @@ void ensureResidentRuntimeReady();
 
 export const residentRuntimeFunction: FunctionDefinition = {
   name: 'resident_runtime',
-  description: '常驻运行器。在指定 tab 上按固定间隔执行工作流，支持分层执行：检测层（Plan 直跑，零 token）+ AI 响应层（按需触发）。支持 start/stop/status/list/run_once。适合自动回复、定时巡检、持续监控。',
+  description: 'Resident runtime. Executes workflows on a specified tab at fixed intervals with layered execution: detection layer (Plan execution, zero tokens) + AI response layer (triggered on demand). Supports start/stop/status/list/run_once. Suitable for auto-reply, periodic inspection, and continuous monitoring.',
   supportsParallel: false,
   permissionLevel: 'interact',
   parameters: {
@@ -538,63 +538,63 @@ export const residentRuntimeFunction: FunctionDefinition = {
       action: {
         type: 'string',
         enum: ['start', 'stop', 'status', 'list', 'run_once'],
-        description: '操作：start(创建/更新并启动)、stop(停用)、status(查看单个)、list(查看全部)、run_once(立即执行一次)',
+        description: 'Action: start (create/update and start), stop (disable), status (view single), list (view all), run_once (execute immediately once)',
       },
       job_id: {
         type: 'string',
-        description: '任务 ID。stop/status/run_once 需要；start 传入则更新该任务',
+        description: 'Job ID. Required for stop/status/run_once; if provided for start, updates the existing job',
       },
       name: {
         type: 'string',
-        description: '任务名（start 可选）',
+        description: 'Job name (optional for start)',
       },
       site_workflow: {
         type: 'string',
-        description: '站点工作流名称（来自注册表，如"Boss直聘消息回复"）',
+        description: 'Site workflow name (from registry)',
       },
       tab_id: {
         type: 'number',
-        description: '常驻执行目标 tabId（start 必填）',
+        description: 'Target tabId for resident execution (required for start)',
       },
       interval_ms: {
         type: 'number',
-        description: '执行间隔毫秒（start 可选，默认 60000，范围 30000~21600000）',
+        description: 'Execution interval in milliseconds (optional for start, default 60000, range 30000~21600000)',
       },
       params: {
         type: 'object',
-        description: '传给 workflow 的入参对象',
+        description: 'Parameters object to pass to the workflow',
       },
       max_failures: {
         type: 'number',
-        description: '连续失败阈值，达到后自动停用。0 表示不自动停用（默认）',
+        description: 'Consecutive failure threshold, auto-disables when reached. 0 means no auto-disable (default)',
       },
       enabled: {
         type: 'boolean',
-        description: 'start 时是否启用，默认 true',
+        description: 'Whether to enable on start, default true',
       },
       ai_enabled: {
         type: 'boolean',
-        description: '是否启用 AI 响应层。启用后，检测到变化时会调用 AI 生成回复',
+        description: 'Whether to enable the AI response layer. When enabled, AI generates a reply upon detecting changes',
       },
       ai_prompt_template: {
         type: 'string',
-        description: 'AI 提示词模板。用 {{result}} 引用检测结果。例如："以下是最新消息：\\n{{result}}\\n请生成回复"',
+        description: 'AI prompt template. Use {{result}} to reference detection results. E.g. "Here are the latest messages:\\n{{result}}\\nPlease generate a reply"',
       },
       ai_action_after: {
         type: 'object',
-        description: 'AI 响应后的动作。action 固定为 "fill_and_send"，需提供 selector（输入框选择器）',
+        description: 'Action after AI response. action is fixed as "fill_and_send", requires selector (input field selector)',
         properties: {
           action: { type: 'string', enum: ['fill_and_send'] },
           selector: { type: 'string' },
-          key: { type: 'string', description: '发送键，默认 Enter' },
+          key: { type: 'string', description: 'Send key, default Enter' },
         },
       },
       ai_budget: {
         type: 'object',
-        description: 'AI 调用预算限制',
+        description: 'AI call budget limits',
         properties: {
-          maxPerHour: { type: 'number', description: '每小时最多调用次数，0=不限' },
-          maxPerDay: { type: 'number', description: '每天最多调用次数，0=不限' },
+          maxPerHour: { type: 'number', description: 'Max calls per hour, 0=unlimited' },
+          maxPerDay: { type: 'number', description: 'Max calls per day, 0=unlimited' },
         },
       },
     },
@@ -610,20 +610,20 @@ export const residentRuntimeFunction: FunctionDefinition = {
     ai_prompt_template?: string;
   }) => {
     const action = String(params.action || '').trim().toLowerCase() as ResidentAction;
-    if (!action) return '缺少 action';
+    if (!action) return 'Missing action';
     if (action === 'start') {
       const siteWorkflow = String(params.site_workflow || '').trim();
-      if (!siteWorkflow) return 'start 需要 site_workflow';
-      if (!Number.isFinite(Number(params.tab_id)) || Number(params.tab_id) <= 0) return 'start 需要有效 tab_id';
+      if (!siteWorkflow) return 'start requires site_workflow';
+      if (!Number.isFinite(Number(params.tab_id)) || Number(params.tab_id) <= 0) return 'start requires a valid tab_id';
       if (params.interval_ms != null && (!Number.isFinite(Number(params.interval_ms)) || Number(params.interval_ms) <= 0)) {
-        return 'interval_ms 必须为正数';
+        return 'interval_ms must be a positive number';
       }
       if (params.ai_enabled && !params.ai_prompt_template?.trim()) {
-        return '启用 AI 响应时需要提供 ai_prompt_template';
+        return 'ai_prompt_template is required when AI response is enabled';
       }
     }
     if ((action === 'stop' || action === 'status' || action === 'run_once') && !String(params.job_id || '').trim()) {
-      return `${action} 需要 job_id`;
+      return `${action} requires job_id`;
     }
     return null;
   },

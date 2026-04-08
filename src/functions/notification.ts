@@ -7,7 +7,7 @@ import type { FunctionDefinition } from './types';
 
 export const notificationFunction: FunctionDefinition = {
   name: 'notification',
-  description: '发送浏览器桌面通知。适用于：提醒用户注意某事、通知任务完成、报告监控结果等。通知会显示在系统通知中心。',
+  description: 'Send a browser desktop notification. Use cases: remind the user of something, notify task completion, report monitoring results, etc. Notifications appear in the system notification center.',
   supportsParallel: true,
   permissionLevel: 'interact',
   parameters: {
@@ -15,11 +15,11 @@ export const notificationFunction: FunctionDefinition = {
     properties: {
       title: {
         type: 'string',
-        description: '通知标题',
+        description: 'Notification title',
       },
       message: {
         type: 'string',
-        description: '通知内容',
+        description: 'Notification body text',
       },
     },
     required: ['title', 'message'],

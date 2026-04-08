@@ -16,7 +16,7 @@ let requestCounter = 0;
 
 export const requestConfirmationFunction: FunctionDefinition = {
   name: 'request_confirmation',
-  description: '在执行敏感或重要操作前请求用户确认。用户会看到确认信息并选择批准或拒绝，拒绝时可附带理由。',
+  description: 'Request user confirmation before performing sensitive or critical operations. The user will see a confirmation message and choose to approve or reject, optionally providing a reason when rejecting.',
   supportsParallel: false,
   permissionLevel: 'read',
   parameters: {
@@ -24,7 +24,7 @@ export const requestConfirmationFunction: FunctionDefinition = {
     properties: {
       message: {
         type: 'string',
-        description: '向用户展示的确认信息，简明描述即将执行的操作及影响',
+        description: 'The confirmation message to present to the user, briefly describing the operation to be performed and its impact.',
       },
     },
     required: ['message'],
@@ -36,7 +36,7 @@ export const requestConfirmationFunction: FunctionDefinition = {
   ): Promise<FunctionResult> => {
     const message = String(params.message || '').trim();
     if (!message) {
-      return { success: false, error: '缺少确认信息' };
+      return { success: false, error: 'Missing confirmation message' };
     }
 
     const requestId = `approval_${Date.now()}_${++requestCounter}`;
@@ -81,7 +81,7 @@ export const requestConfirmationFunction: FunctionDefinition = {
         if (settled) return;
         cleanup();
         Channel.broadcast('__approval_cancel', { requestId });
-        resolve({ success: false, error: '任务已取消' });
+        resolve({ success: false, error: 'Task cancelled' });
       };
 
       Channel.on('__approval_response', handler);

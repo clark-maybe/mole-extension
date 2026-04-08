@@ -21,13 +21,13 @@ const getActiveTabId = (): Promise<number | null> => {
 export const pageSnapshotFunction: FunctionDefinition = {
   name: 'page_snapshot',
   description: [
-    '获取当前页面的语义化快照，返回可交互/可阅读元素候选列表。',
-    '每个候选都会带 element_id、文本、标签、role、是否可点击/可编辑、可见性、位置和 selector 候选。',
-    '适合陌生网站自动化：先用 page_snapshot(query=...) 找到候选元素，再用 cdp_input(element_id=...) 基于 element_id 执行动作。',
-    '\n\n⚠️ 不要用此工具来：',
-    '- 只需要页面纯文本内容时（用 page_viewer 更轻量）',
-    '- 验证操作结果是否符合预期（用 page_assert）',
-    '- 只需要了解页面整体布局（用 page_skeleton 更轻量）',
+    'Get a semantic snapshot of the current page, returning a candidate list of interactive/readable elements.',
+    'Each candidate includes element_id, text, tag, role, clickable/editable status, visibility, position, and selector candidates.',
+    'Ideal for automating unfamiliar websites: first use page_snapshot(query=...) to find candidate elements, then use cdp_input(element_id=...) to perform actions based on element_id.',
+    '\n\n⚠️ Do NOT use this tool for:',
+    '- When you only need plain text content (use page_viewer, lighter weight)',
+    '- Verifying whether an action result meets expectations (use page_assert)',
+    '- When you only need to understand overall page layout (use page_skeleton, lighter weight)',
   ].join('\n'),
   supportsParallel: true,
   permissionLevel: 'read',
@@ -36,31 +36,31 @@ export const pageSnapshotFunction: FunctionDefinition = {
     properties: {
       query: {
         type: 'string',
-        description: '可选：自然语言定位词，如“搜索框”“登录按钮”“商品价格”“发送”。传入后会按相关性排序。',
+        description: 'Optional: natural language locator, e.g. “search box”, “login button”, “product price”, “send”. Results are ranked by relevance when provided.',
       },
       scope_selector: {
         type: 'string',
-        description: '可选：限定扫描范围的 CSS selector，例如 "main"、"form"、"#content"。',
+        description: 'Optional: CSS selector to limit the scan scope, e.g. "main", "form", "#content".',
       },
       include_non_interactive: {
         type: 'boolean',
-        description: '是否额外包含非交互元素。默认 false。查文本信息时可设为 true。',
+        description: 'Whether to include non-interactive elements. Default: false. Set to true when looking for text information.',
       },
       include_hidden: {
         type: 'boolean',
-        description: '是否包含隐藏元素。默认 false。',
+        description: 'Whether to include hidden elements. Default: false.',
       },
       only_viewport: {
         type: 'boolean',
-        description: '是否仅返回当前视口内元素。默认 false。',
+        description: 'Whether to return only elements within the current viewport. Default: false.',
       },
       limit: {
         type: 'number',
-        description: '最多返回多少个候选元素，范围 1-60，默认 20。',
+        description: 'Maximum number of candidate elements to return. Range: 1-60, default: 20.',
       },
       tab_id: {
         type: 'number',
-        description: '目标标签页 ID。不传则操作当前活动标签页。',
+        description: 'Target tab ID. Uses the current active tab if omitted.',
       },
     },
     required: [],
@@ -87,7 +87,7 @@ export const pageSnapshotFunction: FunctionDefinition = {
     } else {
       const activeTabId = await getActiveTabId();
       if (!activeTabId) {
-        return { success: false, error: '无法获取当前标签页' };
+        return { success: false, error: 'Unable to get current tab' };
       }
       tabId = activeTabId;
     }
@@ -100,15 +100,15 @@ export const pageSnapshotFunction: FunctionDefinition = {
         {
           signal: context?.signal,
           deadlineMs: 12000,
-          timeoutMessage: '等待页面语义快照超时',
+          timeoutMessage: 'Timed out waiting for page semantic snapshot',
         },
       );
       if (!response?.success) {
-        return { success: false, error: response?.error || '页面语义快照失败' };
+        return { success: false, error: response?.error || 'Page semantic snapshot failed' };
       }
       return { success: true, data: response.data };
     } catch (err: any) {
-      return { success: false, error: err.message || '页面语义快照失败' };
+      return { success: false, error: err.message || 'Page semantic snapshot failed' };
     }
   },
 };

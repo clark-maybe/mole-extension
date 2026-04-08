@@ -969,14 +969,14 @@ const performGetInfo = async (
 export const cdpInputFunction: FunctionDefinition = {
   name: 'cdp_input',
   description: [
-    '在用户当前浏览的页面上执行交互操作。这是操作页面的主要工具。',
-    '点击：click/double_click/right_click/click_text（按可见文本点击）。',
-    '输入：fill（填写表单）/clear（清空）/select（下拉选择）/type（逐字符输入）/key_press（按键）/focus（聚焦）。',
-    '滚动：scroll/scroll_into_view。',
-    '等待：wait_for_element/wait_text/wait_navigation。',
-    '其他：hover/drag/get_info。',
-    '定位方式：element_id（来自 page_snapshot，优先）或 selector（CSS 选择器）或 x/y 坐标。',
-  ].join(' ') + '\n\n⚠️ 不要用此工具来：\n- 读取页面内容（用 page_viewer）\n- 检查元素是否存在（用 page_snapshot 或 page_assert）\n- 获取元素文本（用 cdp_dom 的 get_text）',
+    'Perform interaction actions on the page the user is currently browsing. This is the primary tool for operating on pages.',
+    'Click: click/double_click/right_click/click_text (click by visible text).',
+    'Input: fill (fill form)/clear/select (dropdown)/type (character-by-character input)/key_press/focus.',
+    'Scroll: scroll/scroll_into_view.',
+    'Wait: wait_for_element/wait_text/wait_navigation.',
+    'Other: hover/drag/get_info.',
+    'Targeting: element_id (from page_snapshot, preferred) or selector (CSS selector) or x/y coordinates.',
+  ].join(' ') + '\n\n⚠️ Do NOT use this tool for:\n- Reading page content (use page_viewer)\n- Checking element existence (use page_snapshot or page_assert)\n- Getting element text (use cdp_dom get_text)',
   supportsParallel: false,
   permissionLevel: 'interact',
   parameters: {
@@ -989,107 +989,107 @@ export const cdpInputFunction: FunctionDefinition = {
           'fill', 'clear', 'select', 'click_text', 'scroll_into_view', 'focus',
           'wait_for_element', 'wait_text', 'wait_navigation', 'get_info',
         ],
-        description: '操作类型',
+        description: 'Action type',
       },
       element_id: {
         type: 'string',
-        description: 'page_snapshot 返回的元素句柄。用于定位目标元素，优先于 selector 和 x/y 坐标',
+        description: 'Element handle returned by page_snapshot. Used to locate the target element, takes priority over selector and x/y coordinates',
       },
       selector: {
         type: 'string',
-        description: 'CSS 选择器。fill/clear/select/focus/scroll_into_view/get_info/wait_for_element/click_text 可用',
+        description: 'CSS selector. Available for fill/clear/select/focus/scroll_into_view/get_info/wait_for_element/click_text',
       },
       x: {
         type: 'number',
-        description: '目标 X 坐标（视口坐标）。element_id 不可用时使用',
+        description: 'Target X coordinate (viewport). Used when element_id is not available',
       },
       y: {
         type: 'number',
-        description: '目标 Y 坐标（视口坐标）。element_id 不可用时使用',
+        description: 'Target Y coordinate (viewport). Used when element_id is not available',
       },
       to_x: {
         type: 'number',
-        description: 'drag 动作的终点 X 坐标',
+        description: 'End X coordinate for drag action',
       },
       to_y: {
         type: 'number',
-        description: 'drag 动作的终点 Y 坐标',
+        description: 'End Y coordinate for drag action',
       },
       text: {
         type: 'string',
-        description: 'type 动作要输入的文本，或 click_text/wait_text 的匹配文本',
+        description: 'Text to input for type action, or matching text for click_text/wait_text',
       },
       value: {
         type: 'string',
-        description: 'fill/select 的目标值',
+        description: 'Target value for fill/select',
       },
       key: {
         type: 'string',
-        description: 'key_press 的按键名，如 Enter、Tab、Escape、ArrowDown、Backspace、Space',
+        description: 'Key name for key_press, e.g. Enter, Tab, Escape, ArrowDown, Backspace, Space',
       },
       modifiers: {
         type: 'array',
         items: { type: 'string' },
-        description: 'key_press 的修饰键，可选 ctrl/shift/alt/meta',
+        description: 'Modifier keys for key_press, options: ctrl/shift/alt/meta',
       },
       match_mode: {
         type: 'string',
         enum: ['contains', 'exact'],
-        description: 'click_text/wait_text 文本匹配模式，默认 contains',
+        description: 'Text matching mode for click_text/wait_text, default contains',
       },
       delta_x: {
         type: 'number',
-        description: 'scroll 水平滚动量（像素），正数向右。默认 0',
+        description: 'Horizontal scroll amount in pixels for scroll, positive means right. Default 0',
       },
       delta_y: {
         type: 'number',
-        description: 'scroll 垂直滚动量（像素），正数向下。默认 120',
+        description: 'Vertical scroll amount in pixels for scroll, positive means down. Default 120',
       },
       direction: {
         type: 'string',
         enum: ['up', 'down', 'left', 'right'],
-        description: 'scroll 滚动方向（与 scroll_to 二选一，不需要坐标）',
+        description: 'Scroll direction (mutually exclusive with scroll_to, no coordinates needed)',
       },
       scroll_to: {
         type: 'string',
         enum: ['top', 'bottom'],
-        description: 'scroll 滚动目标 top/bottom（不需要坐标）',
+        description: 'Scroll target top/bottom (no coordinates needed)',
       },
       amount: {
         type: 'number',
-        description: 'scroll 滚动像素量（与 direction 配合使用），默认 500',
+        description: 'Scroll pixel amount (used with direction), default 500',
       },
       interval_ms: {
         type: 'number',
-        description: 'type 动作的字符间隔毫秒数，默认 30，范围 0-200',
+        description: 'Character interval in milliseconds for type action, default 30, range 0-200',
       },
       timeout_ms: {
         type: 'number',
-        description: '等待超时毫秒数（wait_for_element/wait_text 默认 5000，wait_navigation 默认 10000）',
+        description: 'Wait timeout in milliseconds (wait_for_element/wait_text default 5000, wait_navigation default 10000)',
       },
       visible: {
         type: 'boolean',
-        description: 'wait_for_element 是否要求元素可见，默认 true',
+        description: 'Whether wait_for_element requires the element to be visible, default true',
       },
       stable_ms: {
         type: 'number',
-        description: 'wait_navigation 导航稳定时长，默认 1200ms',
+        description: 'Navigation stability duration for wait_navigation, default 1200ms',
       },
       require_url_change: {
         type: 'boolean',
-        description: 'wait_navigation 是否要求 URL 变化，默认 true',
+        description: 'Whether wait_navigation requires URL change, default true',
       },
       url_contains: {
         type: 'string',
-        description: 'wait_navigation URL 包含匹配',
+        description: 'URL substring match for wait_navigation',
       },
       url_regex: {
         type: 'string',
-        description: 'wait_navigation URL 正则匹配（字符串形式）',
+        description: 'URL regex match for wait_navigation (string form)',
       },
       tab_id: {
         type: 'number',
-        description: '目标标签页 ID。不传则操作当前活动标签页。',
+        description: 'Target tab ID. Uses the current active tab if not provided.',
       },
     },
     required: ['action'],
@@ -1108,29 +1108,29 @@ export const cdpInputFunction: FunctionDefinition = {
     direction?: string;
     scroll_to?: string;
   }) => {
-    if (!params?.action) return '缺少 action';
+    if (!params?.action) return 'Missing action parameter';
 
     // 需要坐标的原始鼠标操作（不包含 scroll，scroll 有多种模式）
     const needCoords = ['click', 'double_click', 'right_click', 'hover'];
     if (needCoords.includes(params.action) && !params.element_id && (typeof params.x !== 'number' || typeof params.y !== 'number')) {
-      return `${params.action} 需要提供 element_id 或 (x, y) 坐标`;
+      return `${params.action} requires element_id or (x, y) coordinates`;
     }
 
     if (params.action === 'drag') {
       if (!params.element_id && (typeof params.x !== 'number' || typeof params.y !== 'number')) {
-        return 'drag 需要提供起点 element_id 或 (x, y)';
+        return 'drag requires origin element_id or (x, y)';
       }
       if (typeof params.to_x !== 'number' || typeof params.to_y !== 'number') {
-        return 'drag 需要提供终点 (to_x, to_y)';
+        return 'drag requires destination (to_x, to_y)';
       }
     }
 
     if (params.action === 'type' && !params.text) {
-      return 'type 需要提供 text';
+      return 'type requires text parameter';
     }
 
     if (params.action === 'key_press' && !params.key) {
-      return 'key_press 需要提供 key';
+      return 'key_press requires key parameter';
     }
 
     // scroll 支持三种模式：坐标+delta / direction / scroll_to
@@ -1139,34 +1139,34 @@ export const cdpInputFunction: FunctionDefinition = {
       const hasDirection = !!params.direction;
       const hasScrollTo = !!params.scroll_to;
       if (!hasCoords && !hasDirection && !hasScrollTo) {
-        return 'scroll 需要 element_id/(x,y) 坐标 或 direction 或 scroll_to';
+        return 'scroll requires element_id/(x,y) coordinates or direction or scroll_to';
       }
     }
 
     // fill/select 需要定位器 + value
     if (params.action === 'fill' || params.action === 'select') {
       if (!params.element_id && !params.selector) {
-        return `${params.action} 需要提供 element_id 或 selector`;
+        return `${params.action} requires element_id or selector`;
       }
       if (typeof params.value !== 'string') {
-        return `${params.action} 需要提供 value（字符串）`;
+        return `${params.action} requires value parameter (string)`;
       }
     }
 
     // clear/focus/scroll_into_view/get_info 需要定位器
     const needLocator = ['clear', 'focus', 'scroll_into_view', 'get_info'];
     if (needLocator.includes(params.action) && !params.element_id && !params.selector) {
-      return `${params.action} 需要提供 element_id 或 selector`;
+      return `${params.action} requires element_id or selector`;
     }
 
     // click_text/wait_text 需要 text
     if ((params.action === 'click_text' || params.action === 'wait_text') && !params.text) {
-      return `${params.action} 需要提供 text`;
+      return `${params.action} requires text parameter`;
     }
 
     // wait_for_element 需要 selector
     if (params.action === 'wait_for_element' && !params.selector) {
-      return 'wait_for_element 需要提供 selector';
+      return 'wait_for_element requires selector parameter';
     }
 
     return null;

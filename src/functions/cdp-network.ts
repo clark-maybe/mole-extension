@@ -20,7 +20,7 @@ const getActiveTabId = (): Promise<number | null> => {
 
 export const cdpNetworkFunction: FunctionDefinition = {
   name: 'cdp_network',
-  description: '网络请求监听与 Cookie 管理（CDP 增强版）。监听页面网络请求，获取完整请求/响应数据（包括 body 和 headers），统计汇总，以及跨域 Cookie 读写。\n\n⚠️ 不要用此工具来：\n- 获取页面内容（用 page_viewer 或 fetch_url）\n- 仅用于调试 API 请求或管理 Cookie',
+  description: 'Network request monitoring and Cookie management (CDP enhanced). Monitor page network requests, retrieve complete request/response data (including body and headers), aggregate statistics, and cross-origin Cookie read/write.\n\n⚠️ Do NOT use this tool for:\n- Getting page content (use page_viewer or fetch_url)\n- Only use for debugging API requests or managing Cookies',
   supportsParallel: false,
   permissionLevel: 'interact',
   actionPermissions: {
@@ -39,78 +39,78 @@ export const cdpNetworkFunction: FunctionDefinition = {
       action: {
         type: 'string',
         enum: ['start', 'stop', 'get_events', 'get_body', 'summary', 'clear', 'get_cookies', 'set_cookie', 'delete_cookie'],
-        description: '操作类型：start=开始监听, stop=停止, get_events=查询事件, get_body=获取响应体, summary=统计汇总, clear=清空, get_cookies=读Cookie, set_cookie=写Cookie, delete_cookie=删Cookie',
+        description: 'Action type: start=start monitoring, stop=stop, get_events=query events, get_body=get response body, summary=aggregate statistics, clear=clear, get_cookies=read cookies, set_cookie=write cookie, delete_cookie=delete cookie',
       },
       url_patterns: {
         type: 'array',
         items: { type: 'string' },
-        description: 'start 时的 URL 过滤模式（支持 * 通配），空则监听全部',
+        description: 'URL filter patterns for start (supports * wildcard), empty monitors all',
       },
       max_events: {
         type: 'number',
-        description: 'start 时每个 tab 最大保留事件数，默认 500',
+        description: 'Max events to keep per tab for start, default 500',
       },
       only_errors: {
         type: 'boolean',
-        description: 'get_events 时仅返回错误请求（HTTP>=400 或网络错误）',
+        description: 'Return only error requests for get_events (HTTP>=400 or network errors)',
       },
       url_filter: {
         type: 'string',
-        description: 'get_events 时按 URL 关键词过滤',
+        description: 'Filter by URL keyword for get_events',
       },
       limit: {
         type: 'number',
-        description: 'get_events 返回条数上限，默认 200',
+        description: 'Max entries to return for get_events, default 200',
       },
       request_id: {
         type: 'string',
-        description: 'get_body 时指定的请求 ID（从 get_events 返回的 requestId 获取）',
+        description: 'Request ID for get_body (obtained from requestId in get_events results)',
       },
       urls: {
         type: 'array',
         items: { type: 'string' },
-        description: 'get_cookies 时指定要获取 cookie 的 URL 列表',
+        description: 'URL list to get cookies for in get_cookies',
       },
       name: {
         type: 'string',
-        description: 'set_cookie/delete_cookie 的 cookie 名称',
+        description: 'Cookie name for set_cookie/delete_cookie',
       },
       value: {
         type: 'string',
-        description: 'set_cookie 的 cookie 值',
+        description: 'Cookie value for set_cookie',
       },
       domain: {
         type: 'string',
-        description: 'set_cookie/delete_cookie 的域名',
+        description: 'Domain for set_cookie/delete_cookie',
       },
       path: {
         type: 'string',
-        description: 'set_cookie 的路径，默认 /',
+        description: 'Path for set_cookie, default /',
       },
       httpOnly: {
         type: 'boolean',
-        description: 'set_cookie 是否 httpOnly',
+        description: 'Whether set_cookie is httpOnly',
       },
       secure: {
         type: 'boolean',
-        description: 'set_cookie 是否 secure',
+        description: 'Whether set_cookie is secure',
       },
       sameSite: {
         type: 'string',
         enum: ['Strict', 'Lax', 'None'],
-        description: 'set_cookie 的 SameSite 属性',
+        description: 'SameSite attribute for set_cookie',
       },
       expires: {
         type: 'number',
-        description: 'set_cookie 的过期时间（Unix 时间戳，秒）',
+        description: 'Expiration time for set_cookie (Unix timestamp in seconds)',
       },
       url: {
         type: 'string',
-        description: 'delete_cookie 时指定的 URL（与 domain 二选一）',
+        description: 'URL for delete_cookie (mutually exclusive with domain)',
       },
       tab_id: {
         type: 'number',
-        description: '目标标签页 ID，不传则使用当前活动标签页',
+        description: 'Target tab ID, uses current active tab if not provided',
       },
     },
     required: ['action'],
@@ -118,21 +118,21 @@ export const cdpNetworkFunction: FunctionDefinition = {
 
   validate: (params: any): string | null => {
     const { action } = params || {};
-    if (!action) return '缺少 action 参数';
+    if (!action) return 'Missing action parameter';
     const validActions = ['start', 'stop', 'get_events', 'get_body', 'summary', 'clear', 'get_cookies', 'set_cookie', 'delete_cookie'];
     if (!validActions.includes(action)) {
-      return `不支持的 action: ${action}`;
+      return `Unsupported action: ${action}`;
     }
     if (action === 'get_body' && !params.request_id) {
-      return 'get_body 需要 request_id 参数';
+      return 'get_body requires request_id parameter';
     }
     if (action === 'set_cookie') {
-      if (!params.name) return 'set_cookie 需要 name 参数';
-      if (params.value === undefined) return 'set_cookie 需要 value 参数';
-      if (!params.domain && !params.url) return 'set_cookie 需要 domain 或 url 参数';
+      if (!params.name) return 'set_cookie requires name parameter';
+      if (params.value === undefined) return 'set_cookie requires value parameter';
+      if (!params.domain && !params.url) return 'set_cookie requires domain or url parameter';
     }
     if (action === 'delete_cookie') {
-      if (!params.name) return 'delete_cookie 需要 name 参数';
+      if (!params.name) return 'delete_cookie requires name parameter';
     }
     return null;
   },

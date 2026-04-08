@@ -21,15 +21,15 @@ const getActiveTabId = (): Promise<number | null> => {
 export const pageSkeletonFunction: FunctionDefinition = {
   name: 'page_skeleton',
   description: [
-    '获取当前页面的层级化骨架结构，返回类 Accessibility Tree 的简化文本表示。',
-    '用极少的 token 即可理解页面整体布局、区域划分和交互元素分布。',
-    '适合在操作前先获取全局结构，再用 page_snapshot 精确定位具体元素。',
-    '交互元素会自动分配 element_id，可直接用于 cdp_input。',
-    '支持 expand_selector 渐进展开特定区域。',
-    '\n\n⚠️ 不要用此工具来：',
-    '- 需要详细的元素信息或 element_id（用 page_snapshot）',
-    '- 需要页面正文内容（用 page_viewer）',
-    '- 仅用于快速了解页面整体布局和区域划分',
+    'Get the hierarchical skeleton structure of the current page, returning a simplified text representation similar to an Accessibility Tree.',
+    'Understand overall page layout, section divisions, and interactive element distribution with minimal tokens.',
+    'Best used before performing actions to get the global structure first, then use page_snapshot to precisely locate specific elements.',
+    'Interactive elements are automatically assigned element_id and can be used directly with cdp_input.',
+    'Supports expand_selector for progressively expanding specific regions.',
+    '\n\n⚠️ Do NOT use this tool for:',
+    '- When you need detailed element info or element_id (use page_snapshot)',
+    '- When you need page body content (use page_viewer)',
+    '- Only for quickly understanding overall page layout and section divisions',
   ].join('\n'),
   supportsParallel: true,
   permissionLevel: 'read',
@@ -38,27 +38,27 @@ export const pageSkeletonFunction: FunctionDefinition = {
     properties: {
       scope_selector: {
         type: 'string',
-        description: '可选：限定骨架树范围的 CSS selector，例如 "main"、"#content"。默认整个 body。',
+        description: 'Optional: CSS selector to limit skeleton tree scope, e.g. "main", "#content". Defaults to the entire body.',
       },
       expand_selector: {
         type: 'string',
-        description: '可选：需要展开详细结构的区域 CSS selector，如 ".product-list"。该区域会获得更深的层级展开。',
+        description: 'Optional: CSS selector for a region to expand with detailed structure, e.g. ".product-list". This region gets deeper level expansion.',
       },
       max_depth: {
         type: 'number',
-        description: '最大遍历深度，范围 3-12，默认 6。展开区域会额外增加 4 层。',
+        description: 'Maximum traversal depth. Range: 3-12, default: 6. Expanded regions get 4 additional levels.',
       },
       max_nodes: {
         type: 'number',
-        description: '骨架树最大节点数，范围 50-300，默认 150。',
+        description: 'Maximum number of nodes in the skeleton tree. Range: 50-300, default: 150.',
       },
       include_hidden: {
         type: 'boolean',
-        description: '是否包含隐藏元素。默认 false。',
+        description: 'Whether to include hidden elements. Default: false.',
       },
       tab_id: {
         type: 'number',
-        description: '目标标签页 ID。不传则操作当前活动标签页。',
+        description: 'Target tab ID. Uses the current active tab if omitted.',
       },
     },
     required: [],
@@ -84,7 +84,7 @@ export const pageSkeletonFunction: FunctionDefinition = {
     } else {
       const activeTabId = await getActiveTabId();
       if (!activeTabId) {
-        return { success: false, error: '无法获取当前标签页' };
+        return { success: false, error: 'Unable to get current tab' };
       }
       tabId = activeTabId;
     }
@@ -97,15 +97,15 @@ export const pageSkeletonFunction: FunctionDefinition = {
         {
           signal: context?.signal,
           deadlineMs: 12000,
-          timeoutMessage: '等待页面骨架树超时',
+          timeoutMessage: 'Timed out waiting for page skeleton tree',
         },
       );
       if (!response?.success) {
-        return { success: false, error: response?.error || '页面骨架树构建失败' };
+        return { success: false, error: response?.error || 'Page skeleton tree build failed' };
       }
       return { success: true, data: response.data };
     } catch (err: any) {
-      return { success: false, error: err.message || '页面骨架树构建失败' };
+      return { success: false, error: err.message || 'Page skeleton tree build failed' };
     }
   },
 };

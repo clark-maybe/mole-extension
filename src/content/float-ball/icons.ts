@@ -62,17 +62,11 @@ const LOGO_CDP_NETWORK = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(
 // CDP 模拟（手机+桌面图标，紫色）
 const LOGO_CDP_EMULATION = `data:image/svg+xml;charset=utf-8,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12" y2="18"/></svg>')}`;
 
-// CDP 控制台（终端图标，绿色）
-const LOGO_CDP_CONSOLE = `data:image/svg+xml;charset=utf-8,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>')}`;
-
-// CDP 请求拦截（漏斗+闪电，玫红色）
-const LOGO_CDP_FETCH = `data:image/svg+xml;charset=utf-8,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#e11d48" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/><path d="M17 8l-2 4h2.5l-3 5" fill="none" stroke="#f59e0b" stroke-width="1.5"/></svg>')}`;
+// CDP 调试工具（虫子图标，橙色 — 合并 console/overlay/fetch）
+const LOGO_CDP_DEBUG = `data:image/svg+xml;charset=utf-8,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#ea580c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2l1.88 1.88M14.12 3.88L16 2M9 7.13v-1a3.003 3.003 0 1 1 6 0v1"/><path d="M12 20c-3.3 0-6-2.7-6-6v-3a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v3c0 3.3-2.7 6-6 6z"/><path d="M12 20v-9"/><path d="M6.53 9C4.6 8.8 3 7.1 3 5"/><path d="M6 13H2"/><path d="M3 21c0-2.1 1.7-3.9 3.8-4"/><path d="M17.47 9c1.93-.2 3.53-1.9 3.53-4"/><path d="M18 13h4"/><path d="M21 21c0-2.1-1.7-3.9-3.8-4"/></svg>')}`;
 
 // CDP DOM 操作（节点树，深青色）
 const LOGO_CDP_DOM = `data:image/svg+xml;charset=utf-8,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#0d9488" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="4" r="2"/><circle cx="6" cy="12" r="2"/><circle cx="18" cy="12" r="2"/><circle cx="6" cy="20" r="2"/><circle cx="18" cy="20" r="2"/><line x1="12" y1="6" x2="6" y2="10"/><line x1="12" y1="6" x2="18" y2="10"/><line x1="6" y1="14" x2="6" y2="18"/><line x1="18" y1="14" x2="18" y2="18"/></svg>')}`;
-
-// CDP 高亮标注（靶心图标，石板蓝色）
-const LOGO_CDP_OVERLAY = `data:image/svg+xml;charset=utf-8,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#6366f1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/><line x1="22" y1="12" x2="18" y2="12"/><line x1="6" y1="12" x2="2" y2="12"/><line x1="12" y1="6" x2="12" y2="2"/><line x1="12" y1="22" x2="12" y2="18"/></svg>')}`;
 
 // 数据提取（表格+放大镜，翠绿色）
 const LOGO_EXTRACT_DATA = `data:image/svg+xml;charset=utf-8,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/><line x1="15" y1="3" x2="15" y2="21"/><circle cx="18" cy="18" r="3" fill="white" stroke="#059669" stroke-width="1.5"/><line x1="20" y1="20" x2="22" y2="22" stroke="#059669" stroke-width="1.5"/></svg>')}`;
@@ -102,9 +96,17 @@ const LOGO_PLAN = `data:image/svg+xml;charset=utf-8,${encodeURIComponent('<svg x
 // 审查验证（盾牌打勾，翠绿色）
 const LOGO_REVIEW = `data:image/svg+xml;charset=utf-8,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg>')}`;
 
+// 加载工具（拼图块，天蓝色）
+const LOGO_LOAD_TOOLS = `data:image/svg+xml;charset=utf-8,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#0ea5e9" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.5 11H19V7c0-1.1-.9-2-2-2h-4V3.5C13 2.12 11.88 1 10.5 1S8 2.12 8 3.5V5H4c-1.1 0-2 .9-2 2v3.8h1.5c1.38 0 2.5 1.12 2.5 2.5S4.88 15.8 3.5 15.8H2V19c0 1.1.9 2 2 2h3.8v-1.5c0-1.38 1.12-2.5 2.5-2.5s2.5 1.12 2.5 2.5V21H17c1.1 0 2-.9 2-2v-4h1.5c1.38 0 2.5-1.12 2.5-2.5S21.88 11 20.5 11z"/></svg>')}`;
+
 // 函数图标映射（函数名 → logo）
 export const FUNCTION_ICONS: Record<string, string> = {
+  page: LOGO_PAGE_VIEWER,
+  // 旧工具名兼容映射（历史对话/workflow 可能引用）
   page_viewer: LOGO_PAGE_VIEWER,
+  page_snapshot: LOGO_PAGE_VIEWER,
+  page_assert: LOGO_PAGE_VIEWER,
+  page_repair: LOGO_PAGE_VIEWER,
   fetch_url: LOGO_FETCH_URL,
   tab_navigate: LOGO_TAB_NAVIGATE,
   clipboard_ops: LOGO_CLIPBOARD,
@@ -117,23 +119,27 @@ export const FUNCTION_ICONS: Record<string, string> = {
   history_search: LOGO_HISTORY,
   download_file: LOGO_DOWNLOAD,
   resident_runtime: LOGO_INTERVAL,
-  site_workflow: LOGO_SITE_WORKFLOW,
   skill: LOGO_SITE_WORKFLOW,
+  // 旧工具名兼容映射
+  site_workflow: LOGO_SITE_WORKFLOW,
   page_skeleton: LOGO_PAGE_SKELETON,
   cdp_input: LOGO_CDP_INPUT,
   cdp_dialog: LOGO_CDP_DIALOG,
   cdp_frame: LOGO_CDP_FRAME,
   cdp_network: LOGO_CDP_NETWORK,
   cdp_emulation: LOGO_CDP_EMULATION,
-  cdp_console: LOGO_CDP_CONSOLE,
-  cdp_fetch: LOGO_CDP_FETCH,
   cdp_dom: LOGO_CDP_DOM,
-  cdp_overlay: LOGO_CDP_OVERLAY,
+  cdp_debug: LOGO_CDP_DEBUG,
+  // 旧工具名兼容映射（历史对话/workflow 可能引用）
+  cdp_console: LOGO_CDP_DEBUG,
+  cdp_overlay: LOGO_CDP_DEBUG,
+  cdp_fetch: LOGO_CDP_DEBUG,
   extract_data: LOGO_EXTRACT_DATA,
   data_pipeline: LOGO_DATA_PIPELINE,
   request_confirmation: LOGO_REQUEST_CONFIRMATION,
   ask_user: LOGO_ASK_USER,
   save_workflow: LOGO_SAVE_WORKFLOW,
+  load_tools: LOGO_LOAD_TOOLS,
   todo: LOGO_TODO,
   explore: LOGO_EXPLORE,
   compact: LOGO_COMPACT,
@@ -143,7 +149,12 @@ export const FUNCTION_ICONS: Record<string, string> = {
 
 // 函数中文名映射（用户可见，不暴露英文标识）
 export const FUNCTION_LABELS: Record<string, string> = {
+  page: '页面工具',
+  // 旧工具名兼容映射
   page_viewer: '网页查看',
+  page_snapshot: '页面快照',
+  page_assert: '页面断言',
+  page_repair: '页面修复',
   fetch_url: '获取网页',
   tab_navigate: '标签页管理',
   clipboard_ops: '剪贴板',
@@ -156,23 +167,27 @@ export const FUNCTION_LABELS: Record<string, string> = {
   history_search: '历史记录',
   download_file: '下载文件',
   resident_runtime: '常驻运行',
-  site_workflow: '站点流程',
   skill: '技能执行',
+  // 旧工具名兼容映射
+  site_workflow: '站点工作流',
   page_skeleton: '页面骨架',
   cdp_input: '页面操作',
   cdp_dialog: '对话框处理',
   cdp_frame: 'JS 执行',
   cdp_network: '网络与 Cookie',
   cdp_emulation: '设备模拟',
-  cdp_console: '控制台捕获',
-  cdp_fetch: '请求拦截',
   cdp_dom: 'DOM 操作',
-  cdp_overlay: '元素高亮',
+  cdp_debug: 'CDP 调试',
+  // 旧工具名兼容映射
+  cdp_console: '控制台捕获',
+  cdp_overlay: '视觉高亮',
+  cdp_fetch: '请求拦截',
   extract_data: '数据提取',
   data_pipeline: '数据管道',
   request_confirmation: '请求确认',
   ask_user: '向用户提问',
   save_workflow: '保存工作流',
+  load_tools: '加载工具',
   todo: '任务规划',
   explore: '探索',
   compact: '压缩',

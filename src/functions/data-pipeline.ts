@@ -183,7 +183,7 @@ const formatData = (items: Record<string, any>[], format: string): { content: st
 
 export const dataPipelineFunction: FunctionDefinition = {
   name: 'data_pipeline',
-  description: '数据管道工具：缓冲、转换（过滤/排序/去重/字段选择）和导出（JSON/CSV/Markdown/TSV）',
+  description: 'Data pipeline tool: buffering, transformation (filter/sort/deduplicate/field selection) and export (JSON/CSV/Markdown/TSV)',
   supportsParallel: false,
   permissionLevel: 'read',
   parameters: {
@@ -192,32 +192,32 @@ export const dataPipelineFunction: FunctionDefinition = {
       action: {
         type: 'string',
         enum: ['create', 'append', 'preview', 'transform', 'export', 'stats', 'clear'],
-        description: '操作类型',
+        description: 'Action type',
       },
       buffer_id: {
         type: 'string',
-        description: '缓冲区 ID（action=create 时自动生成，其他 action 必填）',
+        description: 'Buffer ID (auto-generated for action=create, required for other actions)',
       },
       name: {
         type: 'string',
-        description: '缓冲区名称（action=create 时可选）',
+        description: 'Buffer name (optional for action=create)',
       },
       data: {
         type: 'array',
         items: { type: 'object' },
-        description: '要追加的数据（action=append 时使用）',
+        description: 'Data to append (used when action=append)',
       },
       limit: {
         type: 'number',
-        description: '预览条数，默认 5（action=preview 时使用）',
+        description: 'Number of items to preview, default 5 (used when action=preview)',
       },
       offset: {
         type: 'number',
-        description: '预览偏移量（action=preview 时使用）',
+        description: 'Preview offset (used when action=preview)',
       },
       operations: {
         type: 'array',
-        description: '转换操作列表（action=transform，按顺序执行）。支持：filter/sort/deduplicate/pick/omit/rename/limit',
+        description: 'List of transformation operations (action=transform, executed in order). Supports: filter/sort/deduplicate/pick/omit/rename/limit',
         items: {
           type: 'object',
           properties: {
@@ -242,11 +242,11 @@ export const dataPipelineFunction: FunctionDefinition = {
       format: {
         type: 'string',
         enum: ['json', 'csv', 'markdown', 'tsv'],
-        description: '导出格式（action=export 时使用）',
+        description: 'Export format (used when action=export)',
       },
       filename: {
         type: 'string',
-        description: '导出文件名（action=export 时可选）',
+        description: 'Export filename (optional for action=export)',
       },
     },
     required: ['action'],

@@ -18,7 +18,7 @@ const getActiveTabId = (): Promise<number | null> => {
 
 export const cdpConsoleFunction: FunctionDefinition = {
   name: 'cdp_console',
-  description: '捕获页面控制台消息和未捕获异常。开始捕获后，自动收集 console.log/warn/error 输出以及 JavaScript 未捕获异常，帮助诊断页面问题。',
+  description: 'Capture page console messages and uncaught exceptions. Once started, automatically collects console.log/warn/error output and JavaScript uncaught exceptions to help diagnose page issues.',
   supportsParallel: true,
   permissionLevel: 'read',
   parameters: {
@@ -27,24 +27,24 @@ export const cdpConsoleFunction: FunctionDefinition = {
       action: {
         type: 'string',
         enum: ['start', 'stop', 'get_logs', 'get_exceptions', 'clear'],
-        description: '操作类型：start=开始捕获, stop=停止, get_logs=获取console消息, get_exceptions=获取异常, clear=清空',
+        description: 'Action type: start=start capture, stop=stop capture, get_logs=get console messages, get_exceptions=get exceptions, clear=clear all',
       },
       max_entries: {
         type: 'number',
-        description: 'start 时最大保留条数，默认 200',
+        description: 'Maximum entries to retain when starting. Default: 200.',
       },
       level: {
         type: 'string',
         enum: ['log', 'warn', 'error', 'info', 'debug'],
-        description: 'get_logs 时按级别过滤',
+        description: 'Filter by level when using get_logs.',
       },
       limit: {
         type: 'number',
-        description: 'get_logs/get_exceptions 返回条数上限，默认 200',
+        description: 'Maximum entries returned by get_logs/get_exceptions. Default: 200.',
       },
       tab_id: {
         type: 'number',
-        description: '目标标签页 ID，不传则使用当前活动标签页',
+        description: 'Target tab ID. Uses the current active tab if omitted.',
       },
     },
     required: ['action'],
@@ -52,9 +52,9 @@ export const cdpConsoleFunction: FunctionDefinition = {
 
   validate: (params: any): string | null => {
     const { action } = params || {};
-    if (!action) return '缺少 action 参数';
+    if (!action) return 'Missing action parameter';
     if (!['start', 'stop', 'get_logs', 'get_exceptions', 'clear'].includes(action)) {
-      return `不支持的 action: ${action}`;
+      return `Unsupported action: ${action}`;
     }
     return null;
   },
@@ -80,7 +80,7 @@ export const cdpConsoleFunction: FunctionDefinition = {
     } else {
       const activeTabId = await getActiveTabId();
       if (!activeTabId) {
-        return { success: false, error: '无法确定目标标签页' };
+        return { success: false, error: 'Unable to determine target tab' };
       }
       tabId = activeTabId;
     }
@@ -89,14 +89,14 @@ export const cdpConsoleFunction: FunctionDefinition = {
       case 'start': {
         const result = await CDPSessionManager.startConsoleListening(tabId, params.max_entries || 200);
         if (!result.success) {
-          return { success: false, error: `启动控制台捕获失败: ${result.error}` };
+          return { success: false, error: `Failed to start console capture: ${result.error}` };
         }
         return {
           success: true,
           data: {
             tab_id: tabId,
             max_entries: params.max_entries || 200,
-            message: '控制台消息捕获已启动',
+            message: 'Console message capture started',
           },
         };
       }
@@ -105,7 +105,7 @@ export const cdpConsoleFunction: FunctionDefinition = {
         CDPSessionManager.stopConsoleListening(tabId);
         return {
           success: true,
-          data: { message: '控制台捕获已停止' },
+          data: { message: 'Console capture stopped' },
         };
       }
 
@@ -113,7 +113,7 @@ export const cdpConsoleFunction: FunctionDefinition = {
         if (!CDPSessionManager.isConsoleListening(tabId)) {
           return {
             success: false,
-            error: '尚未启动控制台捕获。请先调用 start 操作。',
+            error: 'Console capture not started. Please call the start action first.',
           };
         }
         const entries = CDPSessionManager.getConsoleEntries(tabId, {
@@ -141,7 +141,7 @@ export const cdpConsoleFunction: FunctionDefinition = {
         if (!CDPSessionManager.isConsoleListening(tabId)) {
           return {
             success: false,
-            error: '尚未启动控制台捕获。请先调用 start 操作。',
+            error: 'Console capture not started. Please call the start action first.',
           };
         }
         const exceptions = CDPSessionManager.getExceptionEntries(tabId, params.limit);
@@ -166,12 +166,12 @@ export const cdpConsoleFunction: FunctionDefinition = {
         CDPSessionManager.clearConsoleEntries(tabId);
         return {
           success: true,
-          data: { message: '控制台捕获已清空' },
+          data: { message: 'Console capture cleared' },
         };
       }
 
       default:
-        return { success: false, error: `未知操作: ${action}` };
+        return { success: false, error: `Unknown action: ${action}` };
     }
   },
 };

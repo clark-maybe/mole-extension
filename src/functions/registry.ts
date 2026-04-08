@@ -9,11 +9,7 @@ import { InMemoryTransport } from '../mcp/transport';
 import { MCPClient } from '../mcp/client';
 import { mcpToolsToSchema } from '../mcp/adapters';
 import type { FunctionDefinition, FunctionResult, ToolExecutionContext } from './types';
-import { pageViewerFunction } from './page-viewer';
-import { pageSnapshotFunction } from './page-snapshot';
-import { pageSkeletonFunction } from './page-skeleton';
-import { pageAssertFunction } from './page-assert';
-import { pageRepairFunction } from './page-repair';
+import { pageFunction } from './page';
 import { timerFunction } from './timer';
 import { fetchUrlFunction } from './fetch-url';
 import { tabNavigateFunction } from './tab-navigate';
@@ -26,22 +22,20 @@ import { bookmarkOpsFunction } from './bookmark-ops';
 import { historySearchFunction } from './history-search';
 import { downloadFileFunction } from './download-file';
 import { residentRuntimeFunction } from './resident-runtime';
-import { siteWorkflowFunction } from './site-workflow';
 import { skillFunction } from './skill';
 import { cdpInputFunction } from './cdp-input';
 import { cdpDialogFunction } from './cdp-dialog';
 import { cdpFrameFunction } from './cdp-frame';
 import { cdpNetworkFunction } from './cdp-network';
 import { cdpEmulationFunction } from './cdp-emulation';
-import { cdpConsoleFunction } from './cdp-console';
-import { cdpFetchFunction } from './cdp-fetch';
 import { cdpDomFunction } from './cdp-dom';
-import { cdpOverlayFunction } from './cdp-overlay';
+import { cdpDebugFunction } from './cdp-debug';
 import { extractDataFunction } from './extract-data';
 import { dataPipelineFunction } from './data-pipeline';
 import { requestConfirmationFunction } from './request-confirmation';
 import { askUserFunction } from './ask-user';
 import { saveWorkflowFunction } from './save-workflow';
+import { loadToolsFunction } from './load-tools';
 
 const DYNAMIC_TOOL_STORAGE_KEY = 'mole_dynamic_tools_v1';
 const DYNAMIC_TOOL_MAX_TIMEOUT_MS = 60_000;
@@ -82,11 +76,7 @@ export interface DynamicToolImportResult {
 }
 
 const BUILTIN_FUNCTIONS: FunctionDefinition[] = [
-  pageViewerFunction,
-  pageSnapshotFunction,
-  pageSkeletonFunction,
-  pageAssertFunction,
-  pageRepairFunction,
+  pageFunction,
   timerFunction,
   fetchUrlFunction,
   tabNavigateFunction,
@@ -99,22 +89,20 @@ const BUILTIN_FUNCTIONS: FunctionDefinition[] = [
   historySearchFunction,
   downloadFileFunction,
   residentRuntimeFunction,
-  siteWorkflowFunction,
   skillFunction,
   cdpInputFunction,
   cdpDialogFunction,
   cdpFrameFunction,
   cdpNetworkFunction,
   cdpEmulationFunction,
-  cdpConsoleFunction,
-  cdpFetchFunction,
   cdpDomFunction,
-  cdpOverlayFunction,
+  cdpDebugFunction,
   extractDataFunction,
   dataPipelineFunction,
   requestConfirmationFunction,
   askUserFunction,
   saveWorkflowFunction,
+  loadToolsFunction,
 ];
 
 const builtinToolNames = new Set(BUILTIN_FUNCTIONS.map((tool) => tool.name));

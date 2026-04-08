@@ -20,13 +20,13 @@ const getActiveTabId = (): Promise<number | null> => {
 const ensureOverlayEnabled = async (tabId: number): Promise<{ success: boolean; error?: string }> => {
   const attachResult = await CDPSessionManager.attach(tabId);
   if (!attachResult.success) {
-    return { success: false, error: `无法连接调试器: ${attachResult.error}` };
+    return { success: false, error: `Unable to connect debugger: ${attachResult.error}` };
   }
   // Overlay 域需要 DOM 域先启用
   await CDPSessionManager.sendCommand(tabId, 'DOM.enable', {});
   const overlayResult = await CDPSessionManager.sendCommand(tabId, 'Overlay.enable', {});
   if (!overlayResult.success) {
-    return { success: false, error: `启用 Overlay 域失败: ${overlayResult.error}` };
+    return { success: false, error: `Failed to enable Overlay domain: ${overlayResult.error}` };
   }
   return { success: true };
 };
@@ -69,7 +69,7 @@ const parseColor = (color?: string, defaultColor?: { r: number; g: number; b: nu
 
 export const cdpOverlayFunction: FunctionDefinition = {
   name: 'cdp_overlay',
-  description: '视觉高亮标注工具（CDP Overlay 域）。高亮页面元素或指定区域，让用户直观看到 AI 正在操作的对象。支持自定义高亮颜色。适用于标注目标元素后截图、辅助用户定位元素、配合 cdp_input 进行可视化操作。',
+  description: 'Visual highlight annotation tool (CDP Overlay domain). Highlight page elements or specified regions so the user can visually see what the AI is operating on. Supports custom highlight colors. Useful for annotating target elements before screenshots, helping users locate elements, and performing visual operations with cdp_input.',
   supportsParallel: true,
   permissionLevel: 'read',
   parameters: {
@@ -78,53 +78,53 @@ export const cdpOverlayFunction: FunctionDefinition = {
       action: {
         type: 'string',
         enum: ['highlight_node', 'highlight_selector', 'highlight_rect', 'hide'],
-        description: '操作类型：highlight_node=高亮指定nodeId元素, highlight_selector=通过CSS选择器高亮, highlight_rect=高亮矩形区域, hide=隐藏所有高亮',
+        description: 'Action type: highlight_node=highlight element by nodeId, highlight_selector=highlight by CSS selector, highlight_rect=highlight a rectangular region, hide=hide all highlights',
       },
       node_id: {
         type: 'number',
-        description: 'highlight_node 的节点 ID',
+        description: 'Node ID for highlight_node.',
       },
       selector: {
         type: 'string',
-        description: 'highlight_selector 的 CSS 选择器',
+        description: 'CSS selector for highlight_selector.',
       },
       // highlight_rect 参数
       x: {
         type: 'number',
-        description: '矩形左上角 x 坐标（视口坐标）',
+        description: 'Top-left x coordinate of the rectangle (viewport coordinates).',
       },
       y: {
         type: 'number',
-        description: '矩形左上角 y 坐标（视口坐标）',
+        description: 'Top-left y coordinate of the rectangle (viewport coordinates).',
       },
       width: {
         type: 'number',
-        description: '矩形宽度',
+        description: 'Rectangle width.',
       },
       height: {
         type: 'number',
-        description: '矩形高度',
+        description: 'Rectangle height.',
       },
       // 样式参数
       content_color: {
         type: 'string',
-        description: '内容区域高亮颜色（hex 如 "#FF000066" 或 rgba 如 "rgba(255,0,0,0.4)"），默认蓝色半透明',
+        description: 'Content area highlight color (hex e.g. "#FF000066" or rgba e.g. "rgba(255,0,0,0.4)"). Default: semi-transparent blue.',
       },
       border_color: {
         type: 'string',
-        description: '边框高亮颜色，默认蓝色',
+        description: 'Border highlight color. Default: blue.',
       },
       padding_color: {
         type: 'string',
-        description: 'padding 区域颜色，默认绿色半透明',
+        description: 'Padding area color. Default: semi-transparent green.',
       },
       margin_color: {
         type: 'string',
-        description: 'margin 区域颜色，默认橙色半透明',
+        description: 'Margin area color. Default: semi-transparent orange.',
       },
       tab_id: {
         type: 'number',
-        description: '目标标签页 ID，不传则使用当前活动标签页',
+        description: 'Target tab ID. Uses the current active tab if omitted.',
       },
     },
     required: ['action'],
@@ -132,20 +132,20 @@ export const cdpOverlayFunction: FunctionDefinition = {
 
   validate: (params: any): string | null => {
     const { action } = params || {};
-    if (!action) return '缺少 action 参数';
+    if (!action) return 'Missing action parameter';
     const validActions = ['highlight_node', 'highlight_selector', 'highlight_rect', 'hide'];
     if (!validActions.includes(action)) {
-      return `不支持的 action: ${action}`;
+      return `Unsupported action: ${action}`;
     }
     if (action === 'highlight_node' && typeof params.node_id !== 'number') {
-      return 'highlight_node 需要 node_id 参数（数字类型）';
+      return 'highlight_node requires node_id parameter (number type)';
     }
     if (action === 'highlight_selector' && !params.selector) {
-      return 'highlight_selector 需要 selector 参数';
+      return 'highlight_selector requires selector parameter';
     }
     if (action === 'highlight_rect') {
-      if (params.x === undefined || params.y === undefined) return 'highlight_rect 需要 x 和 y 参数';
-      if (!params.width || !params.height) return 'highlight_rect 需要 width 和 height 参数';
+      if (params.x === undefined || params.y === undefined) return 'highlight_rect requires x and y parameters';
+      if (!params.width || !params.height) return 'highlight_rect requires width and height parameters';
     }
     return null;
   },
@@ -178,7 +178,7 @@ export const cdpOverlayFunction: FunctionDefinition = {
     } else {
       const activeTabId = await getActiveTabId();
       if (!activeTabId) {
-        return { success: false, error: '无法确定目标标签页' };
+        return { success: false, error: 'Unable to determine target tab' };
       }
       tabId = activeTabId;
     }
@@ -207,13 +207,13 @@ export const cdpOverlayFunction: FunctionDefinition = {
           nodeId: params.node_id,
         });
         if (!result.success) {
-          return { success: false, error: `高亮节点失败: ${result.error}` };
+          return { success: false, error: `Failed to highlight node: ${result.error}` };
         }
         return {
           success: true,
           data: {
             node_id: params.node_id,
-            message: `已高亮节点 ${params.node_id}`,
+            message: `Highlighted node ${params.node_id}`,
           },
         };
       }
@@ -222,18 +222,18 @@ export const cdpOverlayFunction: FunctionDefinition = {
         // 先通过选择器找到 nodeId
         const docNodeId = await getDocumentNodeId(tabId);
         if (!docNodeId) {
-          return { success: false, error: '无法获取文档根节点' };
+          return { success: false, error: 'Unable to get document root node' };
         }
         const queryResult = await CDPSessionManager.sendCommand(tabId, 'DOM.querySelector', {
           nodeId: docNodeId,
           selector: params.selector,
         });
         if (!queryResult.success) {
-          return { success: false, error: `查询选择器失败: ${queryResult.error}` };
+          return { success: false, error: `Failed to query selector: ${queryResult.error}` };
         }
         const nodeId = queryResult.result?.nodeId;
         if (!nodeId || nodeId === 0) {
-          return { success: false, error: `未找到匹配 "${params.selector}" 的元素` };
+          return { success: false, error: `No element found matching "${params.selector}"` };
         }
 
         const result = await CDPSessionManager.sendCommand(tabId, 'Overlay.highlightNode', {
@@ -241,14 +241,14 @@ export const cdpOverlayFunction: FunctionDefinition = {
           nodeId,
         });
         if (!result.success) {
-          return { success: false, error: `高亮元素失败: ${result.error}` };
+          return { success: false, error: `Failed to highlight element: ${result.error}` };
         }
         return {
           success: true,
           data: {
             selector: params.selector,
             node_id: nodeId,
-            message: `已高亮 "${params.selector}" 对应的元素`,
+            message: `Highlighted element matching "${params.selector}"`,
           },
         };
       }
@@ -263,13 +263,13 @@ export const cdpOverlayFunction: FunctionDefinition = {
           outlineColor: parseColor(params.border_color, { r: 255, g: 0, b: 0, a: 1 }),
         });
         if (!result.success) {
-          return { success: false, error: `高亮区域失败: ${result.error}` };
+          return { success: false, error: `Failed to highlight rect: ${result.error}` };
         }
         return {
           success: true,
           data: {
             rect: { x: params.x, y: params.y, width: params.width, height: params.height },
-            message: `已高亮区域 (${params.x}, ${params.y}) ${params.width}x${params.height}`,
+            message: `Highlighted rect (${params.x}, ${params.y}) ${params.width}x${params.height}`,
           },
         };
       }
@@ -277,16 +277,16 @@ export const cdpOverlayFunction: FunctionDefinition = {
       case 'hide': {
         const result = await CDPSessionManager.sendCommand(tabId, 'Overlay.hideHighlight', {});
         if (!result.success) {
-          return { success: false, error: `隐藏高亮失败: ${result.error}` };
+          return { success: false, error: `Failed to hide highlight: ${result.error}` };
         }
         return {
           success: true,
-          data: { message: '所有高亮已隐藏' },
+          data: { message: 'All highlights hidden' },
         };
       }
 
       default:
-        return { success: false, error: `未知操作: ${action}` };
+        return { success: false, error: `Unknown action: ${action}` };
     }
   },
 };
