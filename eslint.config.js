@@ -32,11 +32,16 @@ export default [
       ...tsPlugin.configs.recommended.rules,
       ...reactHooks.configs.recommended.rules,
       'react-refresh/only-export-components': ['warn', { allowConstantExport: true }],
-      '@typescript-eslint/no-explicit-any': 'off',
-      '@typescript-eslint/no-unused-vars': 'off',
+      // any 类型使用给出警告，推动逐步收紧类型安全
+      '@typescript-eslint/no-explicit-any': 'warn',
+      // 未使用变量给出警告，下划线开头的参数/变量可豁免
+      '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
+      // TypeScript 自身负责未定义变量检查，此规则关闭避免误报
       'no-undef': 'off',
-      'no-constant-condition': 'off',
-      'no-useless-escape': 'off',
+      // 常量条件（如 while(true)）给出警告
+      'no-constant-condition': 'warn',
+      // 无用转义字符给出警告
+      'no-useless-escape': 'warn',
     },
   },
 ]

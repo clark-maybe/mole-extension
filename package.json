@@ -20,7 +20,7 @@
     "build:content": "vite build --config vite.config.content.ts",
     "build:background": "vite build --config vite.config.background.ts",
     "build": "npm run build:popup && npm run build:content && npm run build:background && echo 'Build completed!'",
-    "lint": "eslint . --report-unused-disable-directives --max-warnings 0",
+    "lint": "eslint . --report-unused-disable-directives",
     "preview": "vite preview",
     "docs:dev": "vitepress dev docs",
     "docs:build": "vitepress build docs",

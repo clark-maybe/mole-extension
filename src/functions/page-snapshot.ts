@@ -5,18 +5,7 @@
 
 import type { FunctionDefinition, ToolExecutionContext } from './types';
 import { sendToTabWithRetry } from './tab-message';
-
-const getActiveTabId = (): Promise<number | null> => {
-  return new Promise((resolve) => {
-    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-      if (tabs && tabs.length > 0 && tabs[0].id) {
-        resolve(tabs[0].id);
-      } else {
-        resolve(null);
-      }
-    });
-  });
-};
+import { getActiveTabId } from './tab-utils';
 
 export const pageSnapshotFunction: FunctionDefinition = {
   name: 'page_snapshot',

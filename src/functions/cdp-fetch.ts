@@ -6,15 +6,7 @@
 
 import type { FunctionDefinition, FunctionResult, ToolExecutionContext } from './types';
 import { CDPSessionManager } from '../lib/cdp-session';
-
-/** 获取当前活动标签页 ID */
-const getActiveTabId = (): Promise<number | null> => {
-  return new Promise((resolve) => {
-    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-      resolve(tabs?.[0]?.id ?? null);
-    });
-  });
-};
+import { getActiveTabId } from './tab-utils';
 
 export const cdpFetchFunction: FunctionDefinition = {
   name: 'cdp_fetch',

@@ -1,5 +1,14 @@
 import Channel from '../lib/channel';
 
+/** 获取当前活动标签页 ID，如果无法获取返回 null */
+export const getActiveTabId = (): Promise<number | null> => {
+  return new Promise((resolve) => {
+    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+      resolve(tabs?.[0]?.id ?? null);
+    });
+  });
+};
+
 const buildAbortError = (): Error => {
   const err = new Error('aborted');
   err.name = 'AbortError';

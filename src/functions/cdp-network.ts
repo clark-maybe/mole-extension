@@ -6,17 +6,9 @@
 
 import type { FunctionDefinition, FunctionResult, ToolExecutionContext } from './types';
 import { CDPSessionManager } from '../lib/cdp-session';
+import { getActiveTabId } from './tab-utils';
 
 const MAX_BODY_SIZE = 50 * 1024; // 响应 body 最大返回 50KB
-
-/** 获取当前活动标签页 ID */
-const getActiveTabId = (): Promise<number | null> => {
-  return new Promise((resolve) => {
-    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-      resolve(tabs?.[0]?.id ?? null);
-    });
-  });
-};
 
 export const cdpNetworkFunction: FunctionDefinition = {
   name: 'cdp_network',
