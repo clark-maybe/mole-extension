@@ -88,9 +88,15 @@ export const chatComplete = async (
     throw new Error('未配置 API Key，请在设置中填写后重试。');
   }
 
+  // 将 instructions 同时作为 developer 消息注入 input 开头
+  // 部分模型/API 代理可能忽略 instructions 字段，developer 消息是更可靠的补充
+  const effectiveInput = instructions
+    ? [{ role: 'developer' as const, content: instructions }, ...input]
+    : input;
+
   const body: Record<string, any> = {
     model: settings.model,
-    input,
+    input: effectiveInput,
     max_output_tokens: 16384,
   };
   if (instructions) {
@@ -158,9 +164,14 @@ export async function* chatStream(
     throw new Error('未配置 API Key，请在设置中填写后重试。');
   }
 
+  // 将 instructions 同时作为 developer 消息注入 input 开头（与 chatComplete 对齐）
+  const effectiveInput = instructions
+    ? [{ role: 'developer' as const, content: instructions }, ...input]
+    : input;
+
   const body: Record<string, any> = {
     model: settings.model,
-    input,
+    input: effectiveInput,
     max_output_tokens: 16384,
     stream: true,
   };

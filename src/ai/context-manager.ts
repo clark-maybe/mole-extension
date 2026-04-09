@@ -219,43 +219,57 @@ export const microCompact = (context: InputItem[], keepRecentOutputs: number = 6
   return compressedCount;
 };
 
+/** CJK 字符范围（中日韩统一表意文字 + 标点 + 全角字符） */
+const CJK_REGEX = /[\u4e00-\u9fff\u3400-\u4dbf\u3000-\u303f\uff00-\uffef]/g;
+
+/**
+ * 估算字符串的 token 数
+ * CJK 字符：1 字符 ≈ 1.5 token（保守估算，实际 1-2）
+ * 非 CJK 字符：4 字符 ≈ 1 token
+ */
+const estimateStringTokens = (text: string): number => {
+  if (!text) return 0;
+  const cjkMatches = text.match(CJK_REGEX);
+  const cjkCount = cjkMatches ? cjkMatches.length : 0;
+  const nonCjkCount = text.length - cjkCount;
+  return Math.ceil(cjkCount * 1.5 + nonCjkCount / 4);
+};
+
 /**
  * 估算上下文 token 数
  *
- * 策略：累加所有文本字符数，最终除以 2 作为 token 估算
- * - string content 取 length
- * - ContentPart[] 取所有 text 部分 length 之和，图片部分估算 300 token（即 600 字符）
- * - function_call 取 name + arguments 的 length
- * - function_call_output 取 output 的 length
+ * 策略：区分 CJK 和非 CJK 字符，分别用不同系数估算
+ * - CJK 字符（中文为主）：1 字符 ≈ 1.5 token
+ * - 非 CJK 字符（英文/代码）：4 字符 ≈ 1 token
+ * - 图片部分估算 300 token
  */
 export const estimateContextTokens = (context: InputItem[]): number => {
-  let totalChars = 0;
+  let totalTokens = 0;
 
   for (const item of context) {
     if ('type' in item) {
       if (item.type === 'function_call') {
         const fc = item as FunctionCallInputItem;
-        totalChars += (fc.name || '').length + (fc.arguments || '').length;
+        totalTokens += estimateStringTokens(fc.name || '') + estimateStringTokens(fc.arguments || '');
       } else if (item.type === 'function_call_output') {
         const fco = item as FunctionCallOutputItem;
-        totalChars += (fco.output || '').length;
+        totalTokens += estimateStringTokens(fco.output || '');
       }
     } else if ('role' in item && 'content' in item) {
       const msg = item as MessageInputItem;
       if (typeof msg.content === 'string') {
-        totalChars += msg.content.length;
+        totalTokens += estimateStringTokens(msg.content);
       } else if (Array.isArray(msg.content)) {
         for (const part of msg.content) {
           if (part.type === 'input_text') {
-            totalChars += part.text.length;
+            totalTokens += estimateStringTokens(part.text);
           } else if (part.type === 'input_image') {
-            // 图片估算 300 token = 600 字符
-            totalChars += 600;
+            totalTokens += 300;
           }
         }
       }
     }
   }
 
-  return Math.floor(totalChars / 2);
+  return totalTokens;
 };
