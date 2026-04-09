@@ -10,12 +10,14 @@ import { LLMSettingsPage } from './pages/LLMSettingsPage';
 import { WorkflowsPage } from './pages/WorkflowsPage';
 import { BlocklistPage } from './pages/BlocklistPage';
 import { HistoryPage } from './pages/HistoryPage';
+import { WebhookPage } from './pages/WebhookPage';
 
 /** 路由 key → 页面组件映射 */
 const PAGE_MAP: Record<string, React.ComponentType> = {
   settings: LLMSettingsPage,
   workflows: WorkflowsPage,
   blocklist: BlocklistPage,
+  webhook: WebhookPage,
   history: HistoryPage,
 };
 

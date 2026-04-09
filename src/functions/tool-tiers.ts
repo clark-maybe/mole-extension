@@ -35,7 +35,7 @@ export const ON_DEMAND_CATEGORIES: Record<string, {
   browser_utils: {
     label: 'Browser Utilities',
     description: 'Clipboard, notifications, bookmark management, history search, file download',
-    tools: ['clipboard_ops', 'notification', 'bookmark_ops', 'history_search', 'download_file'],
+    tools: ['clipboard_ops', 'notification', 'webhook', 'bookmark_ops', 'history_search', 'download_file'],
   },
   data_storage: {
     label: 'Data Persistence',

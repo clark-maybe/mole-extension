@@ -9,6 +9,7 @@ import {
   ThunderboltOutlined,
   StopOutlined,
   HistoryOutlined,
+  ApiOutlined,
 } from '@ant-design/icons';
 
 export interface RouteItem {
@@ -36,6 +37,12 @@ export const routes: RouteItem[] = [
     label: '域名管理',
     icon: <StopOutlined />,
     description: '维护被禁用的站点列表，控制悬浮球是否出现。',
+  },
+  {
+    key: 'webhook',
+    label: 'Webhook',
+    icon: <ApiOutlined />,
+    description: '管理远端通知推送地址，支持飞书、Slack 等平台。',
   },
   {
     key: 'history',

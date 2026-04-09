@@ -32,6 +32,9 @@ const LOGO_INTERVAL = `data:image/svg+xml;charset=utf-8,${encodeURIComponent('<s
 // 通知（铃铛）
 const LOGO_NOTIFICATION = `data:image/svg+xml;charset=utf-8,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#eab308" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>')}`;
 
+// Webhook（闪电+箭头外发）
+const LOGO_WEBHOOK = `data:image/svg+xml;charset=utf-8,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#8b5cf6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>')}`;
+
 // 收藏夹（星星）
 const LOGO_BOOKMARK = `data:image/svg+xml;charset=utf-8,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>')}`;
 
@@ -115,6 +118,7 @@ export const FUNCTION_ICONS: Record<string, string> = {
   storage_kv: LOGO_STORAGE,
   timer: LOGO_TIMEOUT,
   notification: LOGO_NOTIFICATION,
+  webhook: LOGO_WEBHOOK,
   bookmark_ops: LOGO_BOOKMARK,
   history_search: LOGO_HISTORY,
   download_file: LOGO_DOWNLOAD,
@@ -163,6 +167,7 @@ export const FUNCTION_LABELS: Record<string, string> = {
   storage_kv: '数据存储',
   timer: '定时器',
   notification: '发送通知',
+  webhook: '远端推送',
   bookmark_ops: '收藏管理',
   history_search: '历史记录',
   download_file: '下载文件',
