@@ -5,8 +5,8 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import {
-  Button, Form, Input, Modal, Select, Space, Switch, Table, Tag,
-  Typography, App, Popconfirm, Divider,
+  Button, Collapse, Form, Input, Modal, Select, Space, Switch, Table, Tag,
+  Typography, App, Popconfirm,
 } from 'antd';
 import {
   PlusOutlined,
@@ -17,6 +17,7 @@ import {
   LoadingOutlined,
   AppleOutlined,
   ApiOutlined,
+  SettingOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import { OptionsPageLayout, OptionsSectionCard } from '../components/PageLayout';
@@ -422,42 +423,51 @@ export function WebhookPage() {
                 <Input placeholder="粘贴你的 Device Key" />
               </Form.Item>
 
-              <Divider plain style={{ margin: '12px 0', fontSize: 12, color: '#999' }}>
-                可选参数
-              </Divider>
+              <Collapse
+                ghost
+                size="small"
+                style={{ margin: '4px -12px 0' }}
+                items={[{
+                  key: 'optional',
+                  label: <span style={{ fontSize: 12, color: '#999' }}><SettingOutlined style={{ marginRight: 4 }} />可选参数</span>,
+                  children: (
+                    <>
+                      <Form.Item label="推送分组" name="barkGroup">
+                        <Input placeholder="如：mole（同组通知会折叠显示）" />
+                      </Form.Item>
 
-              <Form.Item label="推送分组" name="barkGroup">
-                <Input placeholder="如：mole（同组通知会折叠显示）" />
-              </Form.Item>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                        <Form.Item label="提示音" name="barkSound" style={{ marginBottom: 12 }}>
+                          <Select
+                            allowClear
+                            placeholder="默认"
+                            options={BARK_SOUNDS.map((s) => ({ value: s, label: s }))}
+                            showSearch
+                          />
+                        </Form.Item>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-                <Form.Item label="提示音" name="barkSound" style={{ marginBottom: 12 }}>
-                  <Select
-                    allowClear
-                    placeholder="默认"
-                    options={BARK_SOUNDS.map((s) => ({ value: s, label: s }))}
-                    showSearch
-                  />
-                </Form.Item>
+                        <Form.Item label="时效性" name="barkLevel" initialValue="active" style={{ marginBottom: 12 }}>
+                          <Select
+                            options={[
+                              { value: 'active', label: '默认' },
+                              { value: 'timeSensitive', label: '时效性（突破专注模式）' },
+                              { value: 'passive', label: '被动（静默）' },
+                            ]}
+                          />
+                        </Form.Item>
+                      </div>
 
-                <Form.Item label="时效性" name="barkLevel" initialValue="active" style={{ marginBottom: 12 }}>
-                  <Select
-                    options={[
-                      { value: 'active', label: '默认' },
-                      { value: 'timeSensitive', label: '时效性（突破专注模式）' },
-                      { value: 'passive', label: '被动（静默）' },
-                    ]}
-                  />
-                </Form.Item>
-              </div>
+                      <Form.Item label="自定义图标" name="barkIcon">
+                        <Input placeholder="图标 URL（如 https://example.com/icon.png）" />
+                      </Form.Item>
 
-              <Form.Item label="自定义图标" name="barkIcon">
-                <Input placeholder="图标 URL（如 https://example.com/icon.png）" />
-              </Form.Item>
-
-              <Form.Item label="点击跳转" name="barkClickUrl">
-                <Input placeholder="点击通知后打开的 URL（可选）" />
-              </Form.Item>
+                      <Form.Item label="点击跳转" name="barkClickUrl">
+                        <Input placeholder="点击通知后打开的 URL（可选）" />
+                      </Form.Item>
+                    </>
+                  ),
+                }]}
+              />
             </>
           )}
 
@@ -474,13 +484,24 @@ export function WebhookPage() {
               >
                 <Input placeholder="https://open.feishu.cn/open-apis/bot/v2/hook/xxx" />
               </Form.Item>
-              <Form.Item
-                label="自定义 Headers（可选）"
-                name="headers"
-                extra='JSON 格式，如 {"Authorization": "Bearer xxx"}'
-              >
-                <Input.TextArea rows={3} placeholder='{"Authorization": "Bearer xxx"}' />
-              </Form.Item>
+              <Collapse
+                ghost
+                size="small"
+                style={{ margin: '4px -12px 0' }}
+                items={[{
+                  key: 'optional',
+                  label: <span style={{ fontSize: 12, color: '#999' }}><SettingOutlined style={{ marginRight: 4 }} />可选参数</span>,
+                  children: (
+                    <Form.Item
+                      label="自定义 Headers"
+                      name="headers"
+                      extra='JSON 格式，如 {"Authorization": "Bearer xxx"}'
+                    >
+                      <Input.TextArea rows={3} placeholder='{"Authorization": "Bearer xxx"}' />
+                    </Form.Item>
+                  ),
+                }]}
+              />
             </>
           )}
         </Form>
