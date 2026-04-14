@@ -111,14 +111,14 @@ export const RuntimeResourceManager = {
         }
     },
 
-    parseEvent(payload: Record<string, any>): RuntimeResourceEventPayload | null {
+    parseEvent(payload: Record<string, unknown>): RuntimeResourceEventPayload | null {
         const resource = payload?.resource;
         if (!resource || typeof resource !== 'object') return null;
         if (resource.kind !== 'timer') return null;
         const action = resource.action === 'closed' ? 'closed' : resource.action === 'opened' ? 'opened' : null;
         if (!action) return null;
         const ids = Array.isArray(resource.resourceIds)
-            ? resource.resourceIds.map((item: any) => String(item || '').trim()).filter(Boolean)
+            ? resource.resourceIds.map((item: unknown) => String(item || '').trim()).filter(Boolean)
             : [];
         if (ids.length === 0) return null;
         return {
@@ -128,7 +128,7 @@ export const RuntimeResourceManager = {
         };
     },
 
-    applyEvent(sessionId: string, payload: Record<string, any>) {
+    applyEvent(sessionId: string, payload: Record<string, unknown>) {
         const resourceEvent = RuntimeResourceManager.parseEvent(payload);
         if (!resourceEvent) return;
         for (const resourceId of resourceEvent.resourceIds) {
@@ -178,7 +178,7 @@ export function trackRuntimeResourceFromEvent(sessionId: string, event: { type: 
         const payload = (() => {
             if (!event.content) return null;
             try {
-                const parsed = JSON.parse(event.content) as Record<string, any>;
+                const parsed = JSON.parse(event.content) as Record<string, unknown>;
                 return parsed && typeof parsed === 'object' ? parsed : null;
             } catch {
                 return null;

@@ -641,7 +641,14 @@ export const residentRuntimeFunction: FunctionDefinition = {
     ai_prompt_template?: string;
     ai_action_after?: AIPostAction;
     ai_budget?: AIBudget;
-  }) => {
+  },
+  context?: ToolExecutionContext,
+  ) => {
+    // 检查取消信号
+    if (context?.signal?.aborted) {
+      return { success: false, error: '操作已取消' };
+    }
+
     await ensureResidentRuntimeReady();
     const action = String(params.action || '').trim().toLowerCase() as ResidentAction;
 

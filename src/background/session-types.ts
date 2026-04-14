@@ -121,7 +121,7 @@ export interface ExecuteSessionOptions {
     taskKind?: SessionTaskKind;
 }
 
-export type SessionChannelResponder = ((response?: any) => void) | undefined;
+export type SessionChannelResponder = ((response?: unknown) => void) | undefined;
 export type SessionTaskKindRequest = SessionTaskKind | string | undefined;
 
 export interface SessionCreateOp {

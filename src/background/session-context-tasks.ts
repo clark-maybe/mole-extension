@@ -125,7 +125,7 @@ function parseReviewOutputPayload(text: string): ReviewOutputPayload {
     }
 
     try {
-        const parsed = JSON.parse(normalizedText) as any;
+        const parsed = JSON.parse(normalizedText) as Record<string, unknown>;
         const summary = typeof parsed?.summary === 'string'
             ? parsed.summary.trim()
             : typeof parsed?.overall_explanation === 'string'
@@ -133,7 +133,7 @@ function parseReviewOutputPayload(text: string): ReviewOutputPayload {
                 : '';
         const findings = Array.isArray(parsed?.findings)
             ? parsed.findings
-                .map((item: any): ReviewFindingItem | null => {
+                .map((item: unknown): ReviewFindingItem | null => {
                     if (!item || typeof item !== 'object') return null;
                     const issue = String(item.issue || item.problem || item.title || '').trim();
                     const impact = String(item.impact || item.risk || '').trim();
@@ -245,7 +245,7 @@ export async function runReviewTaskStandalone(ctx: SessionTaskRunContext) {
             },
         );
     } catch (err) {
-        const aborted = ctx.signal.aborted || (err as any)?.name === 'AbortError';
+        const aborted = ctx.signal.aborted || (err instanceof Error && err.name === 'AbortError');
         if (aborted) throw err;
         emitTaskLifecycleEvent(
             ctx.pushEvent,
@@ -314,7 +314,7 @@ function collectCompactToolFacts(context: InputItem[], maxCount: number = 18): A
         if (!('type' in item) || item.type !== 'function_call_output') continue;
         const toolName = callIdToTool.get(item.call_id);
         if (!toolName) continue;
-        let parsed: any = {};
+        let parsed: Record<string, unknown> = {};
         try {
             parsed = JSON.parse(item.output || '{}');
         } catch {
@@ -484,7 +484,7 @@ export async function runCompactTaskStandalone(ctx: SessionTaskRunContext) {
             },
         );
     } catch (err) {
-        const aborted = ctx.signal.aborted || (err as any)?.name === 'AbortError';
+        const aborted = ctx.signal.aborted || (err instanceof Error && err.name === 'AbortError');
         if (aborted) throw err;
         ctx.pushEvent({
             type: 'turn_item_completed',

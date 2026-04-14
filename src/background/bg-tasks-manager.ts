@@ -51,8 +51,8 @@ Channel.on('__bg_tasks_query', async (_data, _sender, sendResponse) => {
             getActiveResidentJobs(),
         ]);
         sendResponse({ timers, residentJobs });
-    } catch (err: any) {
-        sendResponse({ timers: [], residentJobs: [], error: err.message || '查询失败' });
+    } catch (err: unknown) {
+        sendResponse({ timers: [], residentJobs: [], error: err instanceof Error ? err.message : '查询失败' });
     }
     return true;
 });
@@ -84,8 +84,8 @@ Channel.on('__bg_task_close', async (data, _sender, sendResponse) => {
         }
         sendResponse({ success: true });
         void broadcastBgTasksChanged();
-    } catch (err: any) {
-        sendResponse({ success: false, error: err.message || '关闭失败' });
+    } catch (err: unknown) {
+        sendResponse({ success: false, error: err instanceof Error ? err.message : '关闭失败' });
     }
     return true;
 });

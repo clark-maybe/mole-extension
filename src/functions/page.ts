@@ -153,6 +153,11 @@ export const pageFunction: FunctionDefinition = {
     return null;
   },
   execute: async (params: Record<string, any>, context?: ToolExecutionContext) => {
+    // 检查取消信号
+    if (context?.signal?.aborted) {
+      return { success: false, error: '操作已取消' };
+    }
+
     const action = params.action;
 
     switch (action) {

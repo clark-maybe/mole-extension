@@ -169,6 +169,11 @@ export const cdpOverlayFunction: FunctionDefinition = {
   ): Promise<FunctionResult> => {
     const { action, tab_id } = params;
 
+    // 检查取消信号
+    if (context?.signal?.aborted) {
+      return { success: false, error: '操作已取消' };
+    }
+
     // 确定目标 tabId
     let tabId: number;
     if (typeof tab_id === 'number' && tab_id > 0) {

@@ -743,8 +743,8 @@ Channel.on('__test_chain', (data, sender) => {
                     pushEvent({ type: 'search_results', content: JSON.stringify(parsed.data) });
                 }
             }
-        } catch (err: any) {
-            pushEvent({ type: 'function_result', content: `baidu_search 出错: ${err.message}` });
+        } catch (err: unknown) {
+            pushEvent({ type: 'function_result', content: `baidu_search 出错: ${err instanceof Error ? err.message : String(err)}` });
         }
 
         // 第二轮：京东搜索（通过 MCP Client 调用）
@@ -758,8 +758,8 @@ Channel.on('__test_chain', (data, sender) => {
                     pushEvent({ type: 'search_results', content: JSON.stringify(parsed.data) });
                 }
             }
-        } catch (err: any) {
-            pushEvent({ type: 'function_result', content: `jd_search 出错: ${err.message}` });
+        } catch (err: unknown) {
+            pushEvent({ type: 'function_result', content: `jd_search 出错: ${err instanceof Error ? err.message : String(err)}` });
         }
 
         // 模拟 AI 流式文本输出

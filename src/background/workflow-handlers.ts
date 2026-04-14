@@ -87,10 +87,10 @@ Channel.on('__dynamic_tools_list', (_data, _sender, sendResponse) => {
             success: true,
             tools,
         });
-    })().catch((err: any) => {
+    })().catch((err: unknown) => {
         sendResponse?.({
             success: false,
-            message: err?.message || '读取动态工具失败',
+            message: err instanceof Error ? err.message : '读取动态工具失败',
         });
     });
     return true;
@@ -103,10 +103,10 @@ Channel.on('__dynamic_tools_upsert', (data, _sender, sendResponse) => {
             : data;
         const result = await upsertDynamicTool(rawSpec);
         sendResponse?.(result);
-    })().catch((err: any) => {
+    })().catch((err: unknown) => {
         sendResponse?.({
             success: false,
-            message: err?.message || '更新动态工具失败',
+            message: err instanceof Error ? err.message : '更新动态工具失败',
         });
     });
     return true;
@@ -116,10 +116,10 @@ Channel.on('__dynamic_tools_remove', (data, _sender, sendResponse) => {
     void (async () => {
         const result = await removeDynamicTool(data?.name);
         sendResponse?.(result);
-    })().catch((err: any) => {
+    })().catch((err: unknown) => {
         sendResponse?.({
             success: false,
-            message: err?.message || '移除动态工具失败',
+            message: err instanceof Error ? err.message : '移除动态工具失败',
         });
     });
     return true;
@@ -129,10 +129,10 @@ Channel.on('__dynamic_tools_import_manifest', (data, _sender, sendResponse) => {
     void (async () => {
         const result = await importDynamicToolsFromManifest(data?.url, data?.replaceAll === true);
         sendResponse?.(result);
-    })().catch((err: any) => {
+    })().catch((err: unknown) => {
         sendResponse?.({
             success: false,
-            message: err?.message || '导入动态工具失败',
+            message: err instanceof Error ? err.message : '导入动态工具失败',
             imported: 0,
             removed: 0,
             skipped: 0,
@@ -146,10 +146,10 @@ Channel.on('__workflow_registry_invalidate', (_data, _sender, sendResponse) => {
     void (async () => {
         await reloadRegistryFromStore();
         sendResponse?.({ success: true });
-    })().catch((err: any) => {
+    })().catch((err: unknown) => {
         sendResponse?.({
             success: false,
-            message: err?.message || '刷新 workflow 缓存失败',
+            message: err instanceof Error ? err.message : '刷新 workflow 缓存失败',
         });
     });
     return true;
@@ -165,10 +165,10 @@ Channel.on('__debug_tools_catalog', (_data, _sender, sendResponse) => {
             tools,
             now: Date.now(),
         });
-    })().catch((err: any) => {
+    })().catch((err: unknown) => {
         sendResponse?.({
             success: false,
-            message: err?.message || '读取调试工具目录失败',
+            message: err instanceof Error ? err.message : '读取调试工具目录失败',
         });
     });
     return true;
@@ -192,7 +192,7 @@ Channel.on('__debug_call_tool', (data, _sender, sendResponse) => {
         const startedAt = Date.now();
         const mcpResult = await mcpClient.callTool(toolName, args, tabId ? { tabId } : undefined);
         const text = mcpResult?.content?.[0]?.text || '';
-        let parsed: any = null;
+        let parsed: unknown = null;
         if (text) {
             try {
                 parsed = JSON.parse(text);
@@ -209,10 +209,10 @@ Channel.on('__debug_call_tool', (data, _sender, sendResponse) => {
             parsed,
             mcpResult,
         });
-    })().catch((err: any) => {
+    })().catch((err: unknown) => {
         sendResponse?.({
             success: false,
-            message: err?.message || '调试调用失败',
+            message: err instanceof Error ? err.message : '调试调用失败',
         });
     });
     return true;
@@ -238,10 +238,10 @@ Channel.on('__debug_run_plan', (data, _sender, sendResponse) => {
             actions: getSupportedRemotePlanActions(),
             parsed: result,
         });
-    })().catch((err: any) => {
+    })().catch((err: unknown) => {
         sendResponse?.({
             success: false,
-            message: err?.message || '执行 plan 失败',
+            message: err instanceof Error ? err.message : '执行 plan 失败',
         });
     });
     return true;

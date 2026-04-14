@@ -322,10 +322,11 @@ function normalizeExecuteNumberOption(raw: unknown, min: number, max: number): n
     return Math.max(min, Math.min(max, Math.floor(value)));
 }
 
-export function extractExecuteSessionOptions(raw: any): Partial<ExecuteSessionOptions> {
+export function extractExecuteSessionOptions(raw: Record<string, unknown>): Partial<ExecuteSessionOptions> {
     if (!raw || typeof raw !== 'object') return {};
-    const disallowTools = Array.isArray(raw.disallowTools)
-        ? Array.from(new Set(raw.disallowTools.map((item: any) => String(item || '').trim()).filter(Boolean)))
+    const rawDisallow = raw.disallowTools;
+    const disallowTools = Array.isArray(rawDisallow)
+        ? Array.from(new Set(rawDisallow.map((item: unknown) => String(item || '').trim()).filter(Boolean)))
         : [];
     return {
         disallowTools: disallowTools.length > 0 ? disallowTools : undefined,
@@ -729,12 +730,12 @@ async function runSessionShortcutTask(
                 content: buildErrorContent('E_TOOL_EXEC', result.error || '执行失败', 'tool', true),
             });
         }
-    } catch (err: any) {
-        if (signal.aborted || err?.name === 'AbortError') return true;
+    } catch (err: unknown) {
+        if (signal.aborted || (err instanceof Error && err.name === 'AbortError')) return true;
         session.status = 'error';
         pushEvent({
             type: 'error',
-            content: buildErrorContent('E_TOOL_EXEC', err.message || '执行异常', 'tool', true),
+            content: buildErrorContent('E_TOOL_EXEC', err instanceof Error ? err.message : '执行异常', 'tool', true),
         });
     }
     return true;
@@ -977,11 +978,11 @@ async function executeSessionChat(session: Session, query: string, tabId?: numbe
                 options,
                 pushEvent,
             });
-        } catch (err: any) {
-            if (controller.signal.aborted || err?.name === 'AbortError') {
+        } catch (err: unknown) {
+            if (controller.signal.aborted || (err instanceof Error && err.name === 'AbortError')) {
                 return;
             }
-            const errMsg = err.message || 'AI 处理异常';
+            const errMsg = err instanceof Error ? err.message : 'AI 处理异常';
             const failCode = resolveFailureCode(errMsg);
             session.status = 'error';
             pushEvent({
@@ -1038,12 +1039,12 @@ async function executeSessionChat(session: Session, query: string, tabId?: numbe
         Channel.broadcast('__session_sync', buildSessionSyncPayload(session));
         persistSessionHistory(session);
         persistRuntimeSessions();
-    } catch (err: any) {
+    } catch (err: unknown) {
         console.error('[Mole] 会话处理异常:', err);
         session.status = 'error';
         pushEvent({
             type: 'error',
-            content: buildErrorContent('E_SESSION_RUNTIME', err.message || '会话处理异常', 'background', true),
+            content: buildErrorContent('E_SESSION_RUNTIME', err instanceof Error ? err.message : '会话处理异常', 'background', true),
         });
         Channel.broadcast('__session_sync', buildSessionSyncPayload(session));
         persistSessionHistory(session);

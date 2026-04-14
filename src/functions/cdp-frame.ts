@@ -138,6 +138,11 @@ export const cdpFrameFunction: FunctionDefinition = {
     // expression 优先，code 作为别名
     const rawExpression = params.expression || params.code || '';
 
+    // 检查取消信号
+    if (context?.signal?.aborted) {
+      return { success: false, error: '操作已取消' };
+    }
+
     // 确定目标 tabId
     let tabId: number;
     if (typeof tab_id === 'number' && tab_id > 0) {

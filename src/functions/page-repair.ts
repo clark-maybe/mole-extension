@@ -204,6 +204,11 @@ export const pageRepairFunction: FunctionDefinition = {
     required: [],
   },
   execute: async (params: PageRepairParams, context?: ToolExecutionContext) => {
+    // 检查取消信号
+    if (context?.signal?.aborted) {
+      return { success: false, error: '操作已取消' };
+    }
+
     const targetHint = normalizeText(params.target_hint || '');
     const scopeSelector = normalizeText(params.scope_selector || '') || undefined;
     const attempts = Math.min(Math.max(Math.floor(Number(params.attempts) || 5), 1), 5);

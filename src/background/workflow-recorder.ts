@@ -330,7 +330,7 @@ Channel.on('__recorder_submit', (_data, _sender, sendResponse) => {
             }
 
             // 从 AI 返回中提取 JSON
-            let workflowJson: any = null;
+            let workflowJson: Record<string, unknown> | null = null;
             for (const item of result.output) {
                 if (item.type === 'message' && Array.isArray(item.content)) {
                     for (const part of item.content) {
@@ -383,7 +383,7 @@ Channel.on('__recorder_submit', (_data, _sender, sendResponse) => {
 
             const paramEntries = Object.entries(workflowJson.parameters?.properties || {});
             const paramLine = paramEntries.length > 0
-                ? `\n**参数**：${paramEntries.map(([k, v]: [string, any]) => `\`${k}\` — ${v.description || k}`).join('、')}`
+                ? `\n**参数**：${paramEntries.map(([k, v]: [string, Record<string, unknown>]) => `\`${k}\` — ${(v as Record<string, unknown>).description || k}`).join('、')}`
                 : '';
 
             const aiSummary = [
@@ -428,10 +428,11 @@ Channel.on('__recorder_submit', (_data, _sender, sendResponse) => {
             persistRuntimeSessions();
 
             sendResponse?.({ success: true });
-        } catch (err: any) {
+        } catch (err: unknown) {
+            const errMsg = err instanceof Error ? err.message : '提交处理失败';
             console.error('[Mole] 工作流录制提交失败:', err);
-            sendResponse?.({ success: false, error: err?.message || '提交处理失败' });
-            Channel.broadcast('__recorder_audit_done', { error: err?.message || '审计失败' });
+            sendResponse?.({ success: false, error: errMsg });
+            Channel.broadcast('__recorder_audit_done', { error: errMsg });
         }
     })();
 

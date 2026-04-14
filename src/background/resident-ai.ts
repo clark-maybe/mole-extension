@@ -15,7 +15,7 @@ import { injectAIResponseRunner } from '../functions/resident-runtime';
 export async function runResidentAIResponse(
     job: { id: string; name: string; tabId: number; aiPromptTemplate: string },
     detectData: unknown,
-): Promise<{ success: boolean; data?: any; error?: string }> {
+): Promise<{ success: boolean; data?: { reply: string; prompt: string }; error?: string }> {
     const resultText = typeof detectData === 'string'
         ? detectData
         : JSON.stringify(detectData, null, 2);
@@ -26,7 +26,7 @@ export async function runResidentAIResponse(
         let reply = '';
         let resolved = false;
 
-        const safeResolve = (result: { success: boolean; data?: any; error?: string }) => {
+        const safeResolve = (result: { success: boolean; data?: { reply: string; prompt: string }; error?: string }) => {
             if (resolved) return;
             resolved = true;
             resolve(result);
@@ -47,8 +47,8 @@ export async function runResidentAIResponse(
             undefined,
             undefined,
             { maxRounds: 1, disallowTools: ['resident_runtime', 'spawn_subtask'] },
-        ).catch((err: any) => {
-            safeResolve({ success: false, error: err?.message || 'handleChat 异常' });
+        ).catch((err: unknown) => {
+            safeResolve({ success: false, error: err instanceof Error ? err.message : 'handleChat 异常' });
         });
     });
 }

@@ -21,7 +21,7 @@ export function showNotification(title: string, message: string, notificationId:
         message: message,
     }).then(() => {
         _console.log(`[background] 通知已显示: ${title}`);
-    }).catch((error: any) => {
+    }).catch((error: unknown) => {
         _console.error('[background] 显示通知失败:', error);
     });
 }

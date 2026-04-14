@@ -18,10 +18,10 @@ import { sessionTaskKinds, normalizeTaskKind } from './session-state';
 // ============ 事件解析函数 ============
 
 /** 解析 JSON 事件内容，返回对象或 null */
-export function parseEventObject(content: string): Record<string, any> | null {
+export function parseEventObject(content: string): Record<string, unknown> | null {
     if (!content) return null;
     try {
-        const parsed = JSON.parse(content) as Record<string, any>;
+        const parsed = JSON.parse(content) as Record<string, unknown>;
         return parsed && typeof parsed === 'object' ? parsed : null;
     } catch {
         return null;

@@ -4,7 +4,7 @@
  * 使用 Chrome Alarms API + TimerScheduler 实现双轨调度
  */
 
-import type { FunctionDefinition } from './types';
+import type { FunctionDefinition, ToolExecutionContext } from './types';
 import { TimerStore } from '../lib/timer-store';
 import { TimerScheduler } from '../lib/timer-scheduler';
 
@@ -210,7 +210,12 @@ export const timerFunction: FunctionDefinition = {
 
     return null;
   },
-  execute: async (params: any, context?: { tabId?: number }) => {
+  execute: async (params: any, context?: ToolExecutionContext) => {
+    // 检查取消信号
+    if (context?.signal?.aborted) {
+      return { success: false, error: '操作已取消' };
+    }
+
     switch (params.action) {
       case 'set_timeout': {
         // 搬迁原 setTimeoutFunction.execute 的完整逻辑
