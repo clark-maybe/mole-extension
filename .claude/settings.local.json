@@ -124,7 +124,11 @@
       "Bash(echo:*)",
       "Bash(kill %%)",
       "Bash(md5 .trellis/spec/frontend/index.md)",
-      "Bash(md5)"
+      "Bash(md5)",
+      "Read(//private/tmp/**)",
+      "Bash(npm run *)",
+      "Read(//Users/kpwcry/**)",
+      "Read(//Users/kpwcry/.trellis/**)"
     ],
     "deny": [],
     "ask": []
