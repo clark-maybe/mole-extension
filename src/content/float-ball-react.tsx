@@ -96,13 +96,15 @@ export const initFloatBallReact = async () => {
   // ---- 宿主文档上的全局事件监听 ----
   // 通过 window 上的自定义事件桥接给 React（closed Shadow DOM 内组件无法访问外部 DOM）
 
-  // 全局快捷键：⌘M (Mac) / Ctrl+M (Win)
+  // 全局快捷键：⌘M (Mac) / Ctrl+M (Win) — 打开 Side Panel
   document.addEventListener('keydown', (e) => {
     const modKey = isMac ? e.metaKey : e.ctrlKey;
     if (modKey && e.key.toLowerCase() === 'm') {
       e.preventDefault();
       e.stopPropagation();
-      window.dispatchEvent(new CustomEvent('mole-toggle'));
+      import('../lib/channel').then(({ default: Channel }) => {
+        Channel.send('__open_side_panel', {});
+      });
     }
   });
 

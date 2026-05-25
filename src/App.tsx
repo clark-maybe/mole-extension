@@ -84,6 +84,15 @@ function App() {
     window.close();
   };
 
+  /** 打开 Side Panel 对话 */
+  const openSidePanel = async () => {
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    if (tab?.id) {
+      await (chrome.sidePanel as any).open({ tabId: tab.id });
+    }
+    window.close();
+  };
+
   const llmReady = !!llmStatus?.configured;
   const endpointLabel = useMemo(() => formatEndpointLabel(llmStatus?.endpoint), [llmStatus?.endpoint]);
   const modelLabel = llmStatus?.model || 'gpt-5.4';
@@ -164,7 +173,10 @@ function App() {
         </div>
 
         <div className="popup-actions">
-          <button type="button" className="popup-btn popup-btn-primary" onClick={() => openOptions()}>
+          <button type="button" className="popup-btn popup-btn-primary" onClick={openSidePanel}>
+            打开对话
+          </button>
+          <button type="button" className="popup-btn popup-btn-secondary" onClick={() => openOptions()}>
             打开控制台
           </button>
         </div>

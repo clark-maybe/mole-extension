@@ -16,8 +16,12 @@
     "history",
     "downloads",
     "webRequest",
-    "debugger"
+    "debugger",
+    "sidePanel"
   ],
+  "side_panel": {
+    "default_path": "sidepanel.html"
+  },
   "host_permissions": [
     "<all_urls>"
   ],

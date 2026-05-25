@@ -5,6 +5,17 @@
 import type { SessionOpQueueSnapshot } from '../../../ai/types';
 import type { Side, RecentCompletedTaskItem } from '../constants';
 
+// ============ 历史轮次 ============
+
+export interface RoundItem {
+  query: string;
+  aiText: string;
+  callStack: Array<{ funcName: string; icon: string; text: string; userSummary?: string }>;
+  status: 'done' | 'error';
+  errorMsg?: string;
+  durationMs?: number | null;
+}
+
 // ============ 任务状态 ============
 
 export interface TaskItem {
@@ -28,6 +39,8 @@ export interface TaskItem {
   opQueue?: SessionOpQueueSnapshot;
   /** 会话是否有可恢复的上下文 */
   hasContext?: boolean;
+  /** 历史轮次（多轮对话） */
+  rounds?: RoundItem[];
 }
 
 export interface TabTakeoverState {
@@ -123,6 +136,7 @@ export type MoleAction =
   | { type: 'SET_APPROVAL_REQUEST'; payload: { requestId: string; message: string } | null }
   | { type: 'SET_ASK_USER_REQUEST'; payload: { requestId: string; question: string; options?: string[]; allowFreeText?: boolean } | null }
   | { type: 'APPEND_CALL_STACK'; payload: { funcName: string; icon: string; text: string; userSummary?: string } }
+  | { type: 'SAVE_ROUND' }
   | { type: 'SET_RECORDING'; payload: { isRecording: boolean; stepCount?: number } }
   | { type: 'SET_RECORDER_AUDITING'; payload: boolean }
   | { type: 'SET_RECORD_MODAL'; payload: boolean }

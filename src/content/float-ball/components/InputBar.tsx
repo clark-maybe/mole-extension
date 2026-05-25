@@ -55,7 +55,7 @@ export const InputBar: React.FC<InputBarProps> = ({ resultRef }) => {
     dispatch({ type: 'SET_TASK', payload: tempTask });
     dispatch({ type: 'PUSH_INPUT_HISTORY', payload: value });
 
-    Channel.send('__session_create', { query: value }, (response: any) => {
+    Channel.send('__session_create', { query: value, tabId: state.selfTabId ?? undefined }, (response: any) => {
       if (response?.sessionId) {
         dispatch({
           type: 'UPDATE_TASK',
@@ -78,11 +78,13 @@ export const InputBar: React.FC<InputBarProps> = ({ resultRef }) => {
         });
       }
     });
-  }, [dispatch]);
+  }, [dispatch, state.selfTabId]);
 
   // 继续对话
   const continueTask = useCallback((value: string) => {
     if (!task) return;
+    // 保存当前轮次到历史
+    dispatch({ type: 'SAVE_ROUND' });
     dispatch({
       type: 'UPDATE_TASK',
       payload: {
@@ -104,7 +106,7 @@ export const InputBar: React.FC<InputBarProps> = ({ resultRef }) => {
 
     Channel.send(
       '__session_continue',
-      { sessionId: task.id, query: value },
+      { sessionId: task.id, query: value, tabId: state.selfTabId ?? undefined },
       (response: any) => {
         if (response?.accepted === false) {
           const message = response?.message?.trim() || '继续对话失败';
@@ -121,7 +123,7 @@ export const InputBar: React.FC<InputBarProps> = ({ resultRef }) => {
         }
       },
     );
-  }, [task, dispatch]);
+  }, [task, dispatch, state.selfTabId]);
 
   // 键盘事件
   const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -242,7 +244,9 @@ export const InputBar: React.FC<InputBarProps> = ({ resultRef }) => {
         title="终止任务"
         onClick={handleStop}
       >
-        ■
+        <svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor">
+          <rect x="0" y="0" width="10" height="10" rx="1.5" />
+        </svg>
       </button>
     </div>
   );

@@ -17,9 +17,10 @@
   "scripts": {
     "dev": "vite build --watch",
     "build:popup": "vite build --config vite.config.popup.ts",
+    "build:sidepanel": "vite build --config vite.config.sidepanel.ts",
     "build:content": "vite build --config vite.config.content.ts",
     "build:background": "vite build --config vite.config.background.ts",
-    "build": "npm run build:popup && npm run build:content && npm run build:background && echo 'Build completed!'",
+    "build": "npm run build:popup && npm run build:sidepanel && npm run build:content && npm run build:background && echo 'Build completed!'",
     "lint": "eslint . --report-unused-disable-directives",
     "preview": "vite preview",
     "docs:dev": "vitepress dev docs",

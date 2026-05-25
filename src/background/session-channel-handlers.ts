@@ -553,7 +553,7 @@ Channel.on('__session_create', (data, sender, sendResponse) => {
         query,
         requestedTaskKind: data?.taskKind,
         taskOptions: extractExecuteSessionOptions(data),
-        tabId: sender?.tab?.id,
+        tabId: sender?.tab?.id ?? data?.tabId,
         sendResponse,
     };
     void submitSessionOp(op);
@@ -585,7 +585,7 @@ Channel.on('__session_continue', (data, sender, sendResponse) => {
         expectedSessionId,
         expectedRunId,
         taskOptions: extractExecuteSessionOptions(data),
-        tabId: sender?.tab?.id,
+        tabId: sender?.tab?.id ?? data?.tabId,
         sendResponse,
     };
     void submitSessionOp(op);
@@ -638,7 +638,7 @@ Channel.on('__session_resume', (data, sender, sendResponse) => {
         type: 'resume',
         label: '__session_resume',
         sessionId,
-        tabId: sender?.tab?.id,
+        tabId: sender?.tab?.id ?? data?.tabId,
         sendResponse,
     };
     void submitSessionOp(op);

@@ -2,7 +2,7 @@
  * 悬浮球状态 Reducer
  */
 
-import { type MoleState, type MoleAction, initialMoleState } from './types';
+import { type MoleState, type MoleAction, type RoundItem, initialMoleState } from './types';
 
 const INPUT_HISTORY_KEY = 'mole_input_history';
 const INPUT_HISTORY_MAX = 50;
@@ -85,6 +85,26 @@ export const moleReducer = (state: MoleState, action: MoleAction): MoleState => 
           callStack: [...state.currentTask.callStack, action.payload],
         },
       };
+
+    case 'SAVE_ROUND': {
+      const t = state.currentTask;
+      if (!t || (!t.lastAIText && t.callStack.length === 0)) return state;
+      const round: RoundItem = {
+        query: t.query,
+        aiText: t.lastAIText,
+        callStack: t.callStack,
+        status: t.status === 'error' ? 'error' : 'done',
+        errorMsg: t.errorMsg || undefined,
+        durationMs: t.durationMs,
+      };
+      return {
+        ...state,
+        currentTask: {
+          ...t,
+          rounds: [...(t.rounds || []), round],
+        },
+      };
+    }
 
     case 'SET_RECORDING':
       return {

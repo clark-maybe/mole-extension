@@ -5,10 +5,11 @@
  * 改用 React 组件直接渲染，避免 dangerouslySetInnerHTML 导致 DOM 状态丢失
  */
 
-import React, { useRef, useEffect, useState, useCallback } from 'react';
+import React, { useRef, useEffect, useState, useCallback, useMemo } from 'react';
 import { useMole } from '../context/useMole';
 import { markdownToHtml } from '../markdown';
 import Channel from '../../../lib/channel';
+import type { RoundItem } from '../context/types';
 import {
   sanitizeUserFacingRuntimeText,
   clipRuntimeText,
@@ -110,6 +111,40 @@ const AgentStatePanel: React.FC<{
           </div>
           {children}
         </>
+      )}
+    </div>
+  );
+};
+
+/** 历史轮次：折叠展示之前的对话 */
+const HistoryRound: React.FC<{ round: RoundItem; index: number }> = ({ round }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const html = useMemo(() => round.aiText ? markdownToHtml(round.aiText) : '', [round.aiText]);
+  const preview = round.aiText
+    ? round.aiText.replace(/[#*`\n]/g, ' ').trim().slice(0, 60)
+    : (round.status === 'error' ? round.errorMsg || '执行失败' : '已完成');
+
+  return (
+    <div className="mole-round-history">
+      {/* 用户消息气泡 */}
+      <div className="mole-user-msg">{round.query}</div>
+      {/* 折叠摘要 */}
+      <div className="mole-round-summary" onClick={() => setIsOpen(!isOpen)}>
+        <span className={`arrow${isOpen ? ' open' : ''}`}>▶</span>
+        <span className="mole-round-preview">{preview}</span>
+      </div>
+      {isOpen && (
+        <div className="mole-round-content open">
+          {round.callStack.length > 0 && (
+            <CallsGroup calls={round.callStack} isRunning={false} />
+          )}
+          {html && (
+            <div className="mole-answer" dangerouslySetInnerHTML={{ __html: html }} />
+          )}
+          {round.status === 'error' && round.errorMsg && (
+            <div className="mole-error">⚠ {round.errorMsg}</div>
+          )}
+        </div>
       )}
     </div>
   );
@@ -235,8 +270,20 @@ export const ResultView: React.FC = () => {
   const duration = task.durationMs ?? (task.endedAt ? Math.max(0, task.endedAt - task.startedAt) : null);
   const durationText = duration !== null ? formatDuration(duration) : '';
 
+  const rounds = task.rounds || [];
+
   return (
     <div className="mole-result visible" ref={resultRef} onScroll={handleScroll}>
+      {/* 历史轮次 */}
+      {rounds.map((round, idx) => (
+        <HistoryRound key={idx} round={round} index={idx} />
+      ))}
+
+      {/* 当前轮用户消息（仅多轮时显示） */}
+      {rounds.length > 0 && task.query && (
+        <div className="mole-user-msg">{task.query}</div>
+      )}
+
       {/* 进展面板 */}
       {(isRunning || isFinished) && (
         <AgentStatePanel

@@ -118,7 +118,7 @@ export const Trigger: React.FC<{ onRecordClick: () => void }> = ({ onRecordClick
       savePosition({ side: newSide, y: newY });
     },
     onClick: () => {
-      dispatch({ type: 'TOGGLE_OPEN' });
+      Channel.send('__open_side_panel', {});
     },
   });
 

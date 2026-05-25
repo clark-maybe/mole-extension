@@ -759,9 +759,12 @@ export const getStyles = () => `
     display: none;
     align-items: center;
     justify-content: center;
-    font-size: 14px;
-    line-height: 1;
+    padding: 0;
     transition: transform 0.15s ease, background 0.15s ease, border-color 0.15s ease;
+  }
+
+  .mole-stop-btn svg {
+    display: block;
   }
 
   .mole-stop-btn:hover {

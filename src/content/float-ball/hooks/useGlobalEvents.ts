@@ -1,6 +1,6 @@
 /**
  * 全局事件 Hook
- * 监听从宿主文档桥接过来的 CustomEvent（快捷键、ESC、点击外部）
+ * 监听从宿主文档桥接过来的 CustomEvent（ESC、点击外部）
  * 以及提供稳定的每秒计时器
  */
 
@@ -9,8 +9,7 @@ import Channel from '../../../lib/channel';
 import { useMole } from '../context/useMole';
 
 /**
- * 监听宿主文档通过 CustomEvent 桥接的全局事件
- * 需要传入 React 挂载容器（reactRoot）的引用
+ * 监听宿主文档通过 CustomEvent 桥接的全局事件（ESC、点击外部）
  */
 export const useGlobalEvents = () => {
   const { state, dispatch } = useMole();
@@ -18,18 +17,6 @@ export const useGlobalEvents = () => {
   stateRef.current = state;
 
   useEffect(() => {
-    // 获取 React 挂载容器（mole-react-root）
-    // 它是 CustomEvent 的 dispatch 目标
-    const reactRoot = document.getElementById('mole-react-root');
-    // 在 closed Shadow DOM 内无法用 getElementById，改为向上查找
-    // 实际上 reactRoot 就是当前 React 树的根 DOM 节点的父级
-    // 我们在 MoleRoot 里获取
-
-    // 快捷键切换
-    const handleToggle = () => {
-      dispatch({ type: 'TOGGLE_OPEN' });
-    };
-
     // ESC 键
     const handleEscape = () => {
       const s = stateRef.current;
@@ -72,12 +59,10 @@ export const useGlobalEvents = () => {
     // 监听来自入口文件桥接的 CustomEvent
     // 注意：这些事件分发在 reactRoot 上，但在 closed Shadow DOM 中
     // 我们无法从组件内拿到 reactRoot 引用，改为使用 window 上的自定义事件
-    window.addEventListener('mole-toggle' as any, handleToggle);
     window.addEventListener('mole-escape' as any, handleEscape);
     window.addEventListener('mole-click-outside' as any, handleClickOutside);
 
     return () => {
-      window.removeEventListener('mole-toggle' as any, handleToggle);
       window.removeEventListener('mole-escape' as any, handleEscape);
       window.removeEventListener('mole-click-outside' as any, handleClickOutside);
     };

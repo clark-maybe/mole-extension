@@ -162,6 +162,35 @@ chrome.tabs.onRemoved.addListener((tabId) => {
 });
 
 /**
+ * 打开 Side Panel
+ * content script 或 popup 请求打开侧边栏
+ */
+Channel.on('__open_side_panel', async (data, sender, sendResponse) => {
+    const tabId = sender?.tab?.id ?? data?.tabId;
+    if (typeof tabId !== 'number') {
+        try {
+            const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+            if (tab?.id) {
+                await (chrome.sidePanel as any).open({ tabId: tab.id });
+            }
+            if (sendResponse) sendResponse({ success: true });
+        } catch (err) {
+            _console.error('[Mole] 打开 Side Panel 失败:', err);
+            if (sendResponse) sendResponse({ success: false, error: String(err) });
+        }
+        return true;
+    }
+    try {
+        await (chrome.sidePanel as any).open({ tabId });
+        if (sendResponse) sendResponse({ success: true });
+    } catch (err) {
+        _console.error('[Mole] 打开 Side Panel 失败:', err);
+        if (sendResponse) sendResponse({ success: false, error: String(err) });
+    }
+    return true;
+});
+
+/**
  * 定位到任务发起页签
  * 非发起页签请求跳转到任务所在页签
  */
