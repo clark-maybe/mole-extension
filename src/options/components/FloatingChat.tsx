@@ -13,6 +13,8 @@ import {
   formatDuration, formatClock, buildTaskTitle, clipRuntimeText, sanitizeUserFacingRuntimeText,
 } from '../../content/float-ball/text-utils';
 import { AGENT_PHASE_LABELS, SHOW_AGENT_STATE_PANEL } from '../../content/float-ball/constants';
+import { updateToolLoginNotice } from '../../lib/tool-login';
+import { CHANNEL_PLATFORMS } from '../../lib/channel-platforms';
 import './FloatingChat.css';
 
 // ---- 类型 ----
@@ -329,6 +331,8 @@ export function FloatingChat({ mode = 'float' }: FloatingChatProps) {
     if (prevGroup) prevGroup.classList.add('frozen');
     const prevStatePanel = el.querySelector('.mole-agent-state-panel:not(.frozen)');
     if (prevStatePanel) prevStatePanel.classList.add('frozen');
+    const prevLoginNotice = el.querySelector('.mole-login-notice:not(.frozen)');
+    if (prevLoginNotice) prevLoginNotice.classList.add('frozen');
 
     const roundHistory = document.createElement('div');
     roundHistory.className = 'mole-round-history';
@@ -618,7 +622,7 @@ export function FloatingChat({ mode = 'float' }: FloatingChatProps) {
         try {
           const parsed = JSON.parse(content);
           funcName = parsed?.name || parsed?.function?.name || '';
-          callId = parsed?.call_id || parsed?.id || '';
+          callId = parsed?.callId || parsed?.call_id || parsed?.id || '';
           intentText = parsed?.intent || '';
         } catch {
           funcName = content;
@@ -640,17 +644,36 @@ export function FloatingChat({ mode = 'float' }: FloatingChatProps) {
         return;
       }
 
-      if (type === 'function_result') {
+      if (type === 'function_result' || type === 'platform_action_required') {
         let resultCallId = '';
         let resultText = '';
         let resultSuccess = true;
         let resultUserSummary = '';
         try {
           const parsed = JSON.parse(content);
-          resultCallId = parsed?.call_id || '';
-          resultText = parsed?.output || parsed?.result || '';
+          resultCallId = parsed?.callId || parsed?.call_id || '';
+          resultText = parsed?.message || parsed?.output || parsed?.result || '';
           resultSuccess = parsed?.success !== false;
           resultUserSummary = parsed?.userSummary || parsed?.user_summary || '';
+          const loginNotice = updateToolLoginNotice(undefined, parsed);
+          const existingNotice = el.querySelector('.mole-login-notice:not(.frozen)');
+          if (loginNotice) {
+            const platform = CHANNEL_PLATFORMS[loginNotice.platform];
+            existingNotice?.remove();
+            appendToResult(`<div class="mole-login-notice mole-channel-card" role="status">
+              <div class="mole-channel-header">
+                <img class="mole-channel-icon" src="${escapeHtml(platform.icon)}" alt="" />
+                <div class="mole-channel-identity"><strong>${escapeHtml(platform.name)}</strong><span>搜索账号与线索</span></div>
+                <span class="mole-channel-state">${loginNotice.kind === 'verification' ? '安全验证' : '需要登录'}</span>
+              </div>
+              <div class="mole-channel-body"><strong>${escapeHtml(loginNotice.title)}</strong><p>${escapeHtml(loginNotice.message)}</p></div>
+              <div class="mole-channel-footer"><span>完成后回来重试</span>
+                <a class="mole-channel-action" href="${escapeHtml(loginNotice.url)}" target="_blank" rel="noopener noreferrer"${loginNotice.tabId ? ` data-verification-tab-id="${loginNotice.tabId}"` : ''}>${escapeHtml(loginNotice.linkText)}<span aria-hidden="true">↗</span></a>
+              </div>
+            </div>`);
+          } else if (loginNotice === null) {
+            existingNotice?.remove();
+          }
         } catch {
           resultText = content;
         }
@@ -1308,6 +1331,16 @@ export function FloatingChat({ mode = 'float' }: FloatingChatProps) {
   // ---- 结果区事件委托 ----
   const handleResultClick = useCallback((e: React.MouseEvent) => {
     const target = e.target as HTMLElement;
+
+    const verificationLink = target.closest('a[data-verification-tab-id]') as HTMLAnchorElement | null;
+    if (verificationLink) {
+      const tabId = Number(verificationLink.dataset.verificationTabId);
+      if (Number.isSafeInteger(tabId) && tabId > 0) {
+        e.preventDefault();
+        Channel.send('__session_focus_tab', { tabId });
+        return;
+      }
+    }
 
     // 折叠组摘要 toggle
     const summary = target.closest('.mole-calls-summary') as HTMLElement | null;

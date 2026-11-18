@@ -93,6 +93,7 @@ export const InputBar: React.FC<InputBarProps> = ({ resultRef }) => {
         status: 'running',
         callStack: [],
         lastAIText: '',
+        loginNotice: null,
         agentPhase: 'plan',
         agentRound: 0,
         failureCode: '',

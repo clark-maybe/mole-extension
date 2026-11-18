@@ -3,6 +3,7 @@
  * 从 background.ts 提取，处理所有 __session_* 和 __ai_* 相关的 Channel 消息
  */
 import Channel from '../lib/channel';
+import { matchDouyinVerification } from './douyin-verification';
 import { mcpClient } from '../functions/registry';
 import type { AIStreamEvent, SessionReplayPayload, SessionFailureCode } from '../ai/types';
 import {
@@ -34,6 +35,7 @@ import {
     persistRuntimeSessions,
     persistSessionHistory,
     RuntimeResourceManager,
+    createSessionPushEvent,
 } from './session-manager';
 import type {
     SessionOp,
@@ -51,6 +53,27 @@ import type {
 } from './session-manager';
 
 // ============ 会话管理消息处理 ============
+
+// 请求结束后，抖音登录流程仍可能异步弹出验证码；关联当前轮的原工具页签。
+Channel.on('__douyin_verification_detected', (data: unknown, sender, sendResponse) => {
+    const watchId = data && typeof data === 'object' && 'watchId' in data ? data.watchId : undefined;
+    const tabId = sender?.tab?.id;
+    const session = sessions.get(getActiveSessionId() || '');
+    if (!tabId || !session || typeof watchId !== 'string' || !watchId
+        || sender?.frameId !== 0 || !sender.url?.startsWith('https://www.douyin.com/')) {
+        sendResponse?.({ accepted: false });
+        return;
+    }
+    const { related, notified } = matchDouyinVerification(session.eventLog, tabId, watchId);
+    if (related && !notified) {
+        createSessionPushEvent(session)({
+            type: 'platform_action_required',
+            content: JSON.stringify({ name: 'douyin_search_users', success: false,
+                code: 'E_VERIFICATION_REQUIRED', tabId, verificationWatchId: watchId }),
+        });
+    }
+    sendResponse?.({ accepted: related });
+});
 
 async function handleSessionCreateOp(op: SessionCreateOp) {
     const rollbackCommand = parseRollbackCommand(String(op.query || ''));

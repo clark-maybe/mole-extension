@@ -1,6 +1,7 @@
 /**
  * 悬浮胶囊 — 函数图标与中文标签
  */
+import { DOUYIN_ICON } from '../../lib/channel-platforms';
 
 // 网页查看 logo（放大镜+页面）
 const LOGO_PAGE_VIEWER = `data:image/svg+xml;charset=utf-8,${encodeURIComponent('<svg viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg"><path d="M490.666667 384c-58.88 0-106.666667 47.786667-106.666667 106.666667s47.786667 106.666667 106.666667 106.666666 106.666667-47.786667 106.666666-106.666666-47.786667-106.666667-106.666666-106.666667zM853.333333 170.666667H170.666667c-47.146667 0-85.333333 38.186667-85.333334 85.333333v512c0 47.146667 38.186667 85.333333 85.333334 85.333333h682.666666c47.146667 0 85.333333-38.186667 85.333334-85.333333V256c0-47.146667-38.186667-85.333333-85.333334-85.333333z m-136.746666 606.08l-123.946667-123.946667c-29.653333 18.773333-64.426667 29.866667-101.973333 29.866667a192 192 0 1 1 192-192c0 37.546667-11.093333 72.32-29.866667 101.76l124.16 123.733333-60.373333 60.586667z" fill="#0071e3"/></svg>')}`;
@@ -139,6 +140,7 @@ export const FUNCTION_ICONS: Record<string, string> = {
   cdp_overlay: LOGO_CDP_DEBUG,
   cdp_fetch: LOGO_CDP_DEBUG,
   extract_data: LOGO_EXTRACT_DATA,
+  douyin_search_users: DOUYIN_ICON,
   data_pipeline: LOGO_DATA_PIPELINE,
   request_confirmation: LOGO_REQUEST_CONFIRMATION,
   ask_user: LOGO_ASK_USER,
@@ -160,6 +162,7 @@ export const FUNCTION_LABELS: Record<string, string> = {
   page_assert: '页面断言',
   page_repair: '页面修复',
   fetch_url: '获取网页',
+  douyin_search_users: '抖音用户搜索',
   tab_navigate: '标签页管理',
   clipboard_ops: '剪贴板',
   screenshot: '页面截图',

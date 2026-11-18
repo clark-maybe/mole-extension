@@ -12,6 +12,7 @@ export const ALWAYS_ON_TOOLS: ReadonlySet<string> = new Set([
   'tab_navigate',          // 标签页控制
   'screenshot',            // 截图
   'extract_data',          // 数据提取
+  'douyin_search_users',   // 抖音用户搜索
   'data_pipeline',         // 数据管道
   'skill',                 // Skill 工作流
   'ask_user',              // 向用户提问

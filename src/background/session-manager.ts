@@ -570,7 +570,8 @@ export function createSessionPushEvent(session: Session) {
         const shouldPersistDebounced = !shouldPersistImmediate && event.type !== 'text';
         const shouldPersistHistory = event.type === 'error'
             || event.type === 'turn_aborted'
-            || event.type === 'turn_completed';
+            || event.type === 'turn_completed'
+            || event.type === 'platform_action_required';
 
         void dispatchSessionOp(`session_event:${session.id}:${event.type}`, async () => {
             if (shouldPersistBeforeEmit) {

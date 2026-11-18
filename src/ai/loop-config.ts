@@ -164,6 +164,7 @@ export const EXPLORE_ALLOWED_TOOLS: ReadonlySet<string> = new Set([
   'tab_navigate',
   'extract_data',
   'fetch_url',
+  'douyin_search_users',
   'selection_context',
   'skill',
 ]);

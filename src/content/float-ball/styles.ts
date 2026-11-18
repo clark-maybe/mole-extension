@@ -9,6 +9,7 @@ import {
   LOGO_SIZE,
   TUCK_OFFSET,
 } from './constants';
+import channelCardStyles from './components/ToolLoginCard.css?inline';
 
 export const getStyles = () => `
   :host {
@@ -2087,6 +2088,8 @@ export const getStyles = () => `
   .mole-answer em {
     font-style: italic;
   }
+
+  ${channelCardStyles}
 
   /* 错误信息 */
   .mole-error {

@@ -132,6 +132,7 @@ export type AIStreamEventType =
   | 'agent_state'
   | 'function_call'
   | 'function_result'
+  | 'platform_action_required'
   | 'search_results'
   | 'screenshot_data'
   | 'page_assert_data'

@@ -10,6 +10,7 @@ import { useMole } from '../context/useMole';
 import { markdownToHtml } from '../markdown';
 import Channel from '../../../lib/channel';
 import type { RoundItem } from '../context/types';
+import { ToolLoginCard } from './ToolLoginCard';
 import {
   sanitizeUserFacingRuntimeText,
   clipRuntimeText,
@@ -122,7 +123,7 @@ const HistoryRound: React.FC<{ round: RoundItem; index: number }> = ({ round }) 
   const html = useMemo(() => round.aiText ? markdownToHtml(round.aiText) : '', [round.aiText]);
   const preview = round.aiText
     ? round.aiText.replace(/[#*`\n]/g, ' ').trim().slice(0, 60)
-    : (round.status === 'error' ? round.errorMsg || '执行失败' : '已完成');
+    : round.loginNotice?.title || (round.status === 'error' ? round.errorMsg || '执行失败' : '已完成');
 
   return (
     <div className="mole-round-history">
@@ -141,6 +142,7 @@ const HistoryRound: React.FC<{ round: RoundItem; index: number }> = ({ round }) 
           {html && (
             <div className="mole-answer" dangerouslySetInnerHTML={{ __html: html }} />
           )}
+          {round.loginNotice && <ToolLoginCard notice={round.loginNotice} />}
           {round.status === 'error' && round.errorMsg && (
             <div className="mole-error">⚠ {round.errorMsg}</div>
           )}
@@ -178,7 +180,7 @@ export const ResultView: React.FC = () => {
         el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' });
       });
     }
-  }, [task?.lastAIText, task?.status, task?.liveStatusText, task?.callStack?.length]);
+  }, [task?.lastAIText, task?.status, task?.liveStatusText, task?.callStack?.length, task?.loginNotice]);
 
   // 增量 DOM 更新：只对新出现的块级元素加淡入动画，已有元素就地更新，避免全量替换闪烁
   useEffect(() => {
@@ -296,6 +298,8 @@ export const ResultView: React.FC = () => {
         </AgentStatePanel>
       )}
 
+      {task.loginNotice && <ToolLoginCard notice={task.loginNotice} />}
+
       {/* AI 文本回复 — ref 管理 DOM 实现增量更新 */}
       <div
         className="mole-answer"
@@ -309,7 +313,7 @@ export const ResultView: React.FC = () => {
       )}
 
       {/* 完成但无文本 */}
-      {task.status === 'done' && !task.lastAIText && (
+      {task.status === 'done' && !task.lastAIText && !task.loginNotice && (
         <div className="mole-status"><span className="dot" />已完成处理。</div>
       )}
     </div>

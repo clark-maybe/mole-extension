@@ -135,7 +135,15 @@ Recommended flow for extracting page data:
 **Small data** (< 20 items): extract and display directly in reply
 **Large data** (>= 20 items): buffer → transform → export file
 
-## Cross-Tab Operations
+${toolNames.includes('douyin_search_users') ? `## Douyin User Search
+
+Use douyin_search_users for finding user accounts on Douyin, including business prospect research. It manages the Douyin tab and uses the current browser login session; no copied tokens or manual API construction are needed.
+- Start with keyword and optionally count. To continue the same search, pass the returned cursor and search_id; stop when has_more=false. Reset pagination when changing keywords.
+- Preserve profile URLs and quote the original bio/verification text as evidence. Keyword relevance alone does not prove location, enterprise identity or use of a particular product.
+- If the tool returns E_AUTH_REQUIRED, stop Douyin searches and pagination for this turn. Explain that the query was rejected, usually because the user is not logged in or their session expired. Include a clickable [Open Douyin to log in](https://www.douyin.com/) link (use the user's language), and ask them to finish login/verification and then retry. Do not retry automatically or fall back to manual requests to bypass this state.
+- If the tool returns E_VERIFICATION_REQUIRED, stop Douyin requests for this turn and tell the user to manually complete the security verification in the existing Douyin tab (data.tab_id), then return and retry. The tab stays open with a persistent reminder explaining the search task. Do not attempt to solve the captcha or repeatedly trigger the request. The UI already provides a channel action card; keep the explanation brief.
+
+` : ''}## Cross-Tab Operations
 
 You can operate multiple tabs in a single task. Typical flow:
 

@@ -88,13 +88,14 @@ export const moleReducer = (state: MoleState, action: MoleAction): MoleState => 
 
     case 'SAVE_ROUND': {
       const t = state.currentTask;
-      if (!t || (!t.lastAIText && t.callStack.length === 0)) return state;
+      if (!t || (!t.lastAIText && t.callStack.length === 0 && !t.loginNotice)) return state;
       const round: RoundItem = {
         query: t.query,
         aiText: t.lastAIText,
         callStack: t.callStack,
         status: t.status === 'error' ? 'error' : 'done',
         errorMsg: t.errorMsg || undefined,
+        loginNotice: t.loginNotice,
         durationMs: t.durationMs,
       };
       return {

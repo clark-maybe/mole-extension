@@ -1,0 +1,50 @@
+/* 渠道操作卡片：品牌、状态、说明与操作入口保持一致。 */
+.mole-channel-card {
+  box-sizing: border-box;
+  margin: 12px 0;
+  padding: 15px;
+  border: 1px solid #e8e7ed;
+  border-radius: 14px;
+  background: #fff;
+  color: #24212d;
+  font-size: 13px;
+  line-height: 1.5;
+  box-shadow: 0 2px 8px rgba(30, 20, 50, .025);
+}
+.mole-channel-header { display: flex; align-items: center; gap: 10px; }
+.mole-channel-icon { width: 32px; height: 32px; border-radius: 9px; flex-shrink: 0; }
+.mole-channel-identity { display: flex; flex: 1; flex-direction: column; gap: 1px; min-width: 0; }
+.mole-channel-identity strong { font-size: 13px; font-weight: 650; }
+.mole-channel-identity > span { color: #92909b; font-size: 11px; }
+.mole-channel-state {
+  padding: 3px 8px;
+  border-radius: 6px;
+  background: #f7f5f0;
+  color: #8c744b;
+  font-size: 11px;
+  white-space: nowrap;
+}
+.mole-channel-body { margin: 14px 0; }
+.mole-channel-body > strong { font-weight: 600; font-size: 13px; }
+.mole-channel-body > p { margin: 5px 0 0; color: #777480; font-size: 12px; line-height: 1.75; }
+.mole-channel-footer { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.mole-channel-footer > span { color: #a09ca9; font-size: 11px; }
+.mole-channel-card .mole-channel-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 7px 11px;
+  border: 1px solid #25212c;
+  border-radius: 8px;
+  background: #25212c;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.4;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: background .15s;
+}
+.mole-channel-card .mole-channel-action:hover { background: #3d3748; }
+.mole-channel-card .mole-channel-action:focus-visible { outline: 2px solid #a78bfa; outline-offset: 3px; }

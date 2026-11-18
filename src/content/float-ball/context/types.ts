@@ -4,6 +4,7 @@
 
 import type { SessionOpQueueSnapshot } from '../../../ai/types';
 import type { Side, RecentCompletedTaskItem } from '../constants';
+import type { ToolLoginNotice } from '../../../lib/tool-login';
 
 // ============ 历史轮次 ============
 
@@ -13,6 +14,7 @@ export interface RoundItem {
   callStack: Array<{ funcName: string; icon: string; text: string; userSummary?: string }>;
   status: 'done' | 'error';
   errorMsg?: string;
+  loginNotice?: ToolLoginNotice | null;
   durationMs?: number | null;
 }
 
@@ -27,6 +29,7 @@ export interface TaskItem {
   resultHtml: string;
   callStack: Array<{ funcName: string; icon: string; text: string; userSummary?: string }>;
   errorMsg: string;
+  loginNotice?: ToolLoginNotice | null;
   lastAIText: string;
   agentPhase: string;
   agentRound: number;

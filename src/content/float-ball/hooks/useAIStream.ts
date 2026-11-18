@@ -15,6 +15,7 @@ import { useMole } from '../context/useMole';
 import type { TaskItem } from '../context/types';
 import { buildTaskTitle, buildToolIntentText, buildUserFacingActionSummary } from '../text-utils';
 import { FUNCTION_ICONS, FUNCTION_LABELS } from '../icons';
+import { updateToolLoginNotice } from '../../../lib/tool-login';
 
 export const useAIStream = (resultRef: React.RefObject<HTMLDivElement | null>) => {
   const { state, dispatch } = useMole();
@@ -106,12 +107,22 @@ export const useAIStream = (resultRef: React.RefObject<HTMLDivElement | null>) =
         } catch { /* 忽略 */ }
         break;
 
-      case 'function_result':
+      case 'platform_action_required':
+      case 'function_result': {
+        // 无关工具不写入登录状态，避免连续事件在 React 重渲染前覆盖已有提示。
+        let loginNotice: ReturnType<typeof updateToolLoginNotice>;
+        try {
+          loginNotice = updateToolLoginNotice(undefined, JSON.parse(content));
+        } catch { /* 兼容旧的非 JSON 结果事件 */ }
         dispatch({
           type: 'UPDATE_TASK',
-          payload: { liveStatusText: '处理中...' },
+          payload: {
+            ...(loginNotice !== undefined ? { loginNotice } : {}),
+            liveStatusText: loginNotice?.title || '处理中...',
+          },
         });
         break;
+      }
 
       case 'text':
         dispatch({

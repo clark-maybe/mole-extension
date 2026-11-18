@@ -37,4 +37,6 @@ export interface FunctionResult {
   success: boolean;
   data?: any;
   error?: string;
+  /** 可供 Agent 和界面识别的错误码 */
+  code?: string;
 }

@@ -11,6 +11,7 @@ import { FUNCTION_LABELS } from './icons';
 /** 将内部工具术语替换为用户可读文本 */
 export const replaceInternalToolTerms = (raw: string): string => {
   return raw
+    .replace(/douyin_search_users/gi, '抖音用户搜索')
     .replace(/(page_snapshot|page_viewer|fetch_url)/gi, '查看页面内容')
     .replace(/(cdp_input|cdp_frame|cdp_debug|tab_navigate)/gi, '执行页面操作')
     .replace(/page_assert/gi, '确认操作结果')

@@ -289,11 +289,19 @@ export const executeToolCalls = async (
     let resultSuccess = true;
     let resultMessage = '';
     let resultCancelled = false;
+    let resultCode: string | undefined;
+    let resultTabId: number | undefined;
+    let verificationWatchId: string | undefined;
     try {
       const parsed = JSON.parse(output);
       resultSuccess = parsed.success !== false;
       resultMessage = parsed.error || parsed.data?.summary || '';
       resultCancelled = signal?.aborted === true && !resultSuccess;
+      resultCode = typeof parsed.code === 'string' ? parsed.code : undefined;
+      resultTabId = Number.isSafeInteger(parsed.data?.tab_id) && parsed.data.tab_id > 0
+        ? parsed.data.tab_id : undefined;
+      verificationWatchId = typeof parsed.data?.verification_watch_id === 'string'
+        ? parsed.data.verification_watch_id : undefined;
     } catch {
       // output 解析失败，保持默认值
     }
@@ -307,6 +315,9 @@ export const executeToolCalls = async (
         success: resultSuccess,
         message: resultMessage,
         cancelled: resultCancelled,
+        code: resultCode,
+        tabId: resultTabId,
+        verificationWatchId,
       }),
     });
 

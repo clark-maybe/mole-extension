@@ -37,6 +37,7 @@ import { askUserFunction } from './ask-user';
 import { saveWorkflowFunction } from './save-workflow';
 import { loadToolsFunction } from './load-tools';
 import { webhookFunction } from './webhook';
+import { douyinSearchUsersFunction } from './douyin-search-users';
 
 const DYNAMIC_TOOL_STORAGE_KEY = 'mole_dynamic_tools_v1';
 const DYNAMIC_TOOL_MAX_TIMEOUT_MS = 60_000;
@@ -105,6 +106,7 @@ const BUILTIN_FUNCTIONS: FunctionDefinition[] = [
   saveWorkflowFunction,
   loadToolsFunction,
   webhookFunction,
+  douyinSearchUsersFunction,
 ];
 
 const builtinToolNames = new Set(BUILTIN_FUNCTIONS.map((tool) => tool.name));

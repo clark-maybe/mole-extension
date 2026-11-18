@@ -29,6 +29,18 @@ MoleClaw includes 37+ built-in tools covering all aspects of browser automation.
 | `tab_navigate` | Tab navigation: navigate URL in current tab, open new tab, close tab, etc. |
 | `fetch_url` | Make HTTP requests in the background to fetch URL content without affecting the current page |
 
+## Douyin User Search
+
+`douyin_search_users` is available to the agent by default. For example: “Search Douyin for Wuhan restaurant accounts. Return 12 results with their bios and profile links.”
+
+- Parameters: required `keyword`; optional `count` (default 12, range 1–20), `cursor` (0 for the first page), `search_id` (from the previous page), and `tab_id` (an existing Douyin tab). Reset pagination when changing keywords.
+- Results: `items` contains string user IDs, handles, nicknames, original bios, verification text, follower/like counts and profile URLs. The response also includes `cursor`, `has_more`, `search_id`, a search source URL and the collection time.
+- Reuses an existing Douyin tab or temporarily opens one in the background. Temporary tabs are cleaned up after success or ordinary failures; tabs requiring login or manual verification stay open for the user. Requests run in the page's main world using the current login session; no copied cookies, tokens or signatures are needed.
+- Rejected queries (such as HTTP 401/403, a business rejection or an explicit login requirement) return `success: false`, `code: E_AUTH_REQUIRED` and `data.login_url`. The agent asks the user to log in, and the channel card shows a login action button. Complete login and any page verification before retrying. Network failures, timeouts and normal empty results are not automatically treated as missing login.
+- When `#captcha_container` or a captcha iframe whose URL starts with `https://rmc.bytedance.com/verifycenter/captcha/` appears, the tool returns `E_VERIFICATION_REQUIRED`, `data.verification_required` and the original `data.tab_id`. It stops the current request and asks the user to complete verification manually. Detection covers the period before the request, while waiting, and while reading the response, including iframe `src` changes. It does not need access to the cross-origin iframe's contents. Monitoring continues after the query returns: a captcha shown later during login updates the page banner and the current conversation's verification card directly. Notifications are tied to the original tab and query, so an older query cannot overwrite a newer query or conversation turn. Retry manually after completing verification.
+- Login and verification use a shared channel card with the platform's brand icon, status and action button, which focuses the original tab when available. A dismissible persistent banner on Douyin explains the search keyword, task purpose and next steps. A successful retry clears the banner.
+- Matches are candidate accounts; location, enterprise identity and customer fit require supporting evidence.
+
 ## Browser Capabilities
 
 | Tool | Description |
