@@ -614,6 +614,9 @@ export function createSessionCheckpointHandler(session: Session): NonNullable<Ha
             session.channelResumePending = false;
         }
         if (checkpoint.meta?.todoSnapshot) session.todoSnapshot = checkpoint.meta.todoSnapshot as Session['todoSnapshot'];
+        if (Array.isArray(checkpoint.meta?.webAccessSnapshot)) {
+            session.webAccessSnapshot = checkpoint.meta.webAccessSnapshot as Session['webAccessSnapshot'];
+        }
         const normalizedPhase = checkpoint.phase === 'execute'
             ? 'act'
             : checkpoint.phase;
@@ -652,6 +655,7 @@ async function runSessionTaskChat(
     }, tabId, signal, session.context.length > 0 ? session.context : undefined, {
         sessionId: session.id,
         resumeTodoSnapshot: taskScopedOptions.appendUserQuery === false ? session.todoSnapshot : undefined,
+        resumeWebAccessSnapshot: taskScopedOptions.appendUserQuery === false ? session.webAccessSnapshot : undefined,
         disallowTools: taskScopedOptions.disallowTools,
         maxRounds: taskScopedOptions.maxRounds,
         maxToolCalls: taskScopedOptions.maxToolCalls,

@@ -8,6 +8,7 @@ import type { PermissionLevel } from '../functions/types';
 import { mcpClient, getBuiltinFunction } from '../functions/registry';
 import { truncateToolResult, getTextContent } from './context-manager';
 import { requestConfirmationFunction } from '../functions/request-confirmation';
+import type { AgentRunState } from './run-state';
 
 /** Agent 执行器类型（由 orchestrator 注入） */
 export type AgentRunner = (params: {
@@ -144,6 +145,7 @@ export const executeToolCalls = async (
   emit: (event: AIStreamEvent) => void,
   agentRunner?: AgentRunner,
   sessionId?: string,
+  runState?: AgentRunState,
 ): Promise<InputItem[]> => {
   const results: InputItem[] = [];
 
@@ -269,7 +271,7 @@ export const executeToolCalls = async (
         const result = await mcpClient.callTool(
           call.name,
           params,
-          { tabId, sessionId },
+          { tabId, sessionId, webAccess: runState?.webAccess, webNavigation: runState?.webNavigation },
           { signal },
         );
         const text = result.content?.[0]?.text || '{}';

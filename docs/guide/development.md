@@ -243,6 +243,18 @@ type(scope): 描述
 - **type**: `feat`（新功能）、`fix`（修复）、`docs`（文档）、`refactor`（重构）、`test`（测试）、`chore`（杂项）
 - **scope**: 模块名，如 `ai`、`tools`、`content`、`mcp`
 
+## 网页访问与循环边界
+
+`lib/web-access.ts` 分类明确拒绝、失效页面和临时故障，并按规范化 URL 串行处理访问。`functions/web-access.ts` 在 MCP 执行前统一接入读取、导航和页面操作工具；`lib/web-navigation.ts` 使用现有 `webRequest` 权限记录主文档 HTTP 状态，跟踪搜索跳转目标，不把子资源错误当成整页失败。任务结束时移除监听。
+
+导航操作等待主文档完成，并检查 HTTP 状态及明确拒绝页后才报告成功；浏览器接受打开命令不代表目标可访问，不能据此清空已有失败计数。
+
+明确拒绝在本任务内停止；临时失败最多实际尝试三次，重试前的基础冷却为 1、2 秒，服务端 `Retry-After` 可以延长等待，第三次失败后停止。冷却返回不会重新请求网页。错误页文本识别限制为明确标题或短正文开头，避免误拦讨论错误码的文章。
+
+`ai/run-state.ts` 跨阶段和子 Agent 共用访问状态、总预算及失败计数。普通操作相同参数连续失败两次后阻止重复执行；获得新进展后可以重新定位操作，网址拒绝状态继续保留。连续六轮实际工作均失败后以无工具调用的最终回复收尾，记账、工具发现和标签页列表不视为新进展。
+
+访问快照通过检查点元数据写入 `Session.webAccessSnapshot`，不依赖上下文摘要；仅在同一任务恢复时通过 `resumeWebAccessSnapshot` 还原。新用户回合创建新的访问状态。回归命令为 `node --test tests/*.test.mjs`。
+
 ## 渠道恢复机制
 
 `lib/channel-access.ts` 统一串行渠道工具、保存待恢复调用和检查结果。工具通过 `FunctionDefinition.channel` 声明渠道，MCP 元数据携带 `sessionId`。页面观察器只上报候选信号，不在页面循环探测搜索接口。

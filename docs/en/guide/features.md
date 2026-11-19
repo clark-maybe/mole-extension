@@ -107,6 +107,12 @@ Use `screenshot(annotate=true)` to get a screenshot with numbered interactive el
 - Prefer `page_snapshot` / `page_skeleton` for structured data; use visual analysis as a supplement
 - The floating ball is automatically hidden during screenshots to avoid obscuring page content
 
+## Web Access Failure Protection
+
+When a search result leads to an access-denied or missing page, Mole skips that address and continues with other sources. Limits apply to a specific URL, rather than the whole website. Switching tools, changing read parameters or handing work to another phase does not reopen a confirmed unavailable target.
+
+Timeouts, rate limits and temporary server failures use bounded backoff and respect server retry delays. Repeated failures without progress end with an explanation of completed work and missing information. Access restrictions are saved with progress and survive checkpoint recovery; a new user turn can try again.
+
 ## Channel Intervention and Automatic Continuation
 
 When a Douyin query requires login or security verification, Mole saves the query and existing progress, pauses that channel and offers a link to its original page. Independent work can continue; when none remains, the task shows a waiting status.

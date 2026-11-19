@@ -21,6 +21,8 @@ import { getToolsByCategory } from '../functions/tool-tiers';
 import { TodoManager } from './todo-manager';
 import { TabTracker } from './tab-tracker';
 import { createTodoFunction } from '../functions/todo';
+import { createRunState, isProgressTool } from './run-state';
+import type { AgentRunState } from './run-state';
 
 import type {
   LoopBudget, HandleChatOptions, PhaseControl,
@@ -387,18 +389,21 @@ export const agenticLoop = async (
   registry?: AgentRegistry,
   allTools?: ToolSchema[],
   loadedOnDemandTools?: Set<string>,
+  sharedRunState?: AgentRunState,
 ): Promise<InputItem[]> => {
   let round = 0;
   let totalToolCalls = 0;
   let emptyRetries = 0;
   let imageInjectionCount = 0;
-  const signatureCount = new Map<string, number>();
+  const runState = sharedRunState || createRunState(budget);
+  let forceFinalize = false;
   let roundsSinceTodoOp = 0;
 
   emit({ type: 'thinking', content: 'AI 正在思考...' });
   emitCheckpoint(options, 'act', 0, '开始处理', context);
 
-  while (round < budget.maxRounds) {
+  while (round < budget.maxRounds && runState.rounds < runState.maxRounds &&
+    totalToolCalls < budget.maxToolCalls && runState.toolCalls < runState.maxToolCalls && runState.failureRounds < 6) {
     if (signal?.aborted) {
       emit({ type: 'error', content: JSON.stringify({ code: 'E_CANCELLED', message: '任务已取消' }) });
       return context;
@@ -440,6 +445,7 @@ export const agenticLoop = async (
 
     // ── 机制：调用 LLM ──
     round++;
+    runState.rounds++;
     emitCheckpoint(options, 'act', round, `第 ${round} 轮`, context);
 
     let fullText: string;
@@ -470,37 +476,16 @@ export const agenticLoop = async (
     if (functionCalls.length > 0) {
       emptyRetries = 0;
 
-      // ── 边界：死循环检测 ──
-      for (const fc of functionCalls) {
-        const sig = buildSignature(fc);
-        const count = (signatureCount.get(sig) || 0) + 1;
-        signatureCount.set(sig, count);
-        if (count >= budget.maxSameSignature) {
-          context.push({
-            role: 'user' as const,
-            content: `你已经用完全相同的参数调用 ${fc.name} ${count} 次了，结果不会改变。请换一种方法，或者基于已有结果给出回答。`,
-          });
-        }
-      }
-
       // ── 边界：总调用数检查 ──
-      totalToolCalls += functionCalls.length;
-      if (totalToolCalls >= budget.maxToolCalls) {
-        const results = await executeToolCalls(functionCalls, tabId, signal, emit, undefined, options?.sessionId);
-        for (const r of results) context.push(r);
-        if (tabTracker) scanTabNavigateResults(functionCalls, results, tabTracker);
-        imageInjectionCount = await injectScreenshotImages(functionCalls, results, context, imageInjectionCount);
-
-        context.push({
-          role: 'user' as const,
-          content: '本次处理已经进行了很多步骤。请基于当前已有的信息，总结你已经完成的内容和当前进展，直接给出最终回答。不要提及"轮数""工具限制"等内部概念。',
-        });
-        try {
-          const finalResponse = await collectStreamResponse(context, [], systemPrompt, signal, emit);
-          for (const item of finalResponse.outputItems) context.push(item as InputItem);
-        } catch { /* 忽略，已经有足够上下文 */ }
+      if (totalToolCalls + functionCalls.length > budget.maxToolCalls ||
+        runState.toolCalls + functionCalls.length > runState.maxToolCalls) {
+        for (const fc of functionCalls) context.push({ type: 'function_call_output', call_id: fc.call_id,
+          output: JSON.stringify({ success: false, code: 'E_TOOL_BUDGET', error: '任务处理已达到边界，请基于已有信息收尾。' }) });
+        forceFinalize = true;
         break;
       }
+      totalToolCalls += functionCalls.length;
+      runState.toolCalls += functionCalls.length;
 
       // ── 机制：构建统一 Agent runner ──
       const effectiveRegistry = registry || new AgentRegistry();
@@ -556,11 +541,13 @@ export const agenticLoop = async (
             effectiveTabId, runnerSignal || signal, emit, { sessionId: options?.sessionId }, depth + 1,
             undefined, undefined, undefined, tabTracker,
             effectiveRegistry,
+            undefined, undefined, runState,
           );
 
           const summary = extractLastAssistantReply(resultContext) || 'Agent 已完成但无明确输出';
-          effectiveRegistry.updateStatus(instance.id, 'completed', summary);
-          return { success: true, summary, agentId: instance.id };
+          const success = runState.failureRounds < 6 && !(runnerSignal || signal)?.aborted;
+          effectiveRegistry.updateStatus(instance.id, success ? 'completed' : 'failed', summary);
+          return { success, summary, agentId: instance.id };
         } catch (err: unknown) {
           const errMsg = err instanceof Error ? err.message : 'Agent 执行失败';
           effectiveRegistry.updateStatus(instance.id, 'failed', errMsg);
@@ -687,8 +674,46 @@ export const agenticLoop = async (
 
       // 执行剩余常规工具
       if (regularCalls.length > 0) {
-        const results = await executeToolCalls(regularCalls, tabId, signal, emit, agentRunner, options?.sessionId);
+        const allowedCalls: OutputFunctionCallItem[] = [];
+        const results: InputItem[] = [];
+        for (const fc of regularCalls) {
+          if ((runState.failedSignatures.get(buildSignature(fc)) || 0) >= Math.min(2, budget.maxSameSignature)) {
+            const error = '相同操作已经重复失败，已停止再次执行。请使用其他来源或基于已有结果回答。';
+            results.push({ type: 'function_call_output', call_id: fc.call_id,
+              output: JSON.stringify({ success: false, code: 'E_TOOL_REPEATED_FAILURE', retryable: false, error }) });
+            emit({ type: 'function_call', content: JSON.stringify({ name: fc.name, callId: fc.call_id, arguments: fc.arguments }) });
+            emit({ type: 'function_result', content: JSON.stringify({ name: fc.name, callId: fc.call_id, success: false, message: error }) });
+          } else allowedCalls.push(fc);
+        }
+        results.push(...await executeToolCalls(allowedCalls, tabId, signal, emit, agentRunner, options?.sessionId, runState));
         for (const r of results) context.push(r);
+        let failed = 0;
+        let succeeded = 0;
+        for (const fc of regularCalls) {
+          if (!isProgressTool(fc.name, fc.arguments)) continue;
+          const output = results.find(item => 'type' in item && item.type === 'function_call_output' && item.call_id === fc.call_id);
+          if (!output || !('output' in output)) continue;
+          try {
+            const parsed = JSON.parse(output.output);
+            const signature = buildSignature(fc);
+            if (parsed.success === false) {
+              failed++;
+              // 网页冷却回包没有发起新请求，不能挤占网址自身的实际尝试次数。
+              if (!String(parsed.code || '').startsWith('E_WEB_')) {
+                runState.failedSignatures.set(signature, (runState.failedSignatures.get(signature) || 0) + 1);
+              }
+            } else {
+              succeeded++;
+              runState.failedSignatures.delete(signature);
+            }
+          } catch { /* 无法解析的结果不视为成功进展。 */ }
+        }
+        if (succeeded > 0) {
+          runState.failureRounds = 0;
+          // 页面状态有新进展后允许重新定位操作；网址级拒绝仍由 webAccess 独立保留。
+          runState.failedSignatures.clear();
+        }
+        else if (failed > 0) runState.failureRounds++;
         if (tabTracker) scanTabNavigateResults(regularCalls, results, tabTracker);
         imageInjectionCount = await injectScreenshotImages(regularCalls, results, context, imageInjectionCount);
 
@@ -741,7 +766,8 @@ export const agenticLoop = async (
       emitCheckpoint(options, 'act', round, `工具执行完毕（共 ${totalToolCalls} 次调用）`, context, todoSnap);
 
       // ── 边界：Todo 完成驱动的阶段交接 ──
-      if (phaseControl?.handoffRequested) {
+      if (phaseControl?.handoffRequested && runState.failureRounds < 6 &&
+        runState.rounds < runState.maxRounds && runState.toolCalls < runState.maxToolCalls) {
         emitCheckpoint(options, 'act', round, '阶段交接（Todo 完成）', context, todoSnap);
         break;
       }
@@ -778,22 +804,27 @@ export const agenticLoop = async (
     break;
   }
 
-  // ── 边界：轮数耗尽 ──
-  if (round >= budget.maxRounds) {
+  // ── 边界：预算耗尽或连续失败，停止工具执行并给出可交付结果 ──
+  if (forceFinalize || round >= budget.maxRounds || runState.rounds >= runState.maxRounds ||
+    totalToolCalls >= budget.maxToolCalls || runState.toolCalls >= runState.maxToolCalls || runState.failureRounds >= 6) {
+    if (phaseControl) phaseControl.handoffRequested = false;
     const lastItem = context[context.length - 1];
-    const hasReply = 'role' in lastItem && lastItem.role === 'assistant' &&
+    const hasReply = lastItem && 'role' in lastItem && lastItem.role === 'assistant' &&
                      'content' in lastItem && getTextContent(lastItem.content).trim();
     if (!hasReply) {
       context.push({
         role: 'user' as const,
-        content: '本次处理已经进行了很多步骤。请基于当前已有的信息，总结你已经完成的内容和当前进展，直接给出最终回答。不要提及"轮数""工具限制"等内部概念。',
+        content: runState.failureRounds >= 6
+          ? '多次尝试均失败，当前没有获得新信息。请基于已有证据说明完成的部分、无法获取的信息及具体障碍，直接给出最终回答，不要把受阻任务说成已完成，也不要继续尝试。'
+          : '本次处理已经进行了很多步骤。请基于当前已有的信息，总结你已经完成的内容和当前进展，直接给出最终回答。不要提及"轮数""工具限制"等内部概念。',
       });
       try {
         const finalResponse = await collectStreamResponse(context, [], systemPrompt, signal, emit);
         for (const item of finalResponse.outputItems) context.push(item as InputItem);
       } catch { /* 忽略 */ }
     }
-    emitCheckpoint(options, 'finalize', round, '达到轮数上限', context, todoManager?.active ? todoManager.toSnapshot() : undefined);
+    emitCheckpoint(options, 'finalize', round, runState.failureRounds >= 6 ? '连续失败，基于已有结果收尾' : '达到任务处理边界', context,
+      todoManager?.active ? todoManager.toSnapshot() : undefined);
   }
 
   return context;

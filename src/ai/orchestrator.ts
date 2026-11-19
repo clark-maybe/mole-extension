@@ -26,6 +26,7 @@ import { phaseOrchestrator } from './phase-orchestrator';
 
 import type { LoopBudget, HandleChatOptions, HandleChatCheckpoint, PhaseControl, PendingTurnResponseRequest } from './loop-config';
 import { DEFAULT_BUDGET, COMPACT_SCHEMA } from './loop-config';
+import { createRunState } from './run-state';
 
 // ============ Re-exports（保持外部 import 路径不变） ============
 
@@ -133,14 +134,21 @@ export const handleChat = async (
   // 标签页生命周期追踪：任务结束后自动关闭 AI 打开的标签页
   const tabTracker = new TabTracker();
   await tabTracker.startListening();
+  const runState = createRunState(budget, options?.resumeWebAccessSnapshot);
+  const checkpoint = options?.onCheckpoint;
+  const runOptions: HandleChatOptions = { ...options, onCheckpoint: state => checkpoint?.({
+    ...state, meta: { ...state.meta, webAccessSnapshot: runState.webAccess.snapshot() },
+  }) };
   try {
+    runState.webNavigation.start();
     return await phaseOrchestrator(
       query, tools, systemPrompt, budget,
-      tabId, signal, onEvent, options,
+      tabId, signal, onEvent, runOptions,
       previousContext, todoManager, todoFn, tabTracker,
-      allTools, loadedOnDemandTools,
+      allTools, loadedOnDemandTools, runState,
     );
   } finally {
+    runState.webNavigation.stop();
     await tabTracker.closeAll();
   }
 };

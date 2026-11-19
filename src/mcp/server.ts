@@ -7,6 +7,7 @@
 import type { FunctionDefinition } from '../functions/types';
 import { validateSchema } from './validator';
 import { channelAccess } from '../lib/channel-access';
+import { guardWebTool } from '../functions/web-access';
 import type {
   MCPTool,
   MCPToolCallRequest,
@@ -97,7 +98,7 @@ export class MCPServer {
     }
 
     // 从 _meta 中提取浏览器上下文
-    const context = { tabId: _meta?.tabId, sessionId: _meta?.sessionId, signal };
+    const context = { ..._meta, signal };
 
     if (signal?.aborted) {
       return {
@@ -149,9 +150,10 @@ export class MCPServer {
     }
 
     try {
-      const executePromise = funcDef.channel
+      const run = () => funcDef.channel
         ? channelAccess.execute(funcDef.channel, name, args, context, () => funcDef.execute(args, context))
         : funcDef.execute(args, context);
+      const executePromise = guardWebTool(name, args, context, run);
       let result;
       if (signal) {
         result = await new Promise<Awaited<typeof executePromise>>((resolve, reject) => {

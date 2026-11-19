@@ -3,6 +3,8 @@
  * 自实现轻量 MCP 层，仅覆盖 tools/list 和 tools/call 协议
  */
 
+import type { ToolExecutionContext } from '../functions/types';
+
 /** MCP 工具定义 */
 export interface MCPTool {
   /** 工具唯一名称 */
@@ -22,11 +24,7 @@ export interface MCPToolCallRequest {
   /** 调用参数 */
   arguments: Record<string, any>;
   /** 元数据，用于传递浏览器上下文（如 tabId） */
-  _meta?: {
-    tabId?: number;
-    sessionId?: string;
-    [key: string]: any;
-  };
+  _meta?: Omit<ToolExecutionContext, 'signal'>;
   /** 取消信号（仅内存传输使用，不做序列化） */
   signal?: AbortSignal;
 }

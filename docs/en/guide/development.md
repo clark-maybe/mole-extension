@@ -243,6 +243,18 @@ type(scope): description
 - **type**: `feat` (feature), `fix` (bugfix), `docs` (documentation), `refactor`, `test`, `chore`
 - **scope**: module name, e.g., `ai`, `tools`, `content`, `mcp`
 
+## Web Access and Loop Boundaries
+
+`lib/web-access.ts` classifies denied, missing and temporarily unavailable pages and serializes access by normalized URL. `functions/web-access.ts` guards reading, navigation and page-operation tools at the MCP boundary. `lib/web-navigation.ts` uses the existing `webRequest` permission to observe main-document HTTP status and search redirects without treating subresource errors as page failures. Listeners are removed when the task ends.
+
+Navigation waits for the main document and checks HTTP status and explicit denial pages before reporting success. Accepting an open command does not prove accessibility and must not clear previous failures.
+
+Confirmed denial stops access for the current task. Temporary failures allow at most three actual attempts, with base cooldowns of 1 and 2 seconds before retries; server `Retry-After` may extend the delay. A third failure stops further attempts. Cooldown responses do not make requests. Text detection uses explicit error headings or short page bodies to avoid blocking articles discussing error codes.
+
+`ai/run-state.ts` shares access restrictions, total budgets and failure counts across phases and agents. An ordinary operation that fails twice with identical arguments is blocked until meaningful progress permits another attempt; URL denial remains recorded. Six consecutive rounds of failed work trigger a final response without tools. Bookkeeping, tool discovery and tab listings do not count as progress.
+
+Checkpoint metadata persists the access snapshot as `Session.webAccessSnapshot`, independently of context summaries. `resumeWebAccessSnapshot` restores it only when resuming the same task. A new user turn starts fresh access state. Run regressions with `node --test tests/*.test.mjs`.
+
 ## Channel Recovery
 
 `lib/channel-access.ts` serializes channel tools and persists deferred calls and check results. Tools declare their channel through `FunctionDefinition.channel`; MCP metadata carries `sessionId`. Page observers report candidate signals and do not repeatedly probe the search endpoint.

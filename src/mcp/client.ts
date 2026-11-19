@@ -5,6 +5,7 @@
 
 import type { MCPTool, MCPToolCallResult, MCPListToolsResponse } from './types';
 import type { InMemoryTransport } from './transport';
+import type { ToolExecutionContext } from '../functions/types';
 
 export class MCPClient {
   /** 传输层实例 */
@@ -36,7 +37,7 @@ export class MCPClient {
   async callTool(
     name: string,
     args: Record<string, any>,
-    context?: { tabId?: number; sessionId?: string },
+    context?: Omit<ToolExecutionContext, 'signal'>,
     options?: { signal?: AbortSignal },
   ): Promise<MCPToolCallResult> {
     return this.transport.request('tools/call', {

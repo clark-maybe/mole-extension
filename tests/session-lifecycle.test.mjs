@@ -48,6 +48,20 @@ globalThis.chrome = { runtime: {}, storage: { local: {
 api.Channel.broadcast = (type, data) => broadcasts.push({ type, data: structuredClone(data) });
 after(() => { globalThis.chrome = originalChrome; });
 
+test('网页访问限制随检查点持久化，独立于模型上下文', async () => {
+  const session = api.createSession('收集网页资料');
+  session.status = 'running';
+  const snapshot = [{ url: 'https://example.com/denied', aliases: [], code: 'E_WEB_ACCESS_DENIED',
+    message: '拒绝访问', retryable: false, failures: 1, nextRetryAt: 1000 }];
+  api.createSessionCheckpointHandler(session)({ phase: 'act', round: 1, summary: '网页不可用', updatedAt: 1,
+    contextSnapshot: [{ role: 'user', content: '压缩后的任务目标' }], meta: { webAccessSnapshot: snapshot } });
+  await api.persistRuntimeSessionsImmediate();
+  const saved = stored.mole_session_runtime_v1.sessions.find(item => item.id === session.id);
+  assert.deepEqual(saved.webAccessSnapshot, snapshot);
+  assert.equal(saved.context.length, 1);
+  api.sessions.clear();
+});
+
 test('读取同步快照不改变刚结束但尚未发完成事件的会话状态', () => {
   const session = api.createSession('搜索账号');
   session.eventLog.push({ type: 'turn_started', content: JSON.stringify({ runId: 'run-1', startedAt: 1 }) });

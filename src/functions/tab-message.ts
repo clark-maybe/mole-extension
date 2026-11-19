@@ -48,80 +48,55 @@ export const sendToTabWithRetry = async <T = any>(
   const signal = options?.signal;
 
   return new Promise<T>((resolve, reject) => {
-    if (signal?.aborted) {
-      const abortError = new Error('aborted');
-      abortError.name = 'AbortError';
-      reject(abortError);
-      return;
-    }
-
-    const startedAt = Date.now();
+    let settled = false;
     let attempt = 0;
     let injectedOnce = false;
-    let timeout: ReturnType<typeof setTimeout> | null = null;
+    let retryTimer: ReturnType<typeof setTimeout> | undefined;
+    let deadlineTimer: ReturnType<typeof setTimeout> | undefined;
 
-    const onAbort = () => {
-      if (timeout) clearTimeout(timeout);
+    const finish = (error?: Error, response?: T) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(retryTimer);
+      clearTimeout(deadlineTimer);
       signal?.removeEventListener('abort', onAbort);
-      const abortError = new Error('aborted');
-      abortError.name = 'AbortError';
-      reject(abortError);
+      if (error) reject(error);
+      else resolve(response as T);
     };
-
-    const sendOnce = (): Promise<T> => {
-      return new Promise((resolveSend, rejectSend) => {
-        Channel.sendToTab(tabId, type, data, (response: any) => {
-          if (chrome.runtime.lastError) {
-            rejectSend(new Error(chrome.runtime.lastError.message || '发送消息失败'));
-            return;
-          }
-          resolveSend(response as T);
-        });
-      });
+    const onAbort = () => {
+      const error = new Error('aborted');
+      error.name = 'AbortError';
+      finish(error);
     };
+    if (signal?.aborted) { onAbort(); return; }
+    signal?.addEventListener('abort', onAbort, { once: true });
+    deadlineTimer = setTimeout(() => finish(new Error(timeoutMessage)), deadlineMs);
 
     const trySend = async () => {
-      attempt += 1;
-      const remain = deadlineMs - (Date.now() - startedAt);
-      if (remain <= 0) {
-        signal?.removeEventListener('abort', onAbort);
-        reject(new Error(timeoutMessage));
-        return;
-      }
-
-      timeout = setTimeout(() => {
-        signal?.removeEventListener('abort', onAbort);
-        reject(new Error(timeoutMessage));
-      }, remain);
-
+      if (settled || signal?.aborted) return;
+      attempt++;
       try {
-        const response = await sendOnce();
-        if (timeout) clearTimeout(timeout);
-        signal?.removeEventListener('abort', onAbort);
-        resolve(response);
-      } catch (err: any) {
-        if (timeout) clearTimeout(timeout);
-        const message = err?.message || '发送消息失败';
-        const retryable = isRetryableConnectionError(message) && Date.now() - startedAt < deadlineMs;
-        if (!retryable) {
-          signal?.removeEventListener('abort', onAbort);
-          reject(new Error(message));
-          return;
-        }
-
+        const response = await new Promise<T>((resolveSend, rejectSend) => {
+          Channel.sendToTab(tabId, type, data, (reply: T) => {
+            if (chrome.runtime.lastError) {
+              rejectSend(new Error(chrome.runtime.lastError.message || '发送消息失败'));
+            } else resolveSend(reply);
+          });
+        });
+        finish(undefined, response);
+      } catch (error: unknown) {
+        if (settled) return;
+        const message = error instanceof Error ? error.message : '发送消息失败';
+        if (!isRetryableConnectionError(message)) { finish(new Error(message)); return; }
         if (injectContentScript && !injectedOnce) {
           injectedOnce = true;
           await injectContentScriptIfPossible(tabId);
         }
-
-        const delayMs = Math.min(1400, 160 + attempt * 140);
-        setTimeout(() => {
-          void trySend();
-        }, delayMs);
+        // 注入或发送期间可能已经取消/超时，不得重新启动重试链。
+        if (settled || signal?.aborted) return;
+        retryTimer = setTimeout(() => { void trySend(); }, Math.min(1400, 160 + attempt * 140));
       }
     };
-
-    signal?.addEventListener('abort', onAbort, { once: true });
     void trySend();
   });
 };

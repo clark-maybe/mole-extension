@@ -5,6 +5,7 @@
  */
 
 import Channel from '../lib/channel';
+import { classifyWebPage, webFailureResult } from '../lib/web-access';
 
 /** 页面基础信息（始终返回） */
 interface PageBasicInfo {
@@ -213,6 +214,12 @@ export const initPageParser = () => {
         title: document.title,
         favicon: getFavicon(),
       };
+
+      const failure = classifyWebPage({ title: document.title, content: (document.body?.innerText || '').slice(0, 1600) });
+      if (failure && (!failure.retryable || needSection('content'))) {
+        sendResponse?.(webFailureResult(failure, basic.url));
+        return true;
+      }
 
       // 按需提取各部分信息
       const result: Record<string, any> = { ...basic };

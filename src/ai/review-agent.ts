@@ -10,6 +10,7 @@ import { TodoManager } from './todo-manager';
 import { agenticLoop } from './core-loop';
 import type { LoopBudget, HandoffArtifact } from './loop-config';
 import { DEFAULT_BUDGET, SUBAGENT_LOOP_CONFIGS, WRITE_TOOLS } from './loop-config';
+import type { AgentRunState } from './run-state';
 
 /**
  * 判断是否应跳过审查
@@ -124,6 +125,7 @@ export const runReviewAgent = async (
   tabId: number | undefined,
   signal: AbortSignal | undefined,
   emit: (event: AIStreamEvent) => void,
+  runState?: AgentRunState,
 ): Promise<{ passed: boolean; feedback?: string }> => {
   const config = SUBAGENT_LOOP_CONFIGS.review;
 
@@ -144,6 +146,7 @@ export const runReviewAgent = async (
     const resultContext = await agenticLoop(
       reviewContext, reviewTools, config.buildPrompt(), reviewBudget,
       tabId, signal, emit, undefined, 1,
+      undefined, undefined, undefined, undefined, undefined, undefined, undefined, runState,
     );
 
     const verdict = parseReviewVerdict(resultContext);

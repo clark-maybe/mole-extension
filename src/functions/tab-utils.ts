@@ -68,8 +68,8 @@ export const waitForTabComplete = (
       reject(buildAbortError());
     };
 
-    const listener = (id: number, changeInfo: chrome.tabs.TabChangeInfo) => {
-      if (id === tabId && changeInfo.status === 'complete') {
+    const listener = (id: number, changeInfo: chrome.tabs.TabChangeInfo, tab?: chrome.tabs.Tab) => {
+      if (id === tabId && changeInfo.status === 'complete' && !tab?.pendingUrl) {
         chrome.tabs.onUpdated.removeListener(listener);
         clearTimeout(timeout);
         signal?.removeEventListener('abort', onAbort);
@@ -79,6 +79,15 @@ export const waitForTabComplete = (
 
     signal?.addEventListener('abort', onAbort, { once: true });
     chrome.tabs.onUpdated.addListener(listener);
+    // 先监听再读取，兼容导航已完成及读取状态期间到达的完成事件。
+    void chrome.tabs.get(tabId).then(tab => {
+      if (tab.status === 'complete' && !tab.pendingUrl) listener(tabId, { status: 'complete' }, tab);
+    }).catch((error: unknown) => {
+      chrome.tabs.onUpdated.removeListener(listener);
+      clearTimeout(timeout);
+      signal?.removeEventListener('abort', onAbort);
+      reject(error);
+    });
   });
 };
 
@@ -180,6 +189,7 @@ export const sendToTabWithRetry = async <T = any>(
       const response = await sendToTabAndWait<T>(tabId, type, data, timeoutMs, signal);
       const retry = shouldRetry ? shouldRetry(response) : false;
       if (!retry) return response;
+      if (attempt === attempts) return response;
       lastError = new Error(`${type} 返回未就绪结果（attempt ${attempt}/${attempts}）`);
     } catch (err: any) {
       lastError = err instanceof Error ? err : new Error(err?.message || String(err));

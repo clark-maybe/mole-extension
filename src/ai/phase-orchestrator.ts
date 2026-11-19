@@ -23,6 +23,7 @@ import {
 } from './loop-config';
 
 import { agenticLoop } from './core-loop';
+import type { AgentRunState } from './run-state';
 import { shouldSkipReview, runReviewAgent } from './review-agent';
 
 // ============ 阶段编排辅助函数 ============
@@ -73,7 +74,12 @@ const extractDataFromContext = (context: InputItem[]): {
 
     try {
       const parsed = JSON.parse(output);
-      if (!parsed?.success) continue;
+      if (!parsed?.success) {
+        if (parsed?.code?.startsWith('E_WEB_')) {
+          warningSet.add(`${String(parsed.data?.url || '')}: ${String(parsed.error || '网页不可用')}`);
+        }
+        continue;
+      }
       const data = parsed.data;
       if (!data) continue;
 
@@ -235,6 +241,7 @@ export const phaseOrchestrator = async (
   tabTracker?: TabTracker,
   allTools?: ToolSchema[],
   loadedOnDemandTools?: Set<string>,
+  runState?: AgentRunState,
 ): Promise<InputItem[]> => {
   const originalQuery = query;
   let lastContext: InputItem[] = [];
@@ -270,7 +277,7 @@ export const phaseOrchestrator = async (
       context, tools, systemPrompt, budget,
       tabId, signal, emit, options, 0,
       todoManager, todoFn, phaseControl, tabTracker,
-      undefined, allTools, loadedOnDemandTools,
+      undefined, allTools, loadedOnDemandTools, runState,
     );
 
     lastContext = resultContext;
@@ -299,7 +306,7 @@ export const phaseOrchestrator = async (
 
     // ── 审查流程 ──
     if (!shouldSkipReview(todoManager, resultContext)) {
-      const verdict = await runReviewAgent(artifact, tools, tabId, signal, emit);
+      const verdict = await runReviewAgent(artifact, tools, tabId, signal, emit, runState);
 
       if (!verdict.passed) {
         if (reviewRetries < MAX_REVIEW_RETRIES) {

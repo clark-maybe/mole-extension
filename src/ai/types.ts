@@ -3,6 +3,7 @@
  * 适配 OpenAI Responses API 格式
  */
 import type { TodoSnapshot } from './todo-manager';
+import type { WebAccessSnapshot } from '../lib/web-access';
 export type { TodoSnapshot } from './todo-manager';
 
 /** 多模态内容：纯文本 */
@@ -224,6 +225,7 @@ export interface SessionAgentStateSnapshot {
 
 /** 集中管理的会话数据 */
 export interface Session {
+  webAccessSnapshot?: WebAccessSnapshot;
   /** 恢复人工介入前的待办进度。 */
   todoSnapshot?: TodoSnapshot;
   channelResumeQuery?: string;

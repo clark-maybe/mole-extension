@@ -3,8 +3,9 @@
  * 在后台打开隐藏标签页，由 content script 解析内容后返回，用户不会看到该页面
  */
 
-import type { FunctionDefinition, ToolExecutionContext } from './types';
+import type { FunctionDefinition, FunctionResult, ToolExecutionContext } from './types';
 import { sendToTabWithRetry, waitForAnySelector, waitForTabComplete, withHiddenTab } from './tab-utils';
+import { classifyWebPage, webFailureResult } from '../lib/web-access';
 
 export const fetchUrlFunction: FunctionDefinition = {
   name: 'fetch_url',
@@ -44,14 +45,22 @@ export const fetchUrlFunction: FunctionDefinition = {
 
     try {
       return await withHiddenTab(url, async (tabId) => {
-        await waitForTabComplete(tabId, 24_000, '页面加载超时', signal);
-        await waitForAnySelector(tabId, ['body', 'main', 'article', '[role="main"]'], 12_000, 280, signal);
+        try {
+          await waitForTabComplete(tabId, 24_000, '页面加载超时', signal);
+        } catch (error: unknown) {
+          const failed = context?.webNavigation?.get(tabId);
+          const failure = failed && classifyWebPage(failed);
+          if (!signal?.aborted && failure) return webFailureResult(failure, failed.url);
+          throw error;
+        }
+        const status = context?.webNavigation?.get(tabId);
+        const failure = status && classifyWebPage(status);
+        if (failure) return webFailureResult(failure, status.url);
+        if (status?.error) return webFailureResult({ code: 'E_WEB_TEMPORARY', message: status.error, retryable: true }, status.url);
+        const ready = await waitForAnySelector(tabId, ['body', 'main', 'article', '[role="main"]'], 12_000, 280, signal);
+        if (!ready) return webFailureResult({ code: 'E_WEB_TEMPORARY', message: '页面正文未就绪', retryable: true }, status?.url || url);
 
-        const response = await sendToTabWithRetry<{
-          success: boolean;
-          data?: any;
-          error?: string;
-        }>(
+        const response = await sendToTabWithRetry<FunctionResult>(
           tabId,
           '__parse_page_content',
           {
@@ -62,19 +71,20 @@ export const fetchUrlFunction: FunctionDefinition = {
             attempts: 4,
             timeoutMs: 12_000,
             retryDelayMs: 500,
-            shouldRetry: (res) => !res || res.success !== true,
+            shouldRetry: (res) => !res || (res.success !== true && res.retryable !== false && !res.code?.startsWith('E_WEB_')),
             signal,
           },
         );
 
         if (!response || !response.success) {
-          return { success: false, error: response?.error || '页面内容解析失败' };
+          return response || { success: false, error: '页面内容解析失败', data: { url } };
         }
 
         return { success: true, data: response.data };
       }, signal);
     } catch (err: any) {
-      return { success: false, error: err.message || '获取页面内容失败' };
+      return { success: false, error: err.message || '获取页面内容失败',
+        code: signal?.aborted ? 'E_CANCELLED' : undefined, data: { url } };
     }
   },
 };

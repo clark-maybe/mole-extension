@@ -3,7 +3,7 @@
  * 获取用户当前浏览的网页信息，向当前标签页的 content script 请求页面数据
  */
 
-import type { FunctionDefinition, ToolExecutionContext } from './types';
+import type { FunctionDefinition, FunctionResult, ToolExecutionContext } from './types';
 import { sendToTabWithRetry } from './tab-message';
 
 /** 获取当前活动标签页 ID 作为 fallback */
@@ -67,11 +67,7 @@ export const pageViewerFunction: FunctionDefinition = {
 
     try {
       // 向 content script 发送解析请求
-      const response = await sendToTabWithRetry<{
-        success: boolean;
-        data?: any;
-        error?: string;
-      }>(tabId, '__parse_page_content', {
+      const response = await sendToTabWithRetry<FunctionResult>(tabId, '__parse_page_content', {
         sections: params.sections,
         max_content_length: params.max_content_length,
       }, {
@@ -81,7 +77,7 @@ export const pageViewerFunction: FunctionDefinition = {
       });
 
       if (!response || !response.success) {
-        return { success: false, error: response?.error || 'Failed to parse page content' };
+        return response || { success: false, error: 'Failed to parse page content' };
       }
 
       return {

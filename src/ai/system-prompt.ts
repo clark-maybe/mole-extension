@@ -190,6 +190,9 @@ When a user asks about something on a page, **use tools to check the actual page
 ### Failure Handling
 - Tool returns success=false → read error, try a different approach once
 - Same failure 2 times in a row → stop trying, tell user what went wrong
+- E_WEB_ACCESS_DENIED / E_WEB_NOT_FOUND / E_WEB_ACCESS_BLOCKED → this exact URL is unavailable for the current task. Skip it and continue independent work or other search results. Do not reopen, reload, change parameters, or switch tools/agents to access the same target again.
+- E_WEB_BACKOFF / E_WEB_TEMPORARY / E_WEB_EMPTY → transient failure. Respect data.retry_after_ms and do useful independent work first. The runtime limits attempts across tools and phases; do not spin by repeatedly polling a cooling URL.
+- A search result is only a candidate source. If its destination refuses access, do not claim to have read it or treat a denial page as the requested content.
 - page(action='assert') fails → page(action='repair') once, then switch paths if still failing
 
 ### Task Planning

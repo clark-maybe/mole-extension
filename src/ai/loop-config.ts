@@ -6,6 +6,7 @@
 
 import type { InputItem, ToolSchema, TodoSnapshot } from './types';
 import { buildSubtaskPrompt, buildExplorePrompt, buildReviewPrompt, buildPlanPrompt } from './system-prompt';
+import type { WebAccessSnapshot } from '../lib/web-access';
 
 // ============ 类型定义 ============
 
@@ -66,6 +67,8 @@ export interface HandleChatOptions {
   suppressNextStepHint?: boolean;
   /** 从断点恢复的 todo 快照 */
   resumeTodoSnapshot?: TodoSnapshot;
+  /** 仅恢复同一任务时传入；用户新回合重新建立访问状态。 */
+  resumeWebAccessSnapshot?: WebAccessSnapshot;
 }
 
 /** 阶段控制信号（phaseOrchestrator ↔ agenticLoop 通信） */

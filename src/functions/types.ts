@@ -2,6 +2,9 @@
  * Function-Call 工具函数类型定义
  */
 
+import type { WebAccessGuard } from '../lib/web-access';
+import type { WebNavigationObserver } from '../lib/web-navigation';
+
 /** 工具权限等级 */
 export type PermissionLevel = 'read' | 'interact' | 'sensitive' | 'dangerous';
 
@@ -10,6 +13,9 @@ export interface ToolExecutionContext {
   tabId?: number;
   /** 关联渠道受阻调用，供用户处理后自动接续。 */
   sessionId?: string;
+  /** 同一次任务及子 Agent 共用，不经页面消息序列化。 */
+  webAccess?: WebAccessGuard;
+  webNavigation?: WebNavigationObserver;
   signal?: AbortSignal;
 }
 
@@ -42,4 +48,5 @@ export interface FunctionResult {
   error?: string;
   /** 可供 Agent 和界面识别的错误码 */
   code?: string;
+  retryable?: boolean;
 }
