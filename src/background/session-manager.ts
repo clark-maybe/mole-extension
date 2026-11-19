@@ -4,6 +4,8 @@
  * 具体的状态、事件、资源、持久化、历史、回放、审查/压缩 逻辑已拆分到 spoke 模块
  */
 import Channel from '../lib/channel';
+import _console from '../lib/console';
+import { channelAccess } from '../lib/channel-access';
 import { handleChat } from '../ai/orchestrator';
 import { getTextContent } from '../ai/context-manager';
 import { mcpClient } from '../functions/registry';
@@ -69,6 +71,7 @@ import {
 import {
     reconcileSessionStateFromEventLog,
     extractLatestStartedRunId,
+    parseEventObject,
     parseTurnLifecycleEventPayload,
     applyTurnLifecycleEventToSession,
     resolveFailureCode,
@@ -529,7 +532,15 @@ export function createSessionPushEvent(session: Session) {
         trackRuntimeResourceFromEvent(session.id, event);
 
         // 维护会话级状态快照与失败码
-        if (event.type === 'agent_state') {
+        if (event.type === 'turn_started') {
+            const payload = parseEventObject(event.content);
+            session.status = 'running';
+            if (typeof payload?.startedAt === 'number') session.startedAt = payload.startedAt;
+            session.endedAt = undefined;
+            session.durationMs = undefined;
+            session.failureCode = undefined;
+            session.lastError = undefined;
+        } else if (event.type === 'agent_state') {
             try {
                 const transition = JSON.parse(event.content) as AgentStateTransition;
                 session.agentState = {
@@ -564,7 +575,6 @@ export function createSessionPushEvent(session: Session) {
 
         const streamPayload = { ...event, sessionId: session.id, taskId: session.id };
         const shouldSync = SESSION_SYNC_EVENT_TYPES.has(event.type);
-        const syncPayload = shouldSync ? buildSessionSyncPayload(session) : null;
         const shouldPersistImmediate = SESSION_IMMEDIATE_PERSIST_EVENT_TYPES.has(event.type);
         const shouldPersistBeforeEmit = SESSION_PRE_EMIT_PERSIST_EVENT_TYPES.has(event.type);
         const shouldPersistDebounced = !shouldPersistImmediate && event.type !== 'text';
@@ -580,8 +590,9 @@ export function createSessionPushEvent(session: Session) {
                 persistRuntimeSessions();
             }
             Channel.broadcast('__ai_stream', streamPayload);
-            if (shouldSync && syncPayload) {
-                Channel.broadcast('__session_sync', syncPayload);
+            if (shouldSync) {
+                // 排队期间任务可能已经结束，发送时读取最新状态。
+                Channel.broadcast('__session_sync', buildSessionSyncPayload(session));
             }
             if (shouldPersistImmediate && !shouldPersistBeforeEmit) {
                 await persistRuntimeSessionsImmediate();
@@ -600,7 +611,9 @@ export function createSessionCheckpointHandler(session: Session): NonNullable<Ha
         if (session.status !== 'running') return;
         if (Array.isArray(checkpoint.contextSnapshot) && checkpoint.contextSnapshot.length > 0) {
             session.context = compactSessionContext(checkpoint.contextSnapshot);
+            session.channelResumePending = false;
         }
+        if (checkpoint.meta?.todoSnapshot) session.todoSnapshot = checkpoint.meta.todoSnapshot as Session['todoSnapshot'];
         const normalizedPhase = checkpoint.phase === 'execute'
             ? 'act'
             : checkpoint.phase;
@@ -637,6 +650,8 @@ async function runSessionTaskChat(
     const finalInput = await handleChat(taskScopedQuery, (event: AIStreamEvent) => {
         pushEvent(event);
     }, tabId, signal, session.context.length > 0 ? session.context : undefined, {
+        sessionId: session.id,
+        resumeTodoSnapshot: taskScopedOptions.appendUserQuery === false ? session.todoSnapshot : undefined,
         disallowTools: taskScopedOptions.disallowTools,
         maxRounds: taskScopedOptions.maxRounds,
         maxToolCalls: taskScopedOptions.maxToolCalls,
@@ -652,7 +667,7 @@ async function runSessionTaskChat(
         persistRuntimeSessions();
     }
     if (session.status === 'running') {
-        session.status = 'done';
+        session.status = channelAccess.hasPending(session.id) ? 'waiting' : 'done';
     }
 }
 
@@ -921,6 +936,12 @@ function extractLatestAssistantMessageFromContext(context: InputItem[] | undefin
 async function executeSessionChat(session: Session, query: string, tabId?: number, options?: ExecuteSessionOptions) {
     const sessionPushEvent = createSessionPushEvent(session);
     const { taskKind, query: normalizedQuery } = resolveSessionTaskRequest(query, options?.taskKind);
+    if (!options?.channelRecovery) {
+        session.channelResumePending = false;
+        session.channelResumeQuery = normalizedQuery;
+        session.channelResumeOptions = { disallowTools: options?.disallowTools,
+            maxRounds: options?.maxRounds, maxToolCalls: options?.maxToolCalls, maxSameToolCalls: options?.maxSameToolCalls };
+    }
     const taskRunner = resolveSessionTaskRunner(taskKind);
     sessionTaskKinds.set(session.id, taskKind);
     const runId = `${session.id}:${Date.now()}:${Math.random().toString(36).slice(2, 8)}`;
@@ -928,45 +949,45 @@ async function executeSessionChat(session: Session, query: string, tabId?: numbe
     const controller = runningTask.controller;
     const pushEvent = createRunScopedPushEvent(session, runId, sessionPushEvent);
 
-    session.startedAt = Date.now();
-    session.endedAt = undefined;
-    session.durationMs = undefined;
-    session.failureCode = undefined;
-    session.lastError = undefined;
-    session.agentState = {
-        phase: 'plan',
-        round: 0,
-        reason: `开始处理：${normalizedQuery.slice(0, 30)}`,
-        updatedAt: Date.now(),
-    };
-    await persistRuntimeSessionsImmediate();
-    if (taskRunner.emitTurnStarted !== false) {
-        pushEvent({
-            type: 'turn_started',
-            content: JSON.stringify({
-                sessionId: session.id,
-                runId,
-                query: normalizedQuery,
-                startedAt: session.startedAt,
-                taskKind,
-            }),
-        });
-    }
-    if (taskRunner.start) {
-        try {
-            await taskRunner.start({
-                session,
-                pushEvent,
-                taskKind,
-                query: normalizedQuery,
-                runId,
-            });
-        } catch (err) {
-            console.warn('[Mole] 执行任务 start hook 失败:', err);
-        }
-    }
-
     try {
+        session.startedAt = Date.now();
+        session.endedAt = undefined;
+        session.durationMs = undefined;
+        session.failureCode = undefined;
+        session.lastError = undefined;
+        session.agentState = {
+            phase: 'plan',
+            round: 0,
+            reason: `开始处理：${normalizedQuery.slice(0, 30)}`,
+            updatedAt: Date.now(),
+        };
+        await persistRuntimeSessionsImmediate();
+        if (taskRunner.emitTurnStarted !== false) {
+            pushEvent({
+                type: 'turn_started',
+                content: JSON.stringify({
+                    sessionId: session.id,
+                    runId,
+                    query: normalizedQuery,
+                    startedAt: session.startedAt,
+                    taskKind,
+                }),
+            });
+        }
+        if (taskRunner.start) {
+            try {
+                await taskRunner.start({
+                    session,
+                    pushEvent,
+                    taskKind,
+                    query: normalizedQuery,
+                    runId,
+                });
+            } catch (err) {
+                console.warn('[Mole] 执行任务 start hook 失败:', err);
+            }
+        }
+
         console.log(`[Mole] AI 对话请求(session: ${session.id}, kind: ${taskKind}), query: ${normalizedQuery}`);
         try {
             await taskRunner.run({
@@ -979,7 +1000,9 @@ async function executeSessionChat(session: Session, query: string, tabId?: numbe
                 options,
                 pushEvent,
             });
+            session.channelResumePending = false;
         } catch (err: unknown) {
+            session.channelResumePending = false;
             if (controller.signal.aborted || (err instanceof Error && err.name === 'AbortError')) {
                 return;
             }
@@ -1014,7 +1037,7 @@ async function executeSessionChat(session: Session, query: string, tabId?: numbe
             )
             : undefined;
         await persistRuntimeSessionsImmediate();
-        if ((session.status === 'done' || session.status === 'error') && !hasCurrentRunTurnAborted(session)) {
+        if ((session.status === 'done' || session.status === 'error' || session.status === 'waiting') && !hasCurrentRunTurnAborted(session)) {
             const completedPayload = buildTurnLifecycleEventPayload(
                 session.status,
                 session,
@@ -1052,6 +1075,12 @@ async function executeSessionChat(session: Session, query: string, tabId?: numbe
         persistRuntimeSessions();
     } finally {
         completeActiveTask(session.id, runId);
+        if (session.status === 'done') {
+            await channelAccess.cancelSession(session.id).catch((error) => {
+                _console.warn('[ChannelRecovery] 任务结束后的渠道清理暂未保存', error);
+            });
+        }
+        channelAccess.notify();
     }
 }
 
@@ -1120,8 +1149,14 @@ export async function abortSessionTask(
     const task = findRunningTask(sessionId);
     const taskKind = task?.runner.kind || task?.kind || getSessionTaskKind(sessionId);
     const runningSession = sessions.get(sessionId);
+    if (runningSession) runningSession.channelResumePending = false;
+    task?.controller.abort();
+    try {
+        await channelAccess.cancelSession(sessionId);
+    } catch (error) {
+        _console.warn('[ChannelRecovery] 取消状态暂未保存，已停止当前任务', error);
+    }
     if (task) {
-        task.controller.abort();
         await Promise.race([task.done, delayMs(GRACEFUL_ABORT_TIMEOUT_MS)]);
         task.markDone();
         if (reason === 'interrupted') {
@@ -1145,7 +1180,7 @@ export async function abortSessionTask(
         await RuntimeResourceManager.closeAll(sessionId);
     }
     completeActiveTask(sessionId, task?.runId);
-    if (!runningSession || runningSession.status !== 'running') return;
+    if (!runningSession || !['running', 'waiting'].includes(runningSession.status)) return;
 
     runningSession.status = 'error';
     runningSession.endedAt = Date.now();
@@ -1184,6 +1219,11 @@ export async function abortSessionTask(
 }
 
 async function stopOtherRunningSessions(reason: string, exceptSessionId?: string) {
+    for (const session of sessions.values()) {
+        if (session.id !== exceptSessionId && session.status === 'waiting') {
+            await abortSessionTask(session.id, 'replaced', reason, 'E_SUPERSEDED');
+        }
+    }
     for (const task of getRunningTasks()) {
         if (task.sessionId === exceptSessionId) continue;
         await abortSessionTask(task.sessionId, 'replaced', reason, 'E_SUPERSEDED');

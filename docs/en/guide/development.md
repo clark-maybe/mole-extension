@@ -242,3 +242,15 @@ type(scope): description
 
 - **type**: `feat` (feature), `fix` (bugfix), `docs` (documentation), `refactor`, `test`, `chore`
 - **scope**: module name, e.g., `ai`, `tools`, `content`, `mcp`
+
+## Channel Recovery
+
+`lib/channel-access.ts` serializes channel tools and persists deferred calls and check results. Tools declare their channel through `FunctionDefinition.channel`; MCP metadata carries `sessionId`. Page observers report candidate signals and do not repeatedly probe the search endpoint.
+
+`background/channel-recovery.ts` validates message sources, replays saved queries and commits successful results to the original session before acknowledging them. Stable call IDs prevent duplicate delivery. Sessions enter `waiting` when independent work is exhausted. Background restarts reinstall observers; cancellation and task replacement remove deferred calls. Recovery preserves the original tool restrictions, budgets and Todo snapshot.
+
+Recovered results and the `channelResumePending` handoff marker are persisted together. The marker is cleared at the first resumed Agent checkpoint, covering restarts after results were acknowledged but before the Agent started. Immediate persistence must propagate write failures; failed session writes must not consume recovery results.
+
+The session manager owns live session state. Sync snapshots are read-only; event replay rebuilds state only during startup restoration or rollback. Queued sync messages read the latest state when sent. The UI handles both completion events and completed/failed snapshots so finished replies do not remain marked as processing.
+
+Buffer mutations from `data_pipeline` and `extract_data` are written locally before success is returned and restored lazily after background restarts. Existing sensitive/dangerous-operation confirmations remain in force; channel checks only replay authorized read-only queries.

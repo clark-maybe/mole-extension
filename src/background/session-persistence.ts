@@ -43,7 +43,7 @@ const snapshotSessionForRuntime = (session: Session): Session => ({
 
 /** 队列化持久化，避免并发写入冲突 */
 function queueRuntimeSessionsPersist(): Promise<void> {
-    runtimeSessionPersistQueue = runtimeSessionPersistQueue
+    const write = runtimeSessionPersistQueue
         .then(async () => {
             const payload = {
                 activeSessionId: getActiveSessionId(),
@@ -53,16 +53,17 @@ function queueRuntimeSessionsPersist(): Promise<void> {
             await chrome.storage.local.set({
                 [SESSION_RUNTIME_STORAGE_KEY]: payload,
             });
-        })
-        .catch((err) => {
-            console.error('[Mole] 持久化会话运行态失败:', err);
         });
-    return runtimeSessionPersistQueue;
+    // 队列可继续写入，但直接调用方必须知道本次是否真正落盘。
+    runtimeSessionPersistQueue = write.catch((err) => {
+        console.error('[Mole] 持久化会话运行态失败:', err);
+    });
+    return write;
 }
 
 /** 立刻触发持久化队列 */
 function flushRuntimeSessions() {
-    void queueRuntimeSessionsPersist();
+    void queueRuntimeSessionsPersist().catch(() => undefined);
 }
 
 /** debounce 持久化运行态会话 */

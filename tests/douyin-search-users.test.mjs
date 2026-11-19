@@ -74,7 +74,8 @@ function browser({ tabs = [{ id: 7, active: true }], response, httpStatus = 200,
           location: { origin: 'https://www.douyin.com' },
           document: { body: {}, documentElement: {}, querySelector: (selector) =>
             selector === 'input[placeholder*="搜索"]' ? (searchReady ? {} : null)
-              : (captchaVisible && matchesCaptcha(selector) ? {} : null) },
+              : (captchaVisible && matchesCaptcha(selector) ? {} : null),
+            querySelectorAll: (selector) => captchaVisible && matchesCaptcha(selector) ? [{ getClientRects: () => [{}] }] : [] },
           MutationObserver: class {
             constructor(callback) { this.callback = callback; observers.push(this); }
             observe(_target, options) { this.connected = true; this.options = options; }

@@ -9,8 +9,10 @@ import dayjs from "dayjs";
 
 // 获取数据
 const get = <T>(key: string): Promise<T | undefined> => {
-    return new Promise((resolve) => {
+    return new Promise((resolve, reject) => {
         chrome.storage.local.get(key, (result) => {
+            const error = chrome.runtime?.lastError;
+            if (error) { reject(new Error(error.message || '读取本地存储失败')); return; }
             resolve(result[key] as T | undefined);
         });
     });
@@ -18,8 +20,12 @@ const get = <T>(key: string): Promise<T | undefined> => {
 
 // 存入数据
 const save = (key: string, data: any): Promise<void> => {
-    return new Promise((resolve) => {
-        chrome.storage.local.set({ [key]: data }, resolve);
+    return new Promise((resolve, reject) => {
+        chrome.storage.local.set({ [key]: data }, () => {
+            const error = chrome.runtime?.lastError;
+            if (error) { reject(new Error(error.message || '保存本地存储失败')); return; }
+            resolve();
+        });
     });
 };
 

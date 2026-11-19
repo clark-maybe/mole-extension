@@ -5,7 +5,7 @@
  */
 
 import type { FunctionDefinition, FunctionResult, ToolExecutionContext } from './types';
-import { appendToBuffer, getOrCreateBuffer } from './data-pipeline';
+import { appendToBuffer, getOrCreateBuffer, restoreDataBuffers, persistDataBuffers } from './data-pipeline';
 
 /** 获取当前活动标签页 ID 作为 fallback */
 const getActiveTabId = (): Promise<number | null> => {
@@ -542,8 +542,10 @@ export const extractDataFunction: FunctionDefinition = {
 
       // 如果指定了 buffer_id，走旁路存储模式
       if (buffer_id) {
+        await restoreDataBuffers();
         getOrCreateBuffer(buffer_id);
         const appendResult = appendToBuffer(buffer_id, result.data.items);
+        await persistDataBuffers();
         return {
           success: true,
           data: {

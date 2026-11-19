@@ -29,12 +29,14 @@ const STATUS_LABEL: Record<string, string> = {
   done: '完成',
   error: '失败',
   running: '运行中',
+  waiting: '等待渠道处理',
   cleared: '已清除',
 };
 
 /** 状态标签颜色映射 */
 const STATUS_COLOR: Record<string, string> = {
   done: 'success',
+  waiting: 'warning',
   error: 'error',
   running: 'processing',
   cleared: 'default',

@@ -106,3 +106,9 @@ Use `screenshot(annotate=true)` to get a screenshot with numbered interactive el
 - Images are automatically stripped during context compression, replaced with text placeholders
 - Prefer `page_snapshot` / `page_skeleton` for structured data; use visual analysis as a supplement
 - The floating ball is automatically hidden during screenshots to avoid obscuring page content
+
+## Channel Intervention and Automatic Continuation
+
+When a Douyin query requires login or security verification, Mole saves the query and existing progress, pauses that channel and offers a link to its original page. Independent work can continue; when none remains, the task shows a waiting status.
+
+After the user handles the page, a page-state change triggers one check of the saved query. Success continues the original task automatically, without another “continue” message. A failed check keeps the task waiting. The card includes a “Check and continue” fallback for page states automatic detection does not recognize. Canceling, clearing or starting a new task stops automatic recovery of the previous task.

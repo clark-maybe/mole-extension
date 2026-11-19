@@ -5,7 +5,8 @@
  *
  * 关键设计：
  * - 用 stateRef 保持对最新 state 的引用，避免闭包陈旧
- * - taskId 匹配放宽：只要有正在运行的任务就接受事件（同一时间只有一个活跃任务）
+ * - 仅临时任务 ID 可以绑定到后台返回的真实会话
+ * - 完成事件和会话快照均可更新结束状态
  * - callStack 通过 reducer 内追加，避免快速事件覆盖问题
  */
 
@@ -28,13 +29,11 @@ export const useAIStream = (resultRef: React.RefObject<HTMLDivElement | null>) =
     const { taskId, type, content } = data;
     const currentTask = stateRef.current.currentTask;
 
-    // 放宽匹配：只要有活跃任务就接受事件
-    // 原因：submitNewTask 先用临时 ID 创建任务，background 稍后返回真实 sessionId
-    // 流式事件在 sessionId 更新前就可能到达，严格匹配会丢弃这些事件
+    // 临时 ID 创建后，真实 sessionId 的流式事件可能先于创建回调到达。
     if (!currentTask) return;
     if (currentTask.id !== taskId) {
       // 如果任务正在运行，自动绑定到正确的 sessionId
-      if (currentTask.status === 'running') {
+      if (currentTask.status === 'running' && currentTask.id.startsWith('pending-')) {
         dispatch({ type: 'UPDATE_TASK', payload: { id: taskId } });
       } else {
         return;
@@ -108,6 +107,7 @@ export const useAIStream = (resultRef: React.RefObject<HTMLDivElement | null>) =
         break;
 
       case 'platform_action_required':
+      case 'platform_access_changed':
       case 'function_result': {
         // 无关工具不写入登录状态，避免连续事件在 React 重渲染前覆盖已有提示。
         let loginNotice: ReturnType<typeof updateToolLoginNotice>;
@@ -134,13 +134,14 @@ export const useAIStream = (resultRef: React.RefObject<HTMLDivElement | null>) =
       case 'turn_completed':
         try {
           const parsed = JSON.parse(content || '{}');
-          const status = parsed?.status === 'error' ? 'error' as const : 'done' as const;
+          const status = parsed?.status === 'waiting' ? 'waiting' as const : parsed?.status === 'error' ? 'error' as const : 'done' as const;
           dispatch({
             type: 'UPDATE_TASK',
             payload: {
               status,
-              endedAt: parsed?.endedAt || Date.now(),
-              durationMs: parsed?.durationMs || null,
+              ...(status === 'waiting' ? { liveStatusText: '等待渠道处理，完成后自动继续' } : {}),
+              endedAt: status === 'waiting' ? null : parsed?.endedAt || Date.now(),
+              durationMs: status === 'waiting' ? null : parsed?.durationMs || null,
               failureCode: parsed?.failureCode || '',
               errorMsg: parsed?.reason || '',
             },
@@ -259,19 +260,35 @@ export const useAIStream = (resultRef: React.RefObject<HTMLDivElement | null>) =
     const handleSessionSync = (data: any) => {
       if (!data || typeof data !== 'object') return;
       const { sessionId, status, query, summary, originTabId } = data;
+      const currentTask = stateRef.current.currentTask;
+
+      if (status === 'done' || status === 'error') {
+        if (!currentTask || currentTask.id !== sessionId) return;
+        dispatch({ type: 'UPDATE_TASK', payload: {
+          status,
+          activeRunId: data.activeRunId ?? null,
+          endedAt: typeof data.endedAt === 'number' ? data.endedAt : Date.now(),
+          durationMs: typeof data.durationMs === 'number' ? data.durationMs : currentTask.durationMs,
+          failureCode: data.failureCode || '',
+          errorMsg: data.lastError || '',
+          liveStatusText: status === 'error' ? data.lastError || '处理失败' : '已完成',
+          ...(typeof data.hasContext === 'boolean' ? { hasContext: data.hasContext } : {}),
+          ...(data.agentState ? { agentPhase: data.agentState.phase, agentRound: data.agentState.round } : {}),
+        } });
+        return;
+      }
 
       if (originTabId !== undefined) {
         dispatch({ type: 'SET_SESSION_ORIGIN_TAB', payload: originTabId });
       }
 
-      if (status === 'running') {
-        const currentTask = stateRef.current.currentTask;
+      if (status === 'running' || status === 'waiting') {
         if (!currentTask || (currentTask.id !== sessionId && currentTask.status !== 'running')) {
           const newTask: TaskItem = {
             id: sessionId,
             query: query || '',
             title: buildTaskTitle(summary || query || ''),
-            status: 'running',
+            status,
             resultHtml: '',
             callStack: [],
             errorMsg: '',
@@ -288,7 +305,11 @@ export const useAIStream = (resultRef: React.RefObject<HTMLDivElement | null>) =
           // 同一任务 ID 更新
           dispatch({ type: 'UPDATE_TASK', payload: { id: sessionId } });
         }
-      } else if (status === 'cleared') {
+        const access = data.channelAccess?.[0];
+        dispatch({ type: 'UPDATE_TASK', payload: { status,
+          loginNotice: access ? updateToolLoginNotice(undefined, { name: 'douyin_search_users', ...access }) : null,
+          ...(status === 'waiting' ? { liveStatusText: '等待渠道处理，完成后自动继续' } : {}) } });
+      } else if (status === 'cleared' && currentTask?.id === sessionId) {
         dispatch({ type: 'SET_TASK', payload: null });
       }
     };

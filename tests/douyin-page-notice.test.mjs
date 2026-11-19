@@ -20,6 +20,8 @@ class Element {
   appendChild(child) { this.children.push(child); child.parent = this; }
   remove() { if (this.parent) this.parent.children = this.parent.children.filter((child) => child !== this); }
   setAttribute(key, value) { this.attributes[key] = value; }
+  getAttribute(key) { return this.attributes[key] ?? null; }
+  getClientRects() { return this.hidden ? [] : [{}]; }
   addEventListener(event, handler) { this.handlers[event] = handler; }
   removeEventListener(event, handler) { if (this.handlers[event] === handler) delete this.handlers[event]; }
   dispatchEvent(event) { this.handlers[event.type]?.(); }
@@ -40,12 +42,23 @@ function page() {
     documentElement: root,
     createElement: (tag) => new Element(tag),
     getElementById: (id) => find(root, (node) => node.id === id),
-    querySelector: (selector) => find(root, (node) => selector.split(',').some((part) => {
+    querySelector: (selector) => document.querySelectorAll(selector)[0] || null,
+    querySelectorAll: (selector) => {
+      const nodes = [];
+      const walk = (node) => {
+        if (selector.split(',').some((part) => {
       const candidate = part.trim();
       if (candidate === '#captcha_container') return node.id === 'captcha_container';
+      if (candidate === '[role="dialog"]') return node.attributes.role === 'dialog';
+      if (candidate === 'a[href="/user/self"]') return node.tag === 'a' && node.href === '/user/self';
       const prefix = candidate.match(/^iframe\[src\^="([^"]+)"\]$/)?.[1];
       return node.tag === 'iframe' && prefix && node.src?.startsWith(prefix);
-    })) || null,
+        })) nodes.push(node);
+        node.children.forEach(walk);
+      };
+      walk(root);
+      return nodes;
+    },
   };
   const context = vm.createContext({ document, window, Event: class { constructor(type) { this.type = type; } },
     location: { origin: 'https://www.douyin.com' }, Date: { now: () => now },
@@ -169,4 +182,76 @@ test('重装与页面离开会清理观察器和计时器，旧回调不会影�
   assert.ok(p.observers.every((observer) => !observer.connected));
   assert.equal(p.timers.size, 0);
   assert.equal(p.document.getElementById('mole-douyin-verification-watch'), undefined);
+});
+
+test('验证码消失并保持稳定后只上报一次恢复候选，不在页面循环请求搜索', () => {
+  const p = page();
+  const captcha = new Element('div');
+  captcha.id = 'captcha_container';
+  p.root.append(captcha);
+  p.update('关键词', 'watch', 'icon', 'auto');
+  captcha.remove();
+  p.mutate();
+  for (let i = 0; i < 6; i++) p.tick();
+  const reports = p.reports.filter((report) => report.type === '__channel_access_ready');
+  assert.equal(reports.length, 1);
+  assert.equal(reports[0].data.watchId, 'auto');
+  for (let i = 0; i < 10; i++) { p.tick(); p.mutate(); }
+  assert.equal(p.reports.filter((report) => report.type === '__channel_access_ready').length, 1);
+});
+
+test('登录弹窗消失后自动检查；普通 DOM 变化不会触发恢复', () => {
+  const p = page();
+  p.update('关键词', 'watch', 'icon', 'login-auto');
+  p.update('关键词', 'login', 'icon', 'login-auto');
+  for (let i = 0; i < 6; i++) p.tick();
+  assert.equal(p.reports.length, 0);
+  const dialog = new Element('div');
+  dialog.setAttribute('role', 'dialog');
+  dialog.textContent = '扫码登录';
+  p.root.append(dialog);
+  p.mutate();
+  for (let i = 0; i < 6; i++) p.tick();
+  assert.equal(p.reports.length, 0);
+  dialog.remove();
+  for (let i = 0; i < 6; i++) p.tick();
+  assert.equal(p.reports.filter((report) => report.type === '__channel_access_ready').length, 1);
+});
+
+test('刷新后可按已登录标识重新发现恢复时机，隐藏验证码不阻止恢复', () => {
+  const p = page();
+  const account = new Element('a');
+  account.href = '/user/self';
+  p.root.append(account);
+  const captcha = new Element('div');
+  captcha.id = 'captcha_container';
+  captcha.hidden = true;
+  p.root.append(captcha);
+  p.update('关键词', 'watch', 'icon', 'restored', undefined, 'login');
+  assert.match(text(p.notice()), /请先登录抖音/);
+  for (let i = 0; i < 6; i++) p.tick();
+  assert.equal(p.reports.filter((report) => report.type === '__channel_access_ready').length, 1);
+  assert.equal(p.reports.filter((report) => report.type === '__douyin_verification_detected').length, 0);
+});
+
+test('取消时停止指定查询的观察器，旧任务清理不能停止新查询', () => {
+  const p = page();
+  p.update('关键词', 'watch', 'icon', 'new');
+  p.update('', 'stop', 'icon', 'old');
+  assert.equal(p.timers.size, 1);
+  p.update('', 'stop', 'icon', 'new');
+  assert.equal(p.timers.size, 0);
+});
+
+test('后台重装参数经过 JSON 序列化后，验证码检测仍生效', () => {
+  const p = page();
+  const captcha = new Element('div');
+  captcha.id = 'captcha_container'; p.root.append(captcha);
+  p.update(...JSON.parse(JSON.stringify(['词', 'watch', 'icon', 'restored-captcha', null, 'verification'])));
+  for (let i = 0; i < 8; i++) p.tick();
+  assert.equal(p.reports.filter(report => report.type === '__channel_access_ready').length, 0);
+  assert.equal(p.reports[0].type, '__douyin_verification_detected');
+  captcha.remove();
+  for (let i = 0; i < 8; i++) p.tick();
+  assert.equal(p.reports.filter(report => report.type === '__channel_access_ready').length, 1);
 });

@@ -15,7 +15,7 @@ interface InputBarProps {
 
 /** 创建新任务的默认状态 */
 const createNewTask = (query: string, id?: string): TaskItem => ({
-  id: id || Date.now().toString(),
+  id: id || `pending-${Date.now()}`,
   query,
   title: buildTaskTitle(query),
   status: 'running',
@@ -37,6 +37,7 @@ export const InputBar: React.FC<InputBarProps> = ({ resultRef }) => {
   const inputRef = useRef<HTMLInputElement>(null);
   const task = state.currentTask;
   const isRunning = task?.status === 'running';
+  const isWaiting = task?.status === 'waiting';
   const isAuditing = state.isRecorderAuditing;
 
   // 面板打开时自动聚焦
@@ -172,7 +173,7 @@ export const InputBar: React.FC<InputBarProps> = ({ resultRef }) => {
   // 终止任务
   const handleStop = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
-    if (task?.status === 'running') {
+    if (task?.status === 'running' || task?.status === 'waiting') {
       Channel.send('__ai_cancel', { sessionId: task.id });
     }
     dispatch({ type: 'SET_TASK', payload: null });
@@ -207,6 +208,7 @@ export const InputBar: React.FC<InputBarProps> = ({ resultRef }) => {
     if (isAuditing) return '正在整理录制的工作流...';
     if (!task) return '有什么想让我做的？';
     if (isRunning) return task.liveStatusText || `${task.title}...`;
+    if (isWaiting) return '等待渠道处理，可补充任务要求…';
     return '继续对话...';
   })();
 
@@ -241,8 +243,8 @@ export const InputBar: React.FC<InputBarProps> = ({ resultRef }) => {
         ↻
       </button>
       <button
-        className={`mole-stop-btn${isRunning ? ' visible' : ''}`}
-        title="终止任务"
+        className={`mole-stop-btn${isRunning || isWaiting ? ' visible' : ''}`}
+        title={isWaiting ? '取消等待' : '终止任务'}
         onClick={handleStop}
       >
         <svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor">

@@ -2,6 +2,8 @@
  * AI 模块类型定义
  * 适配 OpenAI Responses API 格式
  */
+import type { TodoSnapshot } from './todo-manager';
+export type { TodoSnapshot } from './todo-manager';
 
 /** 多模态内容：纯文本 */
 export interface InputTextContent {
@@ -94,6 +96,7 @@ export interface SessionOpQueueSnapshot {
 
 /** session_sync 负载 */
 export interface SessionSyncPayload {
+  channelAccess?: Array<{ platform: 'douyin'; status: 'waiting' | 'checking' | 'ready'; kind: 'login' | 'verification'; tabId: number; watchId: string }>;
   sessionId: string;
   activeRunId: string | null;
   status: SessionStatus | 'cleared';
@@ -133,6 +136,7 @@ export type AIStreamEventType =
   | 'function_call'
   | 'function_result'
   | 'platform_action_required'
+  | 'platform_access_changed'
   | 'search_results'
   | 'screenshot_data'
   | 'page_assert_data'
@@ -187,7 +191,7 @@ export type ToolChoice = 'auto' | 'required' | 'none' | { type: 'function'; name
 // ============ 会话管理类型 ============
 
 /** 会话状态 */
-export type SessionStatus = 'running' | 'done' | 'error';
+export type SessionStatus = 'running' | 'waiting' | 'done' | 'error';
 
 /** 会话失败码（用于快速定位失败原因） */
 export type SessionFailureCode =
@@ -220,6 +224,17 @@ export interface SessionAgentStateSnapshot {
 
 /** 集中管理的会话数据 */
 export interface Session {
+  /** 恢复人工介入前的待办进度。 */
+  todoSnapshot?: TodoSnapshot;
+  channelResumeQuery?: string;
+  /** 已持久化恢复结果，等待 Agent 接收第一个续跑检查点。 */
+  channelResumePending?: boolean;
+  channelResumeOptions?: {
+    disallowTools?: string[];
+    maxRounds?: number;
+    maxToolCalls?: number;
+    maxSameToolCalls?: number;
+  };
   /** 会话 ID（由 background 生成） */
   id: string;
   /** 会话状态 */

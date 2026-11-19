@@ -36,7 +36,7 @@ export class MCPClient {
   async callTool(
     name: string,
     args: Record<string, any>,
-    context?: { tabId?: number },
+    context?: { tabId?: number; sessionId?: string },
     options?: { signal?: AbortSignal },
   ): Promise<MCPToolCallResult> {
     return this.transport.request('tools/call', {

@@ -287,7 +287,7 @@ export const ResultView: React.FC = () => {
       )}
 
       {/* 进展面板 */}
-      {(isRunning || isFinished) && (
+      {(isRunning || isFinished || task.status === 'waiting') && (
         <AgentStatePanel
           statusText={statusText}
           isRunning={isRunning}
@@ -298,7 +298,7 @@ export const ResultView: React.FC = () => {
         </AgentStatePanel>
       )}
 
-      {task.loginNotice && <ToolLoginCard notice={task.loginNotice} />}
+      {task.loginNotice && <ToolLoginCard notice={task.loginNotice} sessionId={task.id} />}
 
       {/* AI 文本回复 — ref 管理 DOM 实现增量更新 */}
       <div

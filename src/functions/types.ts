@@ -8,10 +8,13 @@ export type PermissionLevel = 'read' | 'interact' | 'sensitive' | 'dangerous';
 /** 单个工具函数的定义 */
 export interface ToolExecutionContext {
   tabId?: number;
+  /** 关联渠道受阻调用，供用户处理后自动接续。 */
+  sessionId?: string;
   signal?: AbortSignal;
 }
 
 export interface FunctionDefinition {
+  channel?: 'douyin';
   /** 函数唯一标识，如 "jd_search" */
   name: string;
   /** 给 AI 看的函数描述（中文），AI 据此判断是否调用 */

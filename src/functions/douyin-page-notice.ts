@@ -1,13 +1,25 @@
 /** 注入抖音页的常驻轻提醒；函数须能独立序列化至隔离环境。 */
 export function updateDouyinPageNotice(
   keyword: string,
-  state: 'watch' | 'login' | 'verification' | null,
+  state: 'watch' | 'stop' | 'login' | 'verification' | null,
   icon: string,
   watchId = '',
-  captchaSelector = '#captcha_container, iframe[src^="https://rmc.bytedance.com/verifycenter/captcha/"], iframe[src^="//rmc.bytedance.com/verifycenter/captcha/"]',
+  captchaSelector?: string | null,
+  recoveryKind?: 'login' | 'verification',
 ): void {
   if (location.origin !== 'https://www.douyin.com') return;
   const id = 'mole-douyin-task-notice';
+  const visible = (element: Element) => !('getClientRects' in element) || element.getClientRects().length > 0;
+  // executeScript 的参数经 JSON 序列化，省略的中间参数可能变成 null。
+  const hasCaptcha = () => [...document.querySelectorAll(captchaSelector || '#captcha_container, iframe[src^="https://rmc.bytedance.com/verifycenter/captcha/"], iframe[src^="//rmc.bytedance.com/verifycenter/captcha/"]')].some(visible);
+  if (state === 'stop') {
+    const watcher = document.getElementById('mole-douyin-verification-watch');
+    if (watcher?.getAttribute('data-watch-id') === watchId) {
+      watcher.dispatchEvent(new Event('mole-watch-stop'));
+      document.getElementById(id)?.remove();
+    }
+    return;
+  }
   const renderNotice = (noticeState: 'login' | 'verification' | null) => {
     document.getElementById(id)?.remove();
     if (!noticeState) return;
@@ -33,7 +45,7 @@ export function updateDouyinPageNotice(
     const title = document.createElement('strong');
     title.textContent = noticeState === 'verification' ? 'Mole 正在搜索线索 · 需要你完成安全验证' : 'Mole 正在搜索线索 · 请先登录抖音';
     const description = document.createElement('p');
-    description.textContent = `正在查找「${keyword}」相关账号。请${noticeState === 'verification' ? '手动完成当前页面的安全验证' : '在当前页面完成登录'}，然后返回 Mole 重试搜索。`;
+    description.textContent = `正在查找「${keyword}」相关账号。请${noticeState === 'verification' ? '手动完成当前页面的安全验证' : '在当前页面完成登录'}，Mole 检查通过后会自动继续任务。`;
     const close = document.createElement('button');
     close.type = 'button';
     close.textContent = '×';
@@ -46,8 +58,12 @@ export function updateDouyinPageNotice(
   };
 
   if (state !== 'watch') {
+    const watcher = document.getElementById('mole-douyin-verification-watch');
+    if (watcher?.getAttribute('data-watch-id') === watchId) {
+      watcher.setAttribute('data-recovery-kind', state || '');
+    }
     // 返回登录/成功结果的瞬间也可能刚好弹出验证码，不覆盖验证提醒。
-    renderNotice(document.querySelector(captchaSelector) ? 'verification' : state);
+    renderNotice(hasCaptcha() ? 'verification' : state);
     return;
   }
 
@@ -57,6 +73,8 @@ export function updateDouyinPageNotice(
   oldWatcher?.remove();
   const marker = document.createElement('span');
   marker.id = watcherId;
+  marker.setAttribute('data-watch-id', watchId);
+  marker.setAttribute('data-recovery-kind', recoveryKind || '');
   marker.style.display = 'none';
   document.documentElement.appendChild(marker);
   let wasPresent = false;
@@ -66,9 +84,17 @@ export function updateDouyinPageNotice(
   let stopped = false;
   let generation = 0;
   let nextReportAt = 0;
+  let readyAt = 0;
+  let readyReported = false;
+  let sawLogin = false;
+  let readyAttempts = 0;
+  let nextReadyAt = 0;
+  const loginVisible = () => [...document.querySelectorAll(
+    '[role="dialog"], [data-e2e*="login"], [class*="login-modal"], [class*="login-panel"], [class*="loginModal"], [class*="loginPanel"]',
+  )].some((element) => visible(element) && /扫码登录|验证码登录|密码登录|手机号登录|登录抖音/.test(element.textContent || ''));
   const check = () => {
     if (stopped) return;
-    const present = document.querySelector(captchaSelector) !== null;
+    const present = hasCaptcha();
     if (!present) {
       if (wasPresent) generation++;
       wasPresent = false;
@@ -76,8 +102,30 @@ export function updateDouyinPageNotice(
       attempts = 0;
       sending = false;
       nextReportAt = 0;
+      const login = loginVisible();
+      sawLogin ||= login;
+      const kind = marker.getAttribute('data-recovery-kind');
+      const signedIn = document.querySelector('a[href="/user/self"], a[href^="https://www.douyin.com/user/self"], [data-e2e="user-menu"]');
+      const candidate = !login && (kind === 'verification' || (kind === 'login' && (sawLogin || signedIn !== null)));
+      if (!candidate) { readyAt = 0; return; }
+      if (!readyAt) readyAt = Date.now();
+      if (!readyReported && readyAttempts < 10 && Date.now() >= nextReadyAt && Date.now() - readyAt >= 1500) {
+        readyReported = true;
+        readyAttempts++;
+        nextReadyAt = Date.now() + 500;
+        try {
+          chrome.runtime.sendMessage({ type: '__channel_access_ready', data: { watchId } }, (response) => {
+            const error = chrome.runtime.lastError;
+            if (!stopped && (error || response?.accepted !== true)) readyReported = false;
+          });
+        } catch { readyReported = false; }
+      }
       return;
     }
+    readyAt = 0;
+    readyReported = false;
+    readyAttempts = 0;
+    marker.setAttribute('data-recovery-kind', 'verification');
     if (!wasPresent) renderNotice('verification');
     wasPresent = true;
     if (delivered || sending || attempts >= 60 || Date.now() < nextReportAt) return;
@@ -110,5 +158,6 @@ export function updateDouyinPageNotice(
   };
   marker.addEventListener('mole-watch-stop', stop, { once: true });
   window.addEventListener('pagehide', stop, { once: true });
+  if (recoveryKind) renderNotice(recoveryKind);
   check();
 }

@@ -5,7 +5,7 @@
 
 import type { Session, SessionEventLogItem, SessionReplayPayload, SessionOpQueueSnapshot, SessionTaskKind } from './session-types';
 import { getActiveTurnRuntime, buildSessionOpQueueSnapshot, sessionTaskKinds } from './session-state';
-import { reconcileSessionStateFromEventLog } from './session-event';
+import { channelAccess } from '../lib/channel-access';
 
 // ============ 内部工具函数 ============
 
@@ -94,7 +94,8 @@ export function buildSessionReplayPayload(
 
 /** 标准化 session_sync 负载，避免多处拼接字段 */
 export function buildSessionSyncPayload(session: Session) {
-    reconcileSessionStateFromEventLog(session);
+    // 读取快照不能重放旧事件，收尾状态可能尚未追加 turn_completed。
+    // 事件重建只在恢复存储或回滚时执行，运行中的状态由会话管理器维护。
     const now = Date.now();
     const activeRunId = findRunningTaskForSession(session.id)?.runId || null;
     const replayMeta = getSessionReplayMeta(session);
@@ -115,5 +116,6 @@ export function buildSessionSyncPayload(session: Session) {
         replayLastTimestamp: replayMeta.lastTimestamp,
         originTabId: session.originTabId,
         hasContext: Array.isArray(session.context) && session.context.length > 0,
+        channelAccess: channelAccess.forSession(session.id).map(({ platform, status, kind, tabId, watchId }) => ({ platform, status, kind, tabId, watchId })),
     };
 }

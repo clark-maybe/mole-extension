@@ -24,6 +24,7 @@ export interface MCPToolCallRequest {
   /** 元数据，用于传递浏览器上下文（如 tabId） */
   _meta?: {
     tabId?: number;
+    sessionId?: string;
     [key: string]: any;
   };
   /** 取消信号（仅内存传输使用，不做序列化） */

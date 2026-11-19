@@ -43,6 +43,7 @@ export interface PendingTurnResponseRequest {
 
 /** handleChat 选项（保持向后兼容） */
 export interface HandleChatOptions {
+  sessionId?: string;
   /** 禁用指定工具 */
   disallowTools?: string[];
   /** 最大轮数 */

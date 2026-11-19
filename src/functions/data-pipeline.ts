@@ -1,10 +1,11 @@
 /**
  * 数据管道工具
  * 数据缓冲、转换与导出
- * 运行在 background 侧，纯内存操作
+ * 运行在 background 侧，数据变更同步持久化，支持后台重启后恢复。
  */
 
 import type { FunctionDefinition, FunctionResult } from './types';
+import Storage from '../lib/storage';
 
 /** 数据缓冲区结构 */
 export interface DataBuffer {
@@ -16,6 +17,25 @@ export interface DataBuffer {
 
 /** 缓冲区存储（background 内存） */
 const bufferStore = new Map<string, DataBuffer>();
+let buffersRestored: Promise<void> | undefined;
+let bufferWrites: Promise<void> = Promise.resolve();
+
+export async function restoreDataBuffers(): Promise<void> {
+  buffersRestored ??= Storage.get<DataBuffer[]>('mole_data_buffers_v1').then((buffers) => {
+    for (const buffer of (buffers || []).slice(0, MAX_BUFFER_COUNT)) {
+      if (typeof buffer.id === 'string' && Array.isArray(buffer.items)) {
+        bufferStore.set(buffer.id, { ...buffer, items: buffer.items.slice(0, MAX_BUFFER_ITEMS) });
+      }
+    }
+  }).catch((error) => { buffersRestored = undefined; throw error; });
+  await buffersRestored;
+}
+
+export function persistDataBuffers(): Promise<void> {
+  const snapshot = structuredClone([...bufferStore.values()]);
+  bufferWrites = bufferWrites.catch(() => undefined).then(() => Storage.save('mole_data_buffers_v1', snapshot));
+  return bufferWrites;
+}
 
 /** 单个缓冲区最大条数 */
 const MAX_BUFFER_ITEMS = 5000;
@@ -266,6 +286,7 @@ export const dataPipelineFunction: FunctionDefinition = {
     const { action } = params;
 
     try {
+      await restoreDataBuffers();
       switch (action) {
         // ============ 创建缓冲区 ============
         case 'create': {
@@ -281,6 +302,7 @@ export const dataPipelineFunction: FunctionDefinition = {
             createdAt: Date.now(),
           };
           bufferStore.set(id, buffer);
+          await persistDataBuffers();
           return {
             success: true,
             data: { buffer_id: id, name },
@@ -296,6 +318,7 @@ export const dataPipelineFunction: FunctionDefinition = {
             return { success: false, error: '需要提供非空的 data 数组' };
           }
           const result = appendToBuffer(params.buffer_id, params.data);
+          await persistDataBuffers();
           return {
             success: true,
             data: {
@@ -464,6 +487,7 @@ export const dataPipelineFunction: FunctionDefinition = {
 
           // 原地修改缓冲区数据
           buffer.items = items;
+          await persistDataBuffers();
           return {
             success: true,
             data: {
@@ -561,6 +585,7 @@ export const dataPipelineFunction: FunctionDefinition = {
           if (!existed) {
             return { success: false, error: `缓冲区 ${params.buffer_id} 不存在` };
           }
+          await persistDataBuffers();
           return {
             success: true,
             data: { cleared: true },

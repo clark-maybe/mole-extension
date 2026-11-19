@@ -24,7 +24,7 @@ interface TaskItem {
   activeRunId?: string | null;
   query: string;
   title: string;
-  status: 'running' | 'done' | 'error';
+  status: 'running' | 'waiting' | 'done' | 'error';
   resultHtml: string;
   callStack: Array<{ funcName: string; icon: string; text: string; userSummary?: string }>;
   errorMsg: string;
@@ -121,6 +121,32 @@ export function FloatingChat({ mode = 'float' }: FloatingChatProps) {
     }
   }, []);
 
+  // 渠道卡片同时由实时事件和持久化快照恢复。
+  const renderChannelNotice = useCallback((result: unknown) => {
+    const el = resultRef.current;
+    if (!el) return;
+    const loginNotice = updateToolLoginNotice(undefined, result);
+    const existingNotice = el.querySelector('.mole-login-notice:not(.frozen)');
+    if (loginNotice) {
+      const platform = CHANNEL_PLATFORMS[loginNotice.platform];
+      existingNotice?.remove();
+      appendToResult(`<div class="mole-login-notice mole-channel-card" role="status">
+        <div class="mole-channel-header">
+          <img class="mole-channel-icon" src="${escapeHtml(platform.icon)}" alt="" />
+          <div class="mole-channel-identity"><strong>${escapeHtml(platform.name)}</strong><span>搜索账号与线索</span></div>
+          <span class="mole-channel-state">${loginNotice.status === 'checking' ? '正在检查' : loginNotice.kind === 'verification' ? '安全验证' : '需要登录'}</span>
+        </div>
+        <div class="mole-channel-body"><strong>${escapeHtml(loginNotice.title)}</strong><p>${escapeHtml(loginNotice.message)}</p></div>
+        <div class="mole-channel-footer"><span>${loginNotice.autoResume ? '处理完成后自动继续' : '完成后回来重试'}</span>
+          ${loginNotice.autoResume ? `<button type="button" class="mole-channel-check" data-channel-check="true"${loginNotice.status === 'checking' ? ' disabled' : ''}>${loginNotice.status === 'checking' ? '正在检查…' : '检查并继续'}</button>` : ''}
+          <a class="mole-channel-action" href="${escapeHtml(loginNotice.url)}" target="_blank" rel="noopener noreferrer"${loginNotice.tabId ? ` data-verification-tab-id="${loginNotice.tabId}"` : ''}>${escapeHtml(loginNotice.linkText)}<span aria-hidden="true">↗</span></a>
+        </div>
+      </div>`);
+    } else if (loginNotice === null) {
+      existingNotice?.remove();
+    }
+  }, [appendToResult]);
+
   // ---- 进展面板 ----
 
   const buildAgentStatePanelMarkup = (): string => `
@@ -171,7 +197,9 @@ export function FloatingChat({ mode = 'float' }: FloatingChatProps) {
     // 构建摘要文本
     let summaryText = '等待任务开始';
     if (task) {
-      if (task.status === 'done') {
+      if (task.status === 'waiting') {
+        summaryText = '等待渠道处理，完成后自动继续';
+      } else if (task.status === 'done') {
         const duration = task.durationMs ?? (task.endedAt ? Math.max(0, task.endedAt - task.startedAt) : null);
         summaryText = duration !== null ? `已完成 · 耗时 ${formatDuration(duration)}` : '已完成';
       } else if (task.status === 'error') {
@@ -376,11 +404,11 @@ export function FloatingChat({ mode = 'float' }: FloatingChatProps) {
       newBtn?.classList.remove('visible');
       retryBtn?.classList.remove('visible');
       if (hintEl) hintEl.style.display = '';
-    } else if (task.status === 'running') {
+    } else if (task.status === 'running' || task.status === 'waiting') {
       bar.classList.add('state-running');
       inputEl.disabled = false;
       const liveProgress = clipRuntimeText(
-        sanitizeUserFacingRuntimeText(task.liveStatusText || '我正在继续处理，请稍候...', 'current'),
+        sanitizeUserFacingRuntimeText(task.status === 'waiting' ? '等待渠道处理，完成后自动继续' : task.liveStatusText || '我正在继续处理，请稍候...', 'current'),
         28,
       );
       inputEl.placeholder = `${liveProgress || task.title}...`;
@@ -492,10 +520,10 @@ export function FloatingChat({ mode = 'float' }: FloatingChatProps) {
       if (type === 'turn_completed') {
         try {
           const parsed = JSON.parse(content);
-          const status = parsed?.status === 'error' ? 'error' : 'done';
+          const status = parsed?.status === 'waiting' ? 'waiting' : parsed?.status === 'error' ? 'error' : 'done';
           task.status = status;
-          if (typeof parsed?.endedAt === 'number') task.endedAt = parsed.endedAt;
-          if (typeof parsed?.durationMs === 'number') task.durationMs = parsed.durationMs;
+          if (typeof parsed?.endedAt === 'number') task.endedAt = status === 'waiting' ? null : parsed.endedAt;
+          if (typeof parsed?.durationMs === 'number') task.durationMs = status === 'waiting' ? null : parsed.durationMs;
           if (parsed?.failureCode) task.failureCode = parsed.failureCode;
           if (parsed?.reason) task.errorMsg = parsed.reason;
           if (typeof parsed?.lastAgentMessage === 'string' && parsed.lastAgentMessage.trim()) {
@@ -644,7 +672,7 @@ export function FloatingChat({ mode = 'float' }: FloatingChatProps) {
         return;
       }
 
-      if (type === 'function_result' || type === 'platform_action_required') {
+      if (type === 'function_result' || type === 'platform_action_required' || type === 'platform_access_changed') {
         let resultCallId = '';
         let resultText = '';
         let resultSuccess = true;
@@ -655,25 +683,7 @@ export function FloatingChat({ mode = 'float' }: FloatingChatProps) {
           resultText = parsed?.message || parsed?.output || parsed?.result || '';
           resultSuccess = parsed?.success !== false;
           resultUserSummary = parsed?.userSummary || parsed?.user_summary || '';
-          const loginNotice = updateToolLoginNotice(undefined, parsed);
-          const existingNotice = el.querySelector('.mole-login-notice:not(.frozen)');
-          if (loginNotice) {
-            const platform = CHANNEL_PLATFORMS[loginNotice.platform];
-            existingNotice?.remove();
-            appendToResult(`<div class="mole-login-notice mole-channel-card" role="status">
-              <div class="mole-channel-header">
-                <img class="mole-channel-icon" src="${escapeHtml(platform.icon)}" alt="" />
-                <div class="mole-channel-identity"><strong>${escapeHtml(platform.name)}</strong><span>搜索账号与线索</span></div>
-                <span class="mole-channel-state">${loginNotice.kind === 'verification' ? '安全验证' : '需要登录'}</span>
-              </div>
-              <div class="mole-channel-body"><strong>${escapeHtml(loginNotice.title)}</strong><p>${escapeHtml(loginNotice.message)}</p></div>
-              <div class="mole-channel-footer"><span>完成后回来重试</span>
-                <a class="mole-channel-action" href="${escapeHtml(loginNotice.url)}" target="_blank" rel="noopener noreferrer"${loginNotice.tabId ? ` data-verification-tab-id="${loginNotice.tabId}"` : ''}>${escapeHtml(loginNotice.linkText)}<span aria-hidden="true">↗</span></a>
-              </div>
-            </div>`);
-          } else if (loginNotice === null) {
-            existingNotice?.remove();
-          }
+          renderChannelNotice(parsed);
         } catch {
           resultText = content;
         }
@@ -957,6 +967,11 @@ export function FloatingChat({ mode = 'float' }: FloatingChatProps) {
       saveSnapshot();
     };
 
+    const restoreChannelNotice = (data: SessionSyncPayload) => {
+      const access = data.channelAccess?.[0];
+      renderChannelNotice({ name: 'douyin_search_users', ...(access || { status: 'ready' }) });
+    };
+
     // ---- 会话同步 ----
     const handleSessionSync = (data: SessionSyncPayload | null | undefined) => {
       if (!data?.sessionId) return;
@@ -973,7 +988,7 @@ export function FloatingChat({ mode = 'float' }: FloatingChatProps) {
       }
 
       if (task && task.id === data.sessionId) {
-        if (data.status === 'running' || data.status === 'done' || data.status === 'error') {
+        if (data.status === 'running' || data.status === 'waiting' || data.status === 'done' || data.status === 'error') {
           const prevReplayCount = replayKnownEventCountRef.current;
           const targetReplayEventCount = typeof data.replayEventCount === 'number' && data.replayEventCount >= 0
             ? data.replayEventCount : prevReplayCount;
@@ -1004,10 +1019,11 @@ export function FloatingChat({ mode = 'float' }: FloatingChatProps) {
               sessionId: data.sessionId, scope: 'delta', fromEventCount: replayAppliedEventCountRef.current,
             });
           }
+          restoreChannelNotice(data);
           renderTaskRuntimeBoard();
           updateInputUI();
         }
-      } else if (!task && data.status === 'running') {
+      } else if (!task && (data.status === 'running' || data.status === 'waiting')) {
         // 其他标签页发起了新会话，本标签页跟踪
         replayAppliedEventCountRef.current = 0;
         replayLastTimestampRef.current = 0;
@@ -1016,7 +1032,7 @@ export function FloatingChat({ mode = 'float' }: FloatingChatProps) {
           activeRunId: typeof data.activeRunId === 'string' || data.activeRunId === null ? data.activeRunId : null,
           query: data.summary || '',
           title: buildTaskTitle(data.summary || ''),
-          status: 'running',
+          status: data.status,
           resultHtml: '',
           callStack: [],
           errorMsg: '',
@@ -1033,6 +1049,7 @@ export function FloatingChat({ mode = 'float' }: FloatingChatProps) {
         };
         replayKnownEventCountRef.current = typeof data.replayEventCount === 'number' && data.replayEventCount >= 0
           ? data.replayEventCount : 0;
+        restoreChannelNotice(data);
         Channel.send('__session_replay_request', { sessionId: data.sessionId, scope: 'latest_turn' });
         renderTaskRuntimeBoard();
         updateInputUI();
@@ -1113,7 +1130,7 @@ export function FloatingChat({ mode = 'float' }: FloatingChatProps) {
 
     // ---- 初始化：恢复活跃会话 ----
     Channel.send('__session_get_active', {}, (response: SessionSyncPayload | null | undefined) => {
-      if (response?.sessionId) {
+      if (response?.sessionId && response.status !== 'cleared') {
         if (currentTaskRef.current) return;
         currentTaskRef.current = {
           id: response.sessionId,
@@ -1141,6 +1158,7 @@ export function FloatingChat({ mode = 'float' }: FloatingChatProps) {
         replayAppliedEventCountRef.current = 0;
         replayLastTimestampRef.current = typeof response.replayLastTimestamp === 'number' && response.replayLastTimestamp > 0
           ? response.replayLastTimestamp : 0;
+        restoreChannelNotice(response);
         renderTaskRuntimeBoard();
         updateInputUI();
       }
@@ -1283,7 +1301,7 @@ export function FloatingChat({ mode = 'float' }: FloatingChatProps) {
   // ---- 终止任务 ----
   const handleStop = useCallback(() => {
     const task = currentTaskRef.current;
-    if (task && task.status === 'running') {
+    if (task && (task.status === 'running' || task.status === 'waiting')) {
       Channel.send('__ai_cancel', { sessionId: task.id });
     }
     currentTaskRef.current = null;
@@ -1331,13 +1349,17 @@ export function FloatingChat({ mode = 'float' }: FloatingChatProps) {
   // ---- 结果区事件委托 ----
   const handleResultClick = useCallback((e: React.MouseEvent) => {
     const target = e.target as HTMLElement;
+    if (target.closest('[data-channel-check]')) {
+      Channel.send('__channel_access_check', { sessionId: currentTaskRef.current?.id });
+      return;
+    }
 
     const verificationLink = target.closest('a[data-verification-tab-id]') as HTMLAnchorElement | null;
     if (verificationLink) {
       const tabId = Number(verificationLink.dataset.verificationTabId);
       if (Number.isSafeInteger(tabId) && tabId > 0) {
         e.preventDefault();
-        Channel.send('__session_focus_tab', { tabId });
+        Channel.send('__session_focus_tab', { tabId, fallbackUrl: 'https://www.douyin.com/' });
         return;
       }
     }

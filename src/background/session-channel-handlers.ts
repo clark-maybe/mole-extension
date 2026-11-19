@@ -3,6 +3,7 @@
  * 从 background.ts 提取，处理所有 __session_* 和 __ai_* 相关的 Channel 消息
  */
 import Channel from '../lib/channel';
+import { channelAccess } from '../lib/channel-access';
 import { matchDouyinVerification } from './douyin-verification';
 import { mcpClient } from '../functions/registry';
 import type { AIStreamEvent, SessionReplayPayload, SessionFailureCode } from '../ai/types';
@@ -63,6 +64,11 @@ Channel.on('__douyin_verification_detected', (data: unknown, sender, sendRespons
         || sender?.frameId !== 0 || !sender.url?.startsWith('https://www.douyin.com/')) {
         sendResponse?.({ accepted: false });
         return;
+    }
+    if (channelAccess.snapshot().length) {
+        void channelAccess.verificationDetected(tabId, watchId).catch((error) => {
+            console.warn('[ChannelRecovery] 验证状态保存失败:', error);
+        });
     }
     const { related, notified } = matchDouyinVerification(session.eventLog, tabId, watchId);
     if (related && !notified) {
@@ -397,6 +403,7 @@ async function handleSessionRollbackOp(op: SessionRollbackOp) {
 }
 
 async function handleSessionClearOp(op: SessionClearOp) {
+    await channelAccess.cancelSession(op.sessionId);
     await RuntimeResourceManager.closeAll(op.sessionId);
     const clearedTaskKind = getSessionTaskKind(op.sessionId);
     const now = Date.now();
@@ -404,7 +411,7 @@ async function handleSessionClearOp(op: SessionClearOp) {
     const session = sessions.get(op.sessionId);
     const isRunningSession = session?.status === 'running';
     if (session) {
-        if (session.status === 'running') {
+        if (session.status === 'running' || session.status === 'waiting') {
             await abortSessionTask(op.sessionId, 'interrupted', '会话已清除', 'E_CANCELLED');
             persistSessionHistory(session);
         }
@@ -438,6 +445,9 @@ async function handleSessionClearOp(op: SessionClearOp) {
 }
 
 async function handleSessionCancelOp(op: SessionCancelOp) {
+    if (sessions.get(op.sessionId)?.status === 'waiting') {
+        await abortSessionTask(op.sessionId, 'interrupted', '任务已取消', 'E_CANCELLED');
+    }
     if (activeControllers.has(op.sessionId) || getRunningTasks().some(task => task.sessionId === op.sessionId)) {
         console.log(`[Mole] 取消任务: ${op.sessionId}`);
         await abortSessionTask(op.sessionId, 'interrupted', '任务已取消', 'E_CANCELLED');

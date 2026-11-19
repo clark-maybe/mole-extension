@@ -199,11 +199,24 @@ Channel.on('__session_focus_tab', async (data) => {
     if (typeof tabId !== 'number') return;
     try {
         const tab = await chrome.tabs.get(tabId);
+        if (data.fallbackUrl === 'https://www.douyin.com/' && !tab.url?.startsWith('https://www.douyin.com/')) {
+            throw new Error('原抖音页已离开');
+        }
         await chrome.tabs.update(tabId, { active: true });
         if (typeof tab.windowId === 'number') {
             await chrome.windows.update(tab.windowId, { focused: true });
         }
     } catch (err) {
+        if (data.fallbackUrl === 'https://www.douyin.com/') {
+            const reopened = await chrome.tabs.create({ url: data.fallbackUrl, active: true });
+            if (reopened.id) {
+                const { channelAccess } = await import('../lib/channel-access');
+                await channelAccess.rebindTab(tabId, reopened.id);
+                const { restoreChannelRecovery } = await import('./channel-recovery');
+                await restoreChannelRecovery();
+            }
+            return;
+        }
         console.warn('[Mole] 定位到任务页签失败:', err);
     }
 });

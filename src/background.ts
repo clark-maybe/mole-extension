@@ -18,6 +18,7 @@ import Storage from './lib/storage';
 // [!] registry 必须在 bg-tasks-manager 之前导入，否则循环依赖会导致 TDZ 错误
 // 依赖链：bg-tasks-manager → resident-runtime → remote-workflow → registry（循环）
 import { ensureToolRegistryReady } from './functions/registry';
+import { restoreChannelRecovery } from './background/channel-recovery';
 import { restoreRuntimeTimers, restoreSessionState } from './background/timer-dispatch';
 
 // 注册所有 Channel 处理器（副作用导入，统一模式）
@@ -61,6 +62,7 @@ chrome.runtime.onInstalled.addListener((details) => {
 (async () => {
     try {
         await restoreSessionState();
+        await restoreChannelRecovery();
     } catch (err) {
         console.error('[Mole] 恢复会话状态失败:', err);
     }

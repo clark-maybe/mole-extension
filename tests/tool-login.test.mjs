@@ -165,3 +165,25 @@ test('只对明确的抖音登录状态显示提示，拒绝任意结果里的�
   assert.doesNotMatch(notice.message, /script/);
   assert.equal(updateToolLoginNotice(notice, { name: 'other_tool', success: true }), notice);
 });
+
+test('等待态保留自动继续入口，检查中禁用重复检查，真实恢复后移除提示', () => {
+  const access = { name: 'douyin_search_users', status: 'waiting', kind: 'verification', tabId: 7 };
+  let notice = updateToolLoginNotice(undefined, access);
+  const render = () => renderToStaticMarkup(React.createElement(MoleContext.Provider, {
+    value: { state: { ...initialMoleState, currentTask: {
+      id: 'waiting-session', status: 'waiting', loginNotice: notice,
+      lastAIText: '', callStack: [], startedAt: 1, endedAt: null, durationMs: null,
+    } }, dispatch: () => {} },
+  }, React.createElement(ResultView)));
+  assert.match(render(), /完成验证后自动继续/);
+  assert.match(render(), /检查并继续/);
+  assert.doesNotMatch(render(), /已完成处理/);
+  notice = updateToolLoginNotice(notice, { ...access, status: 'checking' });
+  assert.match(render(), /disabled=""/);
+  assert.match(render(), /正在检查…/);
+  notice = updateToolLoginNotice(notice, { ...access, status: 'ready' });
+  assert.doesNotMatch(render(), /mole-channel-card/);
+  for (const tabId of [0, -1, 1.5, '7']) {
+    assert.equal(updateToolLoginNotice(undefined, { ...access, tabId }).tabId, undefined);
+  }
+});

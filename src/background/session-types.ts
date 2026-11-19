@@ -111,6 +111,7 @@ export interface RuntimeResourceEntry {
 // ============ 操作类型（Op） ============
 
 export interface ExecuteSessionOptions {
+    channelRecovery?: boolean;
     disallowTools?: string[];
     maxRounds?: number;
     maxToolCalls?: number;
@@ -233,6 +234,7 @@ export const COMPACT_TASK_INSTRUCTIONS = [
 export const GRACEFUL_ABORT_TIMEOUT_MS = 120;
 
 export const SESSION_SYNC_EVENT_TYPES = new Set<string>([
+    'platform_access_changed',
     'agent_state',
     'turn_started',
     'turn_completed',

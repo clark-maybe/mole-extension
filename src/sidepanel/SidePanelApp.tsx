@@ -16,6 +16,8 @@ import { RecorderBar } from '../content/float-ball/components/RecorderBar';
 import { BgTasksPanel } from '../content/float-ball/components/BgTasksPanel';
 import { ImageViewer } from '../content/float-ball/components/ImageViewer';
 import Channel from '../lib/channel';
+import type { SessionSyncPayload } from '../ai/types';
+import { updateToolLoginNotice } from '../lib/tool-login';
 import { formatClock, formatDuration } from '../content/float-ball/text-utils';
 
 /** Tab 感知 hook：追踪当前活跃标签页，并同步到 MoleContext.selfTabId */
@@ -92,15 +94,15 @@ const SidePanelInner: React.FC = () => {
 
     // 恢复活跃会话
     useEffect(() => {
-        Channel.send('__session_get_active', {}, (response: { sessionId?: string; status?: string; summary?: string; startedAt?: number }) => {
-            if (response?.sessionId && response?.status === 'running') {
+        Channel.send('__session_get_active', {}, (response: SessionSyncPayload | null | undefined) => {
+            if (response?.sessionId && (response?.status === 'running' || response?.status === 'waiting')) {
                 dispatch({
                     type: 'SET_TASK',
                     payload: {
                         id: response.sessionId,
                         query: response.summary || '',
                         title: response.summary || '',
-                        status: 'running',
+                        status: response.status,
                         resultHtml: '',
                         callStack: [],
                         errorMsg: '',
@@ -111,6 +113,10 @@ const SidePanelInner: React.FC = () => {
                         startedAt: response.startedAt || Date.now(),
                         endedAt: null,
                         durationMs: null,
+                        loginNotice: response.channelAccess?.[0]
+                            ? updateToolLoginNotice(undefined, { name: 'douyin_search_users', ...response.channelAccess[0] })
+                            : null,
+                        liveStatusText: response.status === 'waiting' ? '等待渠道处理，完成后自动继续' : '',
                     },
                 });
             }
@@ -119,7 +125,7 @@ const SidePanelInner: React.FC = () => {
 
     // 搜索框状态 class
     const boxState = !task ? 'state-idle'
-        : task.status === 'running' ? 'state-running'
+        : task.status === 'running' || task.status === 'waiting' ? 'state-running'
         : task.status === 'error' ? 'state-error'
         : 'state-done';
 
@@ -141,6 +147,7 @@ const SidePanelInner: React.FC = () => {
     // Footer 文本
     const getFooterText = () => {
         if (!task) return 'Mole · AI 助手';
+        if (task.status === 'waiting') return '等待渠道处理 · 完成后自动继续';
         if (isRunning) return task.liveStatusText || '我正在继续处理';
         if (task.status === 'error') return `处理失败 · ${task.title}`;
         return `已完成 · ${task.title}`;

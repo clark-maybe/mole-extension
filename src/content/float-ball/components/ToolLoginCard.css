@@ -27,7 +27,7 @@
 .mole-channel-body { margin: 14px 0; }
 .mole-channel-body > strong { font-weight: 600; font-size: 13px; }
 .mole-channel-body > p { margin: 5px 0 0; color: #777480; font-size: 12px; line-height: 1.75; }
-.mole-channel-footer { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.mole-channel-footer { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; }
 .mole-channel-footer > span { color: #a09ca9; font-size: 11px; }
 .mole-channel-card .mole-channel-action {
   display: inline-flex;
@@ -48,3 +48,6 @@
 }
 .mole-channel-card .mole-channel-action:hover { background: #3d3748; }
 .mole-channel-card .mole-channel-action:focus-visible { outline: 2px solid #a78bfa; outline-offset: 3px; }
+.mole-channel-check { margin-left: auto; padding: 5px 0; border: 0; background: none; color: #777480; font: inherit; font-size: 12px; cursor: pointer; white-space: nowrap; }
+.mole-channel-check:hover { color: #24212d; }
+.mole-channel-check:disabled { opacity: .5; cursor: default; }

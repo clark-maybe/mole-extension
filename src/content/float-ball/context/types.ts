@@ -25,7 +25,7 @@ export interface TaskItem {
   activeRunId?: string | null;
   query: string;
   title: string;
-  status: 'running' | 'done' | 'error';
+  status: 'running' | 'waiting' | 'done' | 'error';
   resultHtml: string;
   callStack: Array<{ funcName: string; icon: string; text: string; userSummary?: string }>;
   errorMsg: string;

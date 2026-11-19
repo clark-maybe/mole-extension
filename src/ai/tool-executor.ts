@@ -143,6 +143,7 @@ export const executeToolCalls = async (
   signal: AbortSignal | undefined,
   emit: (event: AIStreamEvent) => void,
   agentRunner?: AgentRunner,
+  sessionId?: string,
 ): Promise<InputItem[]> => {
   const results: InputItem[] = [];
 
@@ -268,7 +269,7 @@ export const executeToolCalls = async (
         const result = await mcpClient.callTool(
           call.name,
           params,
-          { tabId },
+          { tabId, sessionId },
           { signal },
         );
         const text = result.content?.[0]?.text || '{}';
@@ -292,12 +293,14 @@ export const executeToolCalls = async (
     let resultCode: string | undefined;
     let resultTabId: number | undefined;
     let verificationWatchId: string | undefined;
+    let autoResume = false;
     try {
       const parsed = JSON.parse(output);
       resultSuccess = parsed.success !== false;
       resultMessage = parsed.error || parsed.data?.summary || '';
       resultCancelled = signal?.aborted === true && !resultSuccess;
       resultCode = typeof parsed.code === 'string' ? parsed.code : undefined;
+      autoResume = parsed.data?.auto_resume === true;
       resultTabId = Number.isSafeInteger(parsed.data?.tab_id) && parsed.data.tab_id > 0
         ? parsed.data.tab_id : undefined;
       verificationWatchId = typeof parsed.data?.verification_watch_id === 'string'
@@ -318,6 +321,7 @@ export const executeToolCalls = async (
         code: resultCode,
         tabId: resultTabId,
         verificationWatchId,
+        autoResume,
       }),
     });
 

@@ -56,7 +56,8 @@ async function searchUsersInPage(
     /登录|登陆|未授权|无权限|拒绝|login|log\s*in|sign\s*in|unauth|forbidden|denied/i.test(message);
   let captchaDetected = false;
   const hasCaptcha = (): boolean => {
-    captchaDetected = captchaDetected || document.querySelector(captchaSelector) !== null;
+    captchaDetected = captchaDetected || [...document.querySelectorAll(captchaSelector)]
+      .some((element) => element.getClientRects().length > 0);
     return captchaDetected;
   };
   const verificationRequired = (): FunctionResult => ({
@@ -195,8 +196,9 @@ async function searchUsersInPage(
 }
 
 export const douyinSearchUsersFunction: FunctionDefinition = {
+  channel: 'douyin',
   name: 'douyin_search_users',
-  description: 'Search Douyin (抖音) user accounts by keyword using the user\'s real browser login session. Prefer this tool for Douyin user searches instead of manual page operations. Returns items with string user IDs, nickname, original bio/signature, verification text, follower counts and profile URLs. Reuses an existing Douyin tab or temporarily opens Douyin in the background. For pagination, pass the returned cursor and search_id with the SAME keyword; stop when has_more is false. E_AUTH_REQUIRED means the query was rejected, usually because login is missing or expired: stop retrying, tell the user to log in via data.login_url and retry after login. E_VERIFICATION_REQUIRED means a captcha is present: stop requests and ask the user to manually complete verification in data.tab_id. That tab is kept open for the user. Search matches are candidates, not verified companies, locations or customers. This tool does not search videos, read full profiles, follow accounts or send messages.',
+  description: 'Search Douyin (抖音) user accounts by keyword using the user\'s real browser login session. Prefer this tool for Douyin user searches instead of manual page operations. Returns items with string user IDs, nickname, original bio/signature, verification text, follower counts and profile URLs. Reuses an existing Douyin tab or temporarily opens Douyin in the background. For pagination, pass the returned cursor and search_id with the SAME keyword; stop when has_more is false. E_AUTH_REQUIRED means the query was rejected, usually because login is missing or expired: stop retrying, tell the user to log in via data.login_url and complete login. When data.auto_resume=true, the runtime saves this exact query and will automatically check and resume it; continue other independent work and do not ask the user to resend the task. E_VERIFICATION_REQUIRED means a captcha is present: stop requests and ask the user to manually complete verification in data.tab_id. That tab is kept open for the user. When data.auto_resume=true, the runtime handles resumption; do not retry requests yourself or mark the whole task complete while waiting. Search matches are candidates, not verified companies, locations or customers. This tool does not search videos, read full profiles, follow accounts or send messages.',
   supportsParallel: false,
   permissionLevel: 'read',
   parameters: {

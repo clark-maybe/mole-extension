@@ -49,7 +49,7 @@ export function parseTurnLifecycleEventPayload(content: string): TurnLifecycleEv
         || typeof parsed.reason === 'string'
         || parsed.abortReason === 'interrupted'
         || parsed.abortReason === 'replaced';
-    const status = parsed.status === 'running' || parsed.status === 'done' || parsed.status === 'error'
+    const status = parsed.status === 'running' || parsed.status === 'waiting' || parsed.status === 'done' || parsed.status === 'error'
         ? parsed.status
         : (hasErrorHint ? 'error' : 'done');
     return {
@@ -153,7 +153,7 @@ export function reconcileSessionStateFromEventLog(session: Session) {
                 : Math.max(0, resolvedEndedAt - startedAt);
             const resolvedStatus: SessionStatus = event.type === 'turn_aborted'
                 ? 'error'
-                : (payload?.status === 'error' ? 'error' : 'done');
+                : (payload?.status === 'waiting' ? 'waiting' : payload?.status === 'error' ? 'error' : 'done');
             const taskKind = normalizeTaskKind(payload?.taskKind);
 
             if (taskKind !== 'regular') {
@@ -174,7 +174,7 @@ export function reconcileSessionStateFromEventLog(session: Session) {
             } else {
                 failureCode = undefined;
                 lastError = undefined;
-                latestReason = '任务完成';
+                latestReason = resolvedStatus === 'waiting' ? '等待渠道登录或安全验证，处理后自动继续' : '任务完成';
             }
             latestPhase = 'finalize';
             latestAgentStateAt = resolvedEndedAt;
@@ -205,8 +205,8 @@ export function reconcileSessionStateFromEventLog(session: Session) {
 
     session.startedAt = startedAt;
     session.status = status;
-    session.endedAt = status === 'running' ? undefined : endedAt;
-    session.durationMs = status === 'running' ? undefined : durationMs;
+    session.endedAt = status === 'running' || status === 'waiting' ? undefined : endedAt;
+    session.durationMs = status === 'running' || status === 'waiting' ? undefined : durationMs;
     session.failureCode = status === 'error' ? (failureCode || 'E_UNKNOWN') : undefined;
     session.lastError = status === 'error' ? (lastError || session.lastError || '会话异常终止') : undefined;
     session.agentState = {
@@ -233,10 +233,10 @@ export function applyTurnLifecycleEventToSession(
         : Math.max(0, endedAt - session.startedAt);
     const resolvedStatus: SessionStatus = eventType === 'turn_aborted'
         ? 'error'
-        : (payload?.status === 'error' ? 'error' : 'done');
+        : (payload?.status === 'waiting' ? 'waiting' : payload?.status === 'error' ? 'error' : 'done');
 
-    session.endedAt = endedAt;
-    session.durationMs = durationMs;
+    session.endedAt = resolvedStatus === 'waiting' ? undefined : endedAt;
+    session.durationMs = resolvedStatus === 'waiting' ? undefined : durationMs;
 
     if (resolvedStatus === 'error') {
         const fallbackReason = eventType === 'turn_aborted'
@@ -261,13 +261,13 @@ export function applyTurnLifecycleEventToSession(
         return;
     }
 
-    session.status = 'done';
+    session.status = resolvedStatus;
     session.failureCode = undefined;
     session.lastError = undefined;
     session.agentState = {
         phase: 'finalize',
         round: session.agentState.round,
-        reason: '任务完成',
+        reason: resolvedStatus === 'waiting' ? '等待渠道处理，完成后自动继续' : '任务完成',
         updatedAt: Date.now(),
     };
 }

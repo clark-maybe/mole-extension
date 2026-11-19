@@ -486,7 +486,7 @@ export const agenticLoop = async (
       // ── 边界：总调用数检查 ──
       totalToolCalls += functionCalls.length;
       if (totalToolCalls >= budget.maxToolCalls) {
-        const results = await executeToolCalls(functionCalls, tabId, signal, emit);
+        const results = await executeToolCalls(functionCalls, tabId, signal, emit, undefined, options?.sessionId);
         for (const r of results) context.push(r);
         if (tabTracker) scanTabNavigateResults(functionCalls, results, tabTracker);
         imageInjectionCount = await injectScreenshotImages(functionCalls, results, context, imageInjectionCount);
@@ -553,7 +553,7 @@ export const agenticLoop = async (
 
           const resultContext = await agenticLoop(
             subContext, subTools, config.buildPrompt(), subBudget,
-            effectiveTabId, runnerSignal || signal, emit, undefined, depth + 1,
+            effectiveTabId, runnerSignal || signal, emit, { sessionId: options?.sessionId }, depth + 1,
             undefined, undefined, undefined, tabTracker,
             effectiveRegistry,
           );
@@ -687,7 +687,7 @@ export const agenticLoop = async (
 
       // 执行剩余常规工具
       if (regularCalls.length > 0) {
-        const results = await executeToolCalls(regularCalls, tabId, signal, emit, agentRunner);
+        const results = await executeToolCalls(regularCalls, tabId, signal, emit, agentRunner, options?.sessionId);
         for (const r of results) context.push(r);
         if (tabTracker) scanTabNavigateResults(regularCalls, results, tabTracker);
         imageInjectionCount = await injectScreenshotImages(regularCalls, results, context, imageInjectionCount);
