@@ -8,14 +8,17 @@ MoleClaw 内置了 37+ 个工具，覆盖浏览器自动化的各个场景。AI 
 
 | 工具 | 说明 |
 |------|------|
-| `lead_workspace` | 管理持久任务、读取线索/事实/证据、记录符合性判断和企业主体关联 |
-| `douyin_collect_users` | 启动按批次落盘的抖音用户采集作业 |
-| `lixiaoyun_search_companies` | 通过励销云独立查询候选企业及工商画像 |
-| `riskbird_search_companies` | 通过风鸟云独立查询候选企业及工商画像 |
-| `lixiaoyun_get_contacts` | 通过励销云补充企业联系方式 |
+| `lead_workspace` | 管理持久任务，读取线索/事实/证据/可信联系方式，通过 `save_profile` 保存版本化销售档案，记录业务匹配判断和主体关联 |
+| `douyin_collect_users` | 在抖音发现潜在活跃企业，按批次落盘；近期活跃需发布内容与时间证据 |
+| `lixiaoyun_search_companies` | 明确企业名称后精确补全工商与法人信息，唯一同名匹配后自动获取联系方式与法人手机号 |
+| `lixiaoyun_get_contacts` | 补充或刷新励销云企业的可信电话与邮箱，保留来源姓名/职位，无需二次核实号码 |
 | `mantis_crm_record` | 按用户要求将选定企业录入指定公司的螳螂 CRM；仅录入，不提供查询 |
 
 找客默认交付可追溯的线索表。CRM 是可选录入渠道，不是查询门槛，也不是任务必经步骤。详见[销售线索工作台](/guide/lead-workspace)。
+
+发现线索先使用抖音等内容平台，再明确企业主体、调用励销云。励销云参数 `keyword` 填已知企业名称，不填行业或地区泛搜词；重名时保留候选，不自动选首项。当前不注册风鸟云工具。
+
+`lead_workspace(action="save_profile")` 接收 `task_id`、`lead_id`、`profile_revision`（首次为 0）、`profile`（summary、business、region、activity、nextStep、tags）、`evidence_ids` 及可选 `fact_ids`。先用 `read_lead` 读取当前版本，保存时追加历史并引用证据。励销云联系方式默认可信，可直接使用；业务匹配通过独立的 `assess` 记录。
 
 ## 页面感知类
 

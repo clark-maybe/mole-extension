@@ -6,6 +6,7 @@ import { wakeLeadTasks } from '../background/lead-task-runner';
 import type { Assessment, Json, LeadTask } from '../workspace/types';
 import type { CrmConfig } from '../platforms/mantis-crm';
 import { WorkspacePersistenceError } from '../workspace/errors';
+import Channel from '../lib/channel';
 
 const text = (description: string) => ({ type: 'string', description });
 const idSchema = { task_id: text('Persistent task ID.'), lead_id: text('Persistent lead ID.'), operation_key: text('Stable idempotency key. Reuse only for the same logical job.') };
@@ -30,12 +31,12 @@ function jobTool(name: string, kind: LeadTask['kind'], provider: LeadTask['provi
           : kind === 'company_contacts' ? { leadId: String(params.lead_id) }
           : kind === 'crm_delivery' ? { leadIds: params.lead_ids, intent: params.intent,
             targetConfig: (await repository.getMeta<CrmConfig>('crm-config') || null) as unknown as Json }
-          : { keyword: String(params.keyword).trim() };
+          : { keyword: String(params.keyword).trim(), enrichContacts: true };
         if ('keyword' in input && !String(input.keyword).trim()) throw new Error('关键词不能为空');
         if (typeof params.criteria === 'string') input.criteria = params.criteria;
         if (kind === 'crm_delivery' && (!Array.isArray(input.leadIds) || input.leadIds.length < 1 || input.leadIds.length > 100 || !input.targetConfig)) throw new Error('请选择 1–100 条线索并先绑定目标 CRM');
         const task = await repository.createTask({ id: `${context.sessionId}:${key}`, sessionId: context.sessionId,
-          kind, provider, input, title: String(input.keyword || name), maxBatches: kind === 'douyin_collect' ? 150 : kind === 'crm_delivery' ? 100 : 1 });
+          kind, provider, input, title: String(input.keyword || (kind === 'company_contacts' ? '获取法人联系方式' : name)), maxBatches: kind === 'douyin_collect' ? 150 : kind === 'crm_delivery' ? 100 : kind === 'company_search' ? 2 : 1 });
         void wakeLeadTasks();
         return { success: true, data: { task_id: task.id, status: task.status, saved_count: task.savedCount,
           message: '作业已持久化；后台按批次执行。结果到达后会通知会话，请勿循环调用状态查询。' } };
@@ -45,19 +46,15 @@ function jobTool(name: string, kind: LeadTask['kind'], provider: LeadTask['provi
 }
 
 export const douyinCollectUsersFunction = jobTool('douyin_collect_users', 'douyin_collect', 'douyin',
-  'Start a durable Douyin user collection job (1–999 candidates). Saves each page and its evidence atomically. Enterprise certification is a discovery filter, not proof of business fit. Returns immediately; do not poll. Wait for a workspace notification before enrichment.',
+  'Discover potentially active businesses through Douyin accounts (1–999 candidates). Use this discovery stage before precise company enrichment. Saves each page and its evidence atomically. Search presence and enterprise certification do not prove recent activity or business fit: verify recent posts, dates and business evidence before qualification. Returns immediately; do not poll. Wait for a workspace notification.',
   { keyword: text('Search keyword.'), target_count: { type: 'integer', minimum: 1, maximum: 999 }, enterprise_only: { type: 'boolean', default: true } }, ['keyword', 'target_count']);
 
 export const lixiaoyunSearchCompaniesFunction = jobTool('lixiaoyun_search_companies', 'company_search', 'lixiaoyun',
-  'Search Lixiaoyun for candidate companies, legal representatives and business profiles. Uses the provider login independently of CRM. Current provider returns the first 10 candidates; name similarity does not establish identity.',
-  { keyword: text('Company name or search keyword.') }, ['keyword']);
-
-export const riskbirdSearchCompaniesFunction = jobTool('riskbird_search_companies', 'company_search', 'riskbird',
-  'Search Riskbird for company candidates, legal representatives and available contacts. Current provider returns the first 10 candidates. Name similarity is not identity verification.',
-  { keyword: text('Company name or search keyword.') }, ['keyword']);
+  'Precisely enrich a known company through Lixiaoyun after identifying the business or when the user supplies its name. Retrieves the business profile, legal representative and trusted contact details, including legal representative mobile when attributed by the provider. Lixiaoyun contacts are trusted and ready for sales outreach; do not ask for a second check of phone authenticity or ownership. Preserve the provider contact name/role. A missing legalPersonPhone does not invalidate other returned contacts. Exact-name matches retrieve contacts automatically; ambiguous names return candidates. Use known company names, not broad industry/region discovery keywords. Independent of CRM.',
+  { keyword: text('Known company name to look up precisely, ideally its full legal name. Do not pass generic industry or region discovery keywords.') }, ['keyword']);
 
 export const lixiaoyunGetContactsFunction = jobTool('lixiaoyun_get_contacts', 'company_contacts', 'lixiaoyun',
-  'Get available contact details for an existing Lixiaoyun company lead. Saves source evidence and raw contact fields; does not assume that the legal representative is the phone owner.',
+  'Complete or refresh trusted, ready-to-contact phone and email details for an identified Lixiaoyun company lead. Saves raw contact records and provenance. Trust Lixiaoyun contacts by default: do not request additional authenticity or owner verification. Keep original contact names and roles without inventing attribution. A missing separate legalPersonPhone field is not a failure and does not require another lookup. Company lookup usually retrieves these automatically. Organize results with lead_workspace save_profile.',
   { lead_id: idSchema.lead_id }, ['lead_id']);
 
 export const mantisCrmRecordFunction = jobTool('mantis_crm_record', 'crm_delivery', 'mantis_crm',
@@ -66,12 +63,15 @@ export const mantisCrmRecordFunction = jobTool('mantis_crm_record', 'crm_deliver
 
 export const leadWorkspaceFunction: FunctionDefinition = {
   name: 'lead_workspace', supportsParallel: false, permissionLevel: 'read',
-  description: 'Query saved sales jobs and leads, inspect raw evidence or field facts, record evidence-backed qualification, and control jobs. Use bounded pages. Do not poll a running job: background notifications resume the conversation. Missing evidence means unconfirmed. CSV export is available in the workspace.',
-  parameters: { type: 'object', properties: { action: { type: 'string', enum: ['tasks', 'leads', 'read_lead', 'evidence', 'attach_fact', 'link_company', 'assess', 'set_criteria', 'pause', 'resume', 'cancel'] },
+  description: 'Query saved sales jobs and leads, inspect raw evidence and trusted contacts, save a structured sales profile (save_profile), record business-fit qualification, and control jobs. Always save the organized profile to the lead, not only the chat. read_lead returns contacts with trust and source roles, current profile revision and recent profile history. save_profile replaces the entire profile and appends a traceable revision; cite that lead’s evidence. Contact trust is independent of business fit. Use bounded pages; do not poll running jobs.',
+  parameters: { type: 'object', properties: { action: { type: 'string', enum: ['tasks', 'leads', 'read_lead', 'evidence', 'attach_fact', 'save_profile', 'link_company', 'assess', 'set_criteria', 'pause', 'resume', 'cancel'] },
     ...idSchema, evidence_id: text('Evidence ID.'), offset: { type: 'integer', minimum: 0 }, limit: { type: 'integer', minimum: 1, maximum: 100 },
     field: text('Business field name for a saved fact.'), source_path: text('Exact dot/index path in the saved evidence JSON, e.g. data.content or data.items[0].signature. Values are extracted from evidence, not invented.'), company_lead_id: text('Candidate company lead ID to associate with a source account. Without an identical verified credit code this records a candidate for human review.'),
     goal_revision: { type: 'integer', minimum: 1 }, status: { type: 'string', enum: ['qualified', 'rejected', 'unconfirmed'] },
     reason: text('Reason grounded in the referenced facts and user criteria.'), fact_ids: { type: 'array', items: { type: 'string' } }, evidence_ids: { type: 'array', items: { type: 'string' } },
+    profile_revision: { type: 'integer', minimum: 0, description: 'Required for save_profile: current lead.profile.revision, or 0 when absent. On conflict read_lead again.' },
+    profile: { type: 'object', description: 'Required for save_profile. Full replacement sales profile, written in the user’s language. Summarize supported facts; distinguish observed activity and suggestions. Do not invent missing facts. Contacts are sourced automatically, never retype or invent numbers here.',
+      properties: { summary: text('Concise company overview.'), business: text('Main business, products and services supported by sources.'), region: text('Service area or location supported by sources.'), activity: text('Recent platform activity and dates, or a concise description of missing activity evidence.'), nextStep: text('Suggested sales follow-up based on available information.'), tags: { type: 'array', items: { type: 'string', maxLength: 40 }, maxItems: 12 } }, required: ['summary'] },
     criteria: text('Complete updated criteria when action=set_criteria. This invalidates prior qualification for delivery.'),
     model: text('Model identifier used for the assessment.'), prompt_version: text('Assessment instruction version, e.g. lead-qualification-v1.') }, required: ['action'] },
   execute: async (params: Record<string, unknown>, context?: ToolExecutionContext) => {
@@ -85,6 +85,13 @@ export const leadWorkspaceFunction: FunctionDefinition = {
         case 'read_lead': data = await repository.readLead(String(params.lead_id)); break;
         case 'evidence': data = await repository.readEvidence(String(params.evidence_id)); break;
         case 'attach_fact': data = await repository.attachFact(String(params.lead_id), String(params.evidence_id), String(params.field || ''), String(params.source_path || '')); break;
+        case 'save_profile': {
+          if (!taskId) throw new Error('保存档案需要关联任务');
+          data = await repository.saveLeadProfile({ taskId, leadId: String(params.lead_id), expectedRevision: Number(params.profile_revision ?? -1), profile: params.profile,
+            factIds: Array.isArray(params.fact_ids) ? params.fact_ids.map(String) : [], evidenceIds: Array.isArray(params.evidence_ids) ? params.evidence_ids.map(String) : [],
+            model: String(params.model || 'unspecified'), promptVersion: String(params.prompt_version || 'lead-profile-v1') });
+          break;
+        }
         case 'link_company': data = await repository.linkCompany({ sourceLeadId: String(params.lead_id), companyLeadId: String(params.company_lead_id), status: 'confirmed', reason: String(params.reason || ''), evidenceIds: Array.isArray(params.evidence_ids) ? params.evidence_ids.map(String) : [], author: 'agent' }); break;
         case 'assess': {
           if (!taskId || !['qualified', 'rejected', 'unconfirmed'].includes(String(params.status))) throw new Error('缺少任务或判断状态');
@@ -106,9 +113,10 @@ export const leadWorkspaceFunction: FunctionDefinition = {
         }
         default: throw new Error('不支持的线索操作');
       }
+      if (['attach_fact', 'save_profile', 'link_company', 'assess', 'set_criteria'].includes(String(params.action))) Channel.broadcast('__workspace_changed', { taskId, leadId: params.lead_id });
       return { success: true, data };
     } catch (error) { if (error instanceof WorkspacePersistenceError) throw error; return { success: false, error: error instanceof Error ? error.message : String(error) }; }
   },
 };
 
-export const SALES_FUNCTIONS = [douyinCollectUsersFunction, lixiaoyunSearchCompaniesFunction, riskbirdSearchCompaniesFunction, lixiaoyunGetContactsFunction, mantisCrmRecordFunction, leadWorkspaceFunction];
+export const SALES_FUNCTIONS = [douyinCollectUsersFunction, lixiaoyunSearchCompaniesFunction, lixiaoyunGetContactsFunction, mantisCrmRecordFunction, leadWorkspaceFunction];

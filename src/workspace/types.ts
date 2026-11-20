@@ -18,7 +18,19 @@ export interface SessionArchive {
   snapshot: Omit<Session, 'eventLog'>;
 }
 
-export type SessionSummary = Omit<SessionArchive, 'snapshot'> & { status: Session['status'] };
+export interface SessionActivity {
+  state: 'running' | 'queued' | 'waiting' | 'paused' | 'error' | 'done';
+  label: string;
+  detail: string;
+  totalTasks: number;
+  completedTasks: number;
+  activeTasks: number;
+  waitingTasks: number;
+  pausedTasks: number;
+  taskId?: string;
+  needsReply?: boolean;
+}
+export type SessionSummary = Omit<SessionArchive, 'snapshot'> & { status: Session['status']; activity: SessionActivity };
 export interface SessionCursor { updatedAt: number; id: string }
 
 export interface WorkspaceEvent {
@@ -88,8 +100,52 @@ export interface Lead {
   fields: { [key: string]: Json };
   evidenceIds: string[];
   companyId?: string;
+  profile?: LeadProfile;
   createdAt: number;
   updatedAt: number;
+}
+
+/** Agent 整理的销售档案与来源事实分开保存，修订历史只追加。 */
+export interface LeadProfileContent {
+  summary: string;
+  business?: string;
+  region?: string;
+  activity?: string;
+  nextStep?: string;
+  tags: string[];
+}
+
+export interface LeadProfile extends LeadProfileContent {
+  id: string;
+  leadId: string;
+  taskId: string;
+  revision: number;
+  factIds: string[];
+  evidenceIds: string[];
+  model: string;
+  promptVersion: string;
+  author: 'agent';
+  createdAt: number;
+}
+
+export interface LeadContact {
+  kind: 'phone' | 'email';
+  value: string;
+  names: string[];
+  roles: string[];
+  sources: string[];
+  trusted: boolean;
+  legalRepresentative: boolean;
+}
+
+export interface LeadDetail {
+  lead: Lead;
+  contacts: LeadContact[];
+  facts: LeadFact[];
+  assessments: Array<Assessment & { current: boolean }>;
+  deliveries: Delivery[];
+  links: EntityLink[];
+  profileHistory: LeadProfile[];
 }
 
 export interface LeadSummary extends Lead {
@@ -158,7 +214,7 @@ export interface Delivery {
 
 export interface BatchResult {
   evidence: Evidence[];
-  leads: Array<Omit<Lead, 'id' | 'createdAt' | 'updatedAt'> & { fieldOrigins?: Record<string, { rawValue: Json; sourcePath: string }> }>;
+  leads: Array<Omit<Lead, 'id' | 'createdAt' | 'updatedAt' | 'profile'> & { fieldOrigins?: Record<string, { rawValue: Json; sourcePath: string }> }>;
   checkpoint: LeadTask['checkpoint'];
   done: boolean;
   partial?: boolean;

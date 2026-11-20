@@ -2,8 +2,9 @@
 import { douyinSearchUsersFunction } from '../functions/douyin-search-users';
 import { parseCompanySearchPayload } from './company-parser';
 import { businessJson, PlatformError, runReadPageJob } from './page-job';
-import type { BatchResult, Evidence, Json, TaskAttempt } from '../workspace/types';
+import type { BatchResult, Evidence, Json, Lead, TaskAttempt } from '../workspace/types';
 import { workspaceRepository } from '../lib/workspace-db/repository';
+import { findLegalRepresentativeMobile, normalizeCompanyName } from './company-enrichment';
 
 function evidence(attempt: TaskAttempt, payload: unknown, sourceUrl: string): Evidence {
   return { id: crypto.randomUUID(), taskId: attempt.task.id, stepId: attempt.step.id,
@@ -50,48 +51,69 @@ export async function collectDouyin(attempt: TaskAttempt): Promise<BatchResult> 
 }
 
 export async function searchCompanies(attempt: TaskAttempt): Promise<BatchResult> {
-  const provider = attempt.task.provider === 'riskbird' ? 'riskbird' : 'lixiaoyun';
+  if (attempt.task.provider !== 'lixiaoyun') throw new PlatformError('此企业信息渠道暂未启用，请明确企业名称后使用励销云', 'waiting');
+  if (attempt.task.checkpoint.stage === 'contacts') {
+    const leads = await workspaceRepository.listLeads(attempt.task.id);
+    const lead = leads.find(row => row.sourceKey === attempt.task.checkpoint.companySourceKey);
+    if (!lead) throw new PlatformError('企业信息检查点缺少已保存主体，未查询联系方式');
+    return collectCompanyContacts(attempt, lead);
+  }
+  const provider = 'lixiaoyun';
   const keyword = String(attempt.task.input.keyword);
   const params = new URLSearchParams({ keyword, jobId: attempt.task.id });
-  const url = provider === 'riskbird' ? `https://riskbird.com/search/company?${params}` : `https://lxcrm.weiwenjia.com/soukebox/advanced_search?${params}`;
-  const data = await runReadPageJob(attempt, url, provider === 'riskbird' ? 'workspace-riskbird.js' : 'workspace-lixiaoyun.js',
-    provider === 'riskbird' ? '__mantis_fengniaoyun_company_search_xhr_hook__' : '__mantis_company_search_xhr_hook__', keyword);
+  const url = `https://lxcrm.weiwenjia.com/soukebox/advanced_search?${params}`;
+  const data = await runReadPageJob(attempt, url, 'workspace-lixiaoyun.js', '__mantis_company_search_xhr_hook__', keyword);
   let parsed: ReturnType<typeof parseCompanySearchPayload>;
-  try { parsed = parseCompanySearchPayload(data.payload, provider === 'riskbird' ? 'fengniaoyun' : 'lixiaoyun'); }
+  try { parsed = parseCompanySearchPayload(data.payload); }
   catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     throw new PlatformError(message, /429|请求频繁|频率|rate.?limit|50[0234]|超时/i.test(message) ? 'retry' : /登录|验证|401|403/.test(message) ? 'waiting' : 'failed');
   }
+  const exact = parsed.items.filter(company => normalizeCompanyName(company.name) === normalizeCompanyName(keyword));
+  const precise = attempt.task.input.enrichContacts === true;
+  const selected = precise && exact.length === 1 ? exact : parsed.items;
+  const lookup = precise && exact.length === 1 && Boolean(exact[0].id);
   const proof = evidence(attempt, data.payload, url);
-  const body = data.payload as { data?: { items?: Array<Record<string, Json>>; list?: Array<Record<string, Json>> } };
-  const rawItems = body?.data?.items || body?.data?.list || [];
-  const paths: Record<string, string> = provider === 'riskbird'
-    ? { id: 'entid', name: 'entName', legalPerson: 'faren', contact: 'tels', address: 'dom', status: 'entStatus', socialCreditCode: 'uniscid', registeredCapital: 'regCap', establishmentDate: 'esDate', email: 'emails', officialWebsite: 'website', tags: 'tags' }
-    : { id: 'id', name: 'companyName', englishName: 'entNameEng', legalPerson: 'legalperson', address: 'address', status: 'entstatus', industry: 'industry', socialCreditCode: 'socialCreditCode', registeredCapital: 'registercapital', establishmentDate: 'esdate', contactName: 'contactName', tags: 'companyTags', officialWebsite: 'officialWebsite' };
-  return { evidence: [proof], leads: parsed.items.map(company => ({
-    sourceKey: `${provider}:${company.id || company.socialCreditCode || company.name}`, kind: 'company', name: company.name, provider, sourceUrl: url,
-    fields: Object.fromEntries(Object.entries(businessJson(company) as { [key: string]: Json }).filter(([field, value]) =>
-      value !== '' && value !== null && !(Array.isArray(value) && !value.length) && !(field === 'contactLoaded' && value === false))), evidenceIds: [proof.id],
+  const body = data.payload as { data?: { items?: Array<Record<string, Json>> } };
+  const rawItems = body?.data?.items || [];
+  const paths: Record<string, string> = { id: 'id', name: 'companyName', englishName: 'entNameEng', legalPerson: 'legalperson', address: 'address', status: 'entstatus', industry: 'industry', socialCreditCode: 'socialCreditCode', registeredCapital: 'registercapital', establishmentDate: 'esdate', contactName: 'contactName', tags: 'companyTags', officialWebsite: 'officialWebsite' };
+  const key = (company: { id: string; socialCreditCode: string; name: string }) => `${provider}:${company.id || company.socialCreditCode || company.name}`;
+  return { evidence: [proof], leads: selected.map(company => ({
+    sourceKey: key(company), kind: 'company', name: company.name, provider, sourceUrl: url,
+    fields: { ...Object.fromEntries(Object.entries(businessJson(company) as { [key: string]: Json }).filter(([field, value]) =>
+      value !== '' && value !== null && !(Array.isArray(value) && !value.length) && !(field === 'contactLoaded' && value === false))),
+      ...(lookup ? { contact: '', legalPersonPhone: '', contactLoaded: false } : {}) }, evidenceIds: [proof.id],
     fieldOrigins: Object.fromEntries(Object.entries(paths).flatMap(([field, path]) => {
-      const index = rawItems.findIndex(raw => company.id ? String(raw.id || raw.entid || raw.uniscid || '') === company.id : String(raw.companyName || raw.name || raw.value || raw.entName || '') === company.name);
+      const index = rawItems.findIndex(raw => company.id ? String(raw.id || '') === company.id : String(raw.companyName || raw.name || raw.value || '') === company.name);
       const raw = rawItems[index];
-      return raw && raw[path] !== undefined ? [[field, { rawValue: raw[path], sourcePath: `data.${provider === 'riskbird' ? 'list' : 'items'}[${index}].${path}` }]] : [];
+      return raw && raw[path] !== undefined ? [[field, { rawValue: raw[path], sourcePath: `data.items[${index}].${path}` }]] : [];
     })),
-  })), checkpoint: { page: 1, returned: parsed.items.length, total: parsed.total }, done: true,
-    partial: parsed.total > parsed.items.length, reason: parsed.total > parsed.items.length ? '已保存首屏结果；平台返回范围为前 10 条' : undefined };
+  })), checkpoint: { page: 1, returned: selected.length, total: parsed.total, ...(lookup ? { stage: 'contacts', companySourceKey: key(exact[0]) } : {}) },
+    done: !lookup, delayMs: 1000, partial: !lookup && (precise || parsed.total > parsed.items.length),
+    reason: lookup ? '已保存企业信息，继续获取法人及联系方式' : precise ? '未获得唯一的同名企业及平台 ID；已保存候选，请核实完整企业名称后再获取联系方式' : parsed.total > parsed.items.length ? '已保存首屏结果；平台返回范围为前 10 条' : undefined };
 }
 
 export async function getContacts(attempt: TaskAttempt): Promise<BatchResult> {
   const { lead } = await workspaceRepository.readLead(String(attempt.task.input.leadId));
+  return collectCompanyContacts(attempt, lead);
+}
+
+async function collectCompanyContacts(attempt: TaskAttempt, lead: Lead): Promise<BatchResult> {
   if (lead.provider !== 'lixiaoyun' || !lead.fields.id) throw new PlatformError('联系方式查询需要励销云企业 ID');
   const params = new URLSearchParams({ mode: 'contact', pid: String(lead.fields.id), entName: lead.name, jobId: attempt.task.id });
   const url = `https://lxcrm.weiwenjia.com/soukebox/advanced_search?${params}`;
   const data = await runReadPageJob(attempt, url, 'workspace-contacts.js', '__mantis_company_contact_xhr_hook__', lead.name);
   const proof = evidence(attempt, data, url);
   const contact = data.result && typeof data.result === 'object' ? data.result as Record<string, unknown> : data;
+  const representative = findLegalRepresentativeMobile(contact.details, String(lead.fields.legalPerson || ''));
+  const prefix = data.result ? 'result.' : '';
+  const details = businessJson(contact.details || []);
+  const rawRepresentative = representative ? (contact.details as Array<Record<string, Json>>)[representative.index].content : undefined;
   return { evidence: [proof], leads: [{ sourceKey: lead.sourceKey, kind: lead.kind, name: lead.name, provider: lead.provider, sourceUrl: lead.sourceUrl,
-    fields: { contact: String(contact.phone || ''), contactDetails: businessJson(contact.details || []), contactLoaded: true }, evidenceIds: [proof.id],
-    fieldOrigins: { contact: { rawValue: businessJson(contact.phone || ''), sourcePath: data.result ? 'result.phone' : 'phone' },
-      contactDetails: { rawValue: businessJson(contact.details || []), sourcePath: data.result ? 'result.details' : 'details' } } }],
-    checkpoint: { leadId: lead.id }, done: true };
+    fields: { contact: representative?.phone || String(contact.phone || ''), contactDetails: details, contactLoaded: true,
+      legalPersonPhone: representative?.phone || '' }, evidenceIds: [proof.id],
+    fieldOrigins: { contact: representative ? { rawValue: rawRepresentative!, sourcePath: `${prefix}details[${representative.index}].content` } : { rawValue: businessJson(contact.phone || ''), sourcePath: `${prefix}phone` },
+      contactDetails: { rawValue: details, sourcePath: `${prefix}details` },
+      ...(representative ? { legalPersonPhone: { rawValue: rawRepresentative!, sourcePath: `${prefix}details[${representative.index}].content` } } : {}) } }],
+    checkpoint: { ...attempt.task.checkpoint, leadId: lead.id, stage: 'complete' }, done: true };
 }

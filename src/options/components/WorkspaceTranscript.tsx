@@ -2,6 +2,7 @@
 import { useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { Button } from 'antd';
+import { ArrowDownOutlined, ArrowRightOutlined, SearchOutlined, SafetyCertificateOutlined, UserOutlined } from '@ant-design/icons';
 import { CallsGroup, MarkdownAnswer, UserMessage } from '../../content/float-ball/components/ConversationItems';
 import { FUNCTION_ICONS, FUNCTION_LABELS } from '../../content/float-ball/icons';
 import type { TranscriptItem } from '../../chat/transcript';
@@ -11,18 +12,21 @@ interface Props {
   items: TranscriptItem[];
   live: string;
   running: boolean;
+  waitingForUser?: boolean;
   hasEarlier: boolean;
   onLoadEarlier: () => Promise<void>;
+  onSuggest: (text: string) => void;
   children?: ReactNode;
 }
 
 type Entry = { kind: 'message'; item: TranscriptItem } | { kind: 'calls'; id: string; items: TranscriptItem[] };
 
-export function WorkspaceTranscript({ sessionId, items, live, running, hasEarlier, onLoadEarlier, children }: Props) {
+export function WorkspaceTranscript({ sessionId, items, live, running, waitingForUser, hasEarlier, onLoadEarlier, onSuggest, children }: Props) {
   const scroll = useRef<HTMLDivElement>(null);
   const follow = useRef(true);
   const anchor = useRef<{ height: number; top: number }>();
   const [loadingEarlier, setLoadingEarlier] = useState(false);
+  const [atBottom, setAtBottom] = useState(true);
   const entries = useMemo(() => {
     const result: Entry[] = [];
     for (const item of items) {
@@ -42,7 +46,7 @@ export function WorkspaceTranscript({ sessionId, items, live, running, hasEarlie
       element.scrollTop = anchor.current.top + element.scrollHeight - anchor.current.height;
       anchor.current = undefined;
     } else if (follow.current) element.scrollTop = element.scrollHeight;
-  }, [items, live, sessionId, loadingEarlier]);
+  }, [items, live, sessionId, loadingEarlier, waitingForUser]);
 
   const loadEarlier = async () => {
     const element = scroll.current;
@@ -55,14 +59,17 @@ export function WorkspaceTranscript({ sessionId, items, live, running, hasEarlie
   const replaceLastAnswer = running && Boolean(live) && items.at(-1)?.role === 'assistant';
   return <div className="workspace-transcript" ref={scroll} onScroll={() => {
     const element = scroll.current;
-    if (element) follow.current = element.scrollHeight - element.scrollTop - element.clientHeight < 72;
+    if (element) { follow.current = element.scrollHeight - element.scrollTop - element.clientHeight < 72; setAtBottom(follow.current); }
   }}>
     <div className="workspace-transcript-content">
       {hasEarlier && <div className="workspace-earlier"><Button type="text" size="small" loading={loadingEarlier} onClick={() => void loadEarlier()}>加载更早的对话</Button></div>}
       {!items.length && !live && !running && <div className="workspace-welcome">
-        <img src={chrome.runtime.getURL('logo.png')} alt="" /><h2>想寻找什么样的客户？</h2>
-        <p>说说行业、地区和筛选条件，我会帮你寻找线索、核实信息并整理成表。</p>
-        <div>例如：寻找上海从事汽车贴膜的企业，先核验主营业务，再补充企业与联系方式。</div>
+        <div className="workspace-welcome-brand"><img src={chrome.runtime.getURL('logo.png')} alt="" /><span>从一个诉求，到一批可联系的客户</span></div>
+        <h2>让下一次联系，<br /><em>从找到对的企业开始。</em></h2>
+        <p>在内容平台发现活跃企业，核实业务与主体，再用励销云补全企业信息和法人联系方式。过程有记录，结果有来源。</p>
+        <div className="workspace-discovery-path"><span><SearchOutlined />发现活跃企业</span><i /><span><SafetyCertificateOutlined />核实企业主体</span><i /><span><UserOutlined />补全法人信息</span></div>
+        <div className="workspace-starters"><button type="button" onClick={() => onSuggest('帮我寻找上海做汽车贴膜的企业，优先最近 30 天在抖音更新过内容的，核实企业主体后补全法人联系方式。')}><span>寻找活跃客户<small>上海 · 汽车贴膜 · 近期更新</small></span><ArrowRightOutlined rotate={-45} /></button>
+          <button type="button" onClick={() => onSuggest('我有一家已知名称的企业，想用励销云补全企业信息和法人手机号。')}><span>补全已知企业<small>工商信息 · 法人 · 手机号</small></span><ArrowRightOutlined rotate={-45} /></button></div>
       </div>}
       {entries.map((entry, index) => {
         if (entry.kind === 'calls') return <CallsGroup key={entry.id} initiallyOpen={false} isRunning={running} calls={entry.items.map(item => ({
@@ -84,8 +91,9 @@ export function WorkspaceTranscript({ sessionId, items, live, running, hasEarlie
         <div className="workspace-assistant-label"><img src={chrome.runtime.getURL('logo.png')} alt="" />Mole</div>
         <MarkdownAnswer text={live} />
       </article>}
-      {running && !live && <div className="workspace-thinking" role="status"><span /><span /><span />正在处理</div>}
+      {running && !live && !waitingForUser && <div className="workspace-thinking" role="status"><span /><span /><span />正在处理</div>}
       {children}
     </div>
+    {!atBottom && <div className="workspace-jump-latest"><Button shape="round" size="small" icon={<ArrowDownOutlined />} onClick={() => { follow.current = true; setAtBottom(true); scroll.current?.scrollTo({ top: scroll.current.scrollHeight, behavior: 'smooth' }); }}>回到最新消息</Button></div>}
   </div>;
 }

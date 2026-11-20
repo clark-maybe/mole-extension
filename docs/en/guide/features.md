@@ -6,6 +6,10 @@ This page covers the technical architecture behind Mole. For user-facing feature
 
 Options provides direct conversations, complete session archives, durable jobs, and traceable lead tables. Batches commit incrementally; fields and qualification decisions reference original evidence, and jobs recover from committed checkpoints. Company and contact queries use each provider's own login session. CRM is an optional recording destination, with no lookup capability or mandatory role in a task. See [Sales Lead Workspace](/en/guide/lead-workspace).
 
+Discover active businesses on content platforms such as Douyin and verify their identities before precise Lixiaoyun enrichment of company details, legal representatives and mobiles. Riskbird is currently disabled. Active sessions and sessions needing attention are pinned separately; a live banner combines model and background job state so ongoing collection remains visible after a model turn ends.
+
+Lead dossiers prioritize copyable phones and emails, with Lixiaoyun contacts trusted by default. The agent saves structured business summaries and follow-up suggestions with version history and evidence. Business fit is assessed separately; raw JSON and technical records are collapsed.
+
 ## Agentic Loop Architecture
 
 At Mole's core is a minimal Agentic Loop, with this design philosophy:

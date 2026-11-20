@@ -1,6 +1,7 @@
 /** 导入前检查记录形状和引用；不接受可执行的旧指令。 */
 import type { WorkspaceBackup } from '../../workspace/types';
 import { STORE_NAMES } from './database';
+import { leadProfileHistoryKey, parseLeadProfileContent } from '../../workspace/lead-profile';
 
 export function validateBackup(backup: WorkspaceBackup): void {
   if (backup.format !== 'mole-workspace' || backup.version !== 1 || !backup.records || typeof backup.records !== 'object') throw new Error('备份格式无效');
@@ -74,5 +75,36 @@ export function validateBackup(backup: WorkspaceBackup): void {
       if (tables.get('facts')!.get(id)!.leadId !== row.leadId) throw new Error('判断事实不属于同一线索');
     }
     for (const id of row.evidenceIds) require('evidence', id);
+  }
+  const validateProfile = (value: unknown) => {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('档案记录无效');
+    const profile = value as Record<string, unknown>;
+    parseLeadProfileContent(profile);
+    if (typeof profile.id !== 'string' || !profile.id || !Number.isInteger(profile.revision) || Number(profile.revision) < 1
+      || profile.author !== 'agent' || typeof profile.createdAt !== 'number' || !Array.isArray(profile.factIds) || !Array.isArray(profile.evidenceIds) || !profile.evidenceIds.length) throw new Error('档案版本或引用无效');
+    require('leads', profile.leadId); require('tasks', profile.taskId);
+    require('taskLeads', `${profile.taskId}:${profile.leadId}`);
+    const lead = tables.get('leads')!.get(profile.leadId as string)!;
+    for (const id of profile.evidenceIds) {
+      require('evidence', id);
+      if (!(lead.evidenceIds as unknown[]).includes(id)) throw new Error('档案证据不属于同一线索');
+    }
+    for (const id of profile.factIds) {
+      require('facts', id);
+      const fact = tables.get('facts')!.get(id as string)!;
+      if (fact.leadId !== profile.leadId || !profile.evidenceIds.includes(fact.evidenceId)) throw new Error('档案事实不属于同一线索或缺少证据');
+    }
+    return profile;
+  };
+  for (const row of tables.get('meta')!.values()) {
+    if (!(row.id as string).startsWith('lead-profile:')) continue;
+    const profile = validateProfile(row.value);
+    if (row.id !== leadProfileHistoryKey(String(profile.leadId), Number(profile.revision))) throw new Error('档案历史标识不一致');
+  }
+  for (const row of tables.get('leads')!.values()) {
+    if (!row.profile) continue;
+    const profile = validateProfile(row.profile);
+    const history = tables.get('meta')!.get(leadProfileHistoryKey(String(row.id), Number(profile.revision)));
+    if (profile.leadId !== row.id || !history || JSON.stringify(history.value) !== JSON.stringify(profile)) throw new Error('当前档案与整理历史不一致');
   }
 }

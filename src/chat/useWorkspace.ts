@@ -2,10 +2,15 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import Channel from '../lib/channel';
 import { workspaceQuery } from './workspace-client';
-import type { LeadTask, SessionArchive, SessionSummary, SessionPage, WorkspaceEvent } from '../workspace/types';
+import type { LeadTask, SessionArchive, SessionSummary, SessionPage, WorkspaceEvent, SessionCursor } from '../workspace/types';
+import { ACTIVE_SESSION_STATES } from '../workspace/session-activity';
 
 export function useWorkspace(sessionId?: string) {
   const [sessions, setSessions] = useState<SessionSummary[]>([]);
+  const [activeSessions, setActiveSessions] = useState<SessionSummary[]>([]);
+  const activeIds = useRef<string[]>([]);
+  const historyCursor = useRef<SessionCursor>();
+  const pagedHistory = useRef(false);
   const [archive, setArchive] = useState<SessionArchive>();
   const [events, setEvents] = useState<WorkspaceEvent[]>([]);
   const [tasks, setTasks] = useState<LeadTask[]>([]);
@@ -26,13 +31,21 @@ export function useWorkspace(sessionId?: string) {
     const epoch = generation.current;
     const id = selected.current;
     const work = (async () => {
-      const [list, jobs] = await Promise.all([
+      const [list, jobs, activity] = await Promise.all([
         workspaceQuery<SessionSummary[]>({ kind: 'sessions', search: searchRef.current }),
         id ? workspaceQuery<LeadTask[]>({ kind: 'tasks', sessionId: id }) : Promise.resolve([]),
+        workspaceQuery<SessionSummary[]>({ kind: 'active_sessions', search: searchRef.current, includeIds: activeIds.current }),
       ]);
       if (epoch !== generation.current) return;
-      setSessions(previous => [...new Map([...previous, ...list].map(row => [row.id, row])).values()].sort((a, b) => b.updatedAt - a.updatedAt || b.id.localeCompare(a.id)));
-      setHasMoreSessions(list.length === 50); setTasks(jobs.filter(job => job.kind !== 'tool_read'));
+      const active = activity.filter(row => ACTIVE_SESSION_STATES.has(row.activity.state));
+      activeIds.current = active.map(row => row.id); setActiveSessions(active);
+      setSessions(previous => [...new Map([...previous, ...list, ...activity].map(row => [row.id, row])).values()].sort((a, b) => b.updatedAt - a.updatedAt || b.id.localeCompare(a.id)));
+      if (!pagedHistory.current) {
+        const last = list.at(-1);
+        historyCursor.current = last ? { updatedAt: last.updatedAt, id: last.id } : undefined;
+        setHasMoreSessions(list.length === 50);
+      }
+      setTasks(jobs.filter(job => job.kind !== 'tool_read'));
       if (!id) return;
       let more = true;
       while (more && epoch === generation.current) {
@@ -60,7 +73,7 @@ export function useWorkspace(sessionId?: string) {
 
   useEffect(() => {
     selected.current = sessionId; generation.current++; cursor.current = 0;
-    setEvents([]); setArchive(undefined); setLive(''); setError(''); setHasEarlier(false);
+    setEvents([]); setTasks([]); setArchive(undefined); setLive(''); setError(''); setHasEarlier(false);
     void refresh();
   }, [sessionId, refresh]);
 
@@ -75,21 +88,28 @@ export function useWorkspace(sessionId?: string) {
       if (!data.sessionId || data.sessionId === selected.current) setError(data.message || '后台操作失败');
     };
     Channel.on('__workspace_changed', changed); Channel.on('__channel_reconnected', changed);
+    const interactionEvents = ['__ask_user_request', '__approval_request', '__ask_user_settled', '__approval_settled', '__ask_user_cancel', '__approval_cancel'];
+    interactionEvents.forEach(event => Channel.on(event, changed));
     Channel.on('__ai_stream', stream); Channel.on('__workspace_storage_error', failed); Channel.on('__workspace_command_error', failed);
     return () => {
       Channel.off('__workspace_changed', changed); Channel.off('__channel_reconnected', changed);
+      interactionEvents.forEach(event => Channel.off(event, changed));
       Channel.off('__ai_stream', stream); Channel.off('__workspace_storage_error', failed); Channel.off('__workspace_command_error', failed);
       invalidate();
     };
   }, [refresh, invalidate]);
 
   const loadMoreSessions = async () => {
-    const last = sessions.at(-1);
+    const last = historyCursor.current;
     if (!last) return;
     const term = searchRef.current;
+    const epoch = generation.current;
     try {
       const page = await workspaceQuery<SessionSummary[]>({ kind: 'sessions', before: { updatedAt: last.updatedAt, id: last.id }, search: term });
-      if (term !== searchRef.current) return;
+      if (term !== searchRef.current || epoch !== generation.current) return;
+      pagedHistory.current = true;
+      const tail = page.at(-1);
+      if (tail) historyCursor.current = { updatedAt: tail.updatedAt, id: tail.id };
       setSessions(previous => [...new Map([...previous, ...page].map(row => [row.id, row])).values()]);
       setHasMoreSessions(page.length === 50);
     } catch (reason) { setError(reason instanceof Error ? reason.message : String(reason)); }
@@ -106,8 +126,8 @@ export function useWorkspace(sessionId?: string) {
     } catch (reason) { if (epoch === generation.current) setError(reason instanceof Error ? reason.message : String(reason)); }
   };
   const searchSessions = (term: string) => {
-    searchRef.current = term; setSearch(term); setSessions([]); generation.current++;
+    searchRef.current = term; setSearch(term); setSessions([]); setActiveSessions([]); historyCursor.current = undefined; pagedHistory.current = false; generation.current++;
     void refresh();
   };
-  return { sessions, archive, events, tasks, live, error, refresh, search, searchSessions, loadMoreSessions, hasMoreSessions, loadEarlier, hasEarlier };
+  return { sessions, activeSessions, archive, events, tasks, live, error, refresh, search, searchSessions, loadMoreSessions, hasMoreSessions, loadEarlier, hasEarlier };
 }

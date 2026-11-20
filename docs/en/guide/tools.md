@@ -8,14 +8,17 @@ MoleClaw includes 37+ built-in tools covering all aspects of browser automation.
 
 | Tool | Description |
 |------|-------------|
-| `lead_workspace` | Manage durable jobs, read leads/facts/evidence, and record qualification decisions and company identity links |
-| `douyin_collect_users` | Start a Douyin account collection job that saves each batch |
-| `lixiaoyun_search_companies` | Independently find candidate companies and business profiles through Lixiaoyun |
-| `riskbird_search_companies` | Independently find candidate companies and business profiles through Riskbird |
-| `lixiaoyun_get_contacts` | Enrich company contact details through Lixiaoyun |
+| `lead_workspace` | Manage durable jobs, read leads/facts/evidence/trusted contacts, save versioned sales dossiers with `save_profile`, and record business qualification and company identity links |
+| `douyin_collect_users` | Discover potentially active businesses on Douyin and save each batch; recent activity needs content and date evidence |
+| `lixiaoyun_search_companies` | Precisely enrich a known company profile and legal representative, automatically retrieving contacts and representative mobile after a unique exact-name match |
+| `lixiaoyun_get_contacts` | Complete or refresh trusted Lixiaoyun phone/email contacts with original names and roles; no second authenticity or owner check |
 | `mantis_crm_record` | Record selected companies in a company-specific Mantis CRM when requested; recording only, with no lookup capability |
 
 Prospecting delivers a traceable lead table by default. CRM is an optional recording destination, not a query prerequisite or a required task step. See [Sales Lead Workspace](/en/guide/lead-workspace).
+
+Discover leads on Douyin or other content platforms first, establish company identity, then use Lixiaoyun. Its `keyword` parameter takes a known company name, not broad industry/region keywords. Ambiguous matches remain candidates rather than selecting the first result. Riskbird tools are currently not registered.
+
+`lead_workspace(action="save_profile")` accepts `task_id`, `lead_id`, `profile_revision` (0 initially), `profile` (summary, business, region, activity, nextStep, tags), `evidence_ids`, and optional `fact_ids`. Read the current revision with `read_lead` before replacing a dossier. Saves retain evidence references and append history. Lixiaoyun contact results are trusted by default; they do not require a second phone-authenticity or owner check. Business-fit qualification is a separate assessment.
 
 ## Page Awareness
 

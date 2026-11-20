@@ -173,6 +173,45 @@ test('同毫秒的 130 个历史会话可完整分页，列表不传模型上下
   await db.close();
 });
 
+test('旧会话仍在执行时独立置顶，模型 done 不掩盖后台作业；结束后可刷新旧状态', async () => {
+  const db = new WorkspaceDatabase(`active-${crypto.randomUUID()}`), repo = new WorkspaceRepository(db);
+  try {
+    await repo.saveSession(session('old-active'));
+    await db.transaction(['sessions'], 'readwrite', async tx => {
+      const read = tx.objectStore('sessions').get('old-active');
+      const row = await new Promise(resolve => { read.onsuccess = () => resolve(read.result); });
+      tx.objectStore('sessions').put({ ...row, updatedAt: 1 });
+    });
+    for (let i = 0; i < 55; i++) await repo.saveSession(session(`recent-${i}`));
+    await repo.createTask({ id: 'active-job', sessionId: 'old-active', kind: 'douyin_collect', provider: 'douyin', title: '上海贴膜企业', input: {} });
+    await repo.claimTask('active-job');
+    const recent = await repo.listSessions();
+    assert.equal(recent.some(row => row.id === 'old-active'), false);
+    const [active] = await repo.listActiveSessions();
+    assert.equal(active.id, 'old-active'); assert.equal(active.status, 'done'); assert.equal(active.activity.state, 'running');
+    assert.ok(!('snapshot' in active));
+    await repo.controlTask('active-job', 'pause');
+    assert.equal((await repo.listActiveSessions())[0].activity.state, 'paused');
+    await repo.controlTask('active-job', 'cancel');
+    assert.equal((await repo.listActiveSessions()).length, 0);
+    assert.equal((await repo.listActiveSessions('', ['old-active']))[0].activity.state, 'done');
+  } finally { await db.close(); }
+});
+
+test('待回复状态可从持久交互复原，结算后会话恢复真实执行态', async () => {
+  const db = new WorkspaceDatabase(`reply-state-${crypto.randomUUID()}`), repo = new WorkspaceRepository(db);
+  try {
+    await repo.saveSession({ ...session('reply'), status: 'running' });
+    const interaction = { sessionId: 'reply', requestId: 'question', kind: 'question', question: '具体是哪家企业？', state: 'pending' };
+    await repo.setMeta('interaction:question', interaction);
+    assert.equal((await repo.listSessions())[0].activity.label, '等待你的回复');
+    assert.equal((await repo.listActiveSessions())[0].activity.needsReply, true);
+    await repo.setMeta('interaction:question', { ...interaction, state: 'settled', answer: '上海示例公司' });
+    assert.equal((await repo.listSessions())[0].activity.state, 'running');
+    assert.equal((await repo.listActiveSessions())[0].activity.needsReply, undefined);
+  } finally { await db.close(); }
+});
+
 test('重启打断排队模型和人机请求，保留待处理输入与只读作业的恢复边界', async () => {
   const { repo, db } = await fixture('tool_read');
   await repo.saveSession({ ...session('s'), status: 'waiting', context: [{ role: 'user', content: '已接收的新请求' }], pendingUserInputs: [{ id: 'input-1', text: '追加地区条件' }] });

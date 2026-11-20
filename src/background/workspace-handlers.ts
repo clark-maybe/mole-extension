@@ -86,7 +86,7 @@ async function notifyTaskResults(): Promise<void> {
     if (task.kind === 'tool_read' || !['completed', 'partial', 'failed'].includes(task.status)) continue;
     const requestId = `task-update:${task.id}:${task.goalRevision}:${task.batches}:${task.status}`;
     await repository.acceptCommand({ requestId, sessionId: task.sessionId, kind: 'task_update', taskId: task.id,
-      text: `[系统作业通知] ${task.title}：${task.status}，已保存 ${task.savedCount} 条。task_id=${task.id}，goal_revision=${task.goalRevision}。${task.reason || ''}\n请用 lead_workspace 分页查看结果，继续必要的画像、主体核验和交付；资料不足保留待确认。` });
+      text: `[系统作业通知] ${task.title}：${task.status}，已保存 ${task.savedCount} 条。task_id=${task.id}，goal_revision=${task.goalRevision}。${task.reason || ''}\n请用 lead_workspace 分页查看结果，将画像通过 save_profile 保存到档案，并记录业务符合性判断。励销云返回的联系方式默认可信、可直接联系，不需要再次核实号码真实性或归属；只对尚缺的业务条件说明信息缺口。` });
   }
   await pumpWorkspaceCommands();
 }
@@ -124,9 +124,11 @@ Channel.on('__workspace_query', (raw: unknown, sender, respond) => {
         if (before && (typeof before.updatedAt !== 'number' || typeof before.id !== 'string')) throw new Error('会话分页标识无效');
         value = await repository.listSessions(before, 50, typeof data.search === 'string' ? data.search : ''); break;
       }
+      case 'active_sessions': value = await repository.listActiveSessions(typeof data.search === 'string' ? data.search : '', Array.isArray(data.includeIds) ? data.includeIds.filter((id): id is string => typeof id === 'string') : []); break;
       case 'session_history': value = await repository.readSessionHistory(String(data.sessionId), typeof data.beforeSeq === 'number' ? data.beforeSeq : undefined); break;
       case 'session': value = await repository.readSession(String(data.sessionId), Math.max(0, Number(data.afterSeq) || 0)); break;
       case 'tasks': value = await repository.listTasks(typeof data.sessionId === 'string' ? data.sessionId : undefined); break;
+      case 'task': value = await repository.getTask(String(data.taskId)); break;
       case 'leads': value = await repository.listLeadSummaries(typeof data.taskId === 'string' ? data.taskId : undefined, Math.max(0, Number(data.offset) || 0), 100, typeof data.search === 'string' ? data.search : ''); break;
       case 'lead': value = await repository.readLead(String(data.leadId)); break;
       case 'evidence': value = await repository.readEvidence(String(data.evidenceId)); break;

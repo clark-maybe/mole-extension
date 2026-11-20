@@ -1,8 +1,11 @@
 /** 工作台唯一业务写入口；所有成功响应均发生在事务提交之后。 */
 import type { Session } from '../../ai/types';
-import type { Assessment, BatchResult, CommandReceipt, Delivery, EntityLink, Evidence, Json, Lead, LeadFact, LeadTask, SessionArchive, SessionPage, TaskAttempt, TaskLead, TaskStep, WorkspaceBackup, WorkspaceCommand, WorkspaceEvent } from '../../workspace/types';
+import type { Assessment, BatchResult, CommandReceipt, Delivery, EntityLink, Evidence, Json, Lead, LeadDetail, LeadFact, LeadProfile, LeadTask, SessionArchive, SessionPage, TaskAttempt, TaskLead, TaskStep, WorkspaceBackup, WorkspaceCommand, WorkspaceEvent } from '../../workspace/types';
 import { cursorPage, request, STORE_NAMES, WorkspaceDatabase } from './database';
 import type { LeadSummary, SessionCursor, SessionSummary } from '../../workspace/types';
+import { getSessionActivity } from '../../workspace/session-activity';
+import { getLeadContacts } from '../../workspace/lead-contacts';
+import { leadProfileHistoryKey, parseLeadProfileContent } from '../../workspace/lead-profile';
 
 const now = () => Date.now();
 const uuid = () => crypto.randomUUID();
@@ -15,6 +18,13 @@ export class WorkspaceConflict extends Error {
 async function emit(tx: IDBTransaction, event: Omit<WorkspaceEvent, 'seq' | 'eventId' | 'timestamp'>): Promise<number> {
   const item: WorkspaceEvent = { ...event, eventId: uuid(), timestamp: now() };
   return Number(await request(tx.objectStore('events').add(item)));
+}
+
+interface PendingInteraction { sessionId: string; state: string; kind?: string; question?: string; message?: string }
+async function pendingInteractions(tx: IDBTransaction): Promise<Map<string, PendingInteraction>> {
+  const rows = await cursorPage<{ value: PendingInteraction }>(tx.objectStore('meta'), IDBKeyRange.bound('interaction:', 'interaction:\uffff'), 200, 'next', 0,
+    row => row.value?.state === 'pending' && Boolean(row.value.sessionId));
+  return new Map(rows.map(row => [row.value.sessionId, row.value]));
 }
 
 export class WorkspaceRepository {
@@ -41,11 +51,27 @@ export class WorkspaceRepository {
   }
 
   listSessions(before?: SessionCursor, limit = 50, search = ''): Promise<SessionSummary[]> {
-    return this.database.transaction(['sessions'], 'readonly', async tx => {
+    return this.database.transaction(['sessions', 'tasks', 'meta'], 'readonly', async tx => {
+      const interactions = await pendingInteractions(tx);
       const rows = await cursorPage<SessionArchive>(tx.objectStore('sessions').index('updatedAt'),
         before ? IDBKeyRange.upperBound(before.updatedAt) : undefined, Math.max(1, Math.min(200, limit)), 'prev', 0,
         row => (!before || row.updatedAt < before.updatedAt || row.id < before.id) && row.title.toLowerCase().includes(search.toLowerCase()));
-      return rows.map(({ snapshot, ...row }) => ({ ...row, status: snapshot.status }));
+      return Promise.all(rows.map(async ({ snapshot, ...row }) => ({ ...row, status: snapshot.status,
+        activity: getSessionActivity(snapshot, await request<LeadTask[]>(tx.objectStore('tasks').index('sessionId').getAll(row.id)), interactions.get(row.id)) })));
+    });
+  }
+
+  /** 独立读取进行中的会话，避免旧会话的后台作业被历史分页隐藏。 */
+  listActiveSessions(search = '', includeIds: string[] = []): Promise<SessionSummary[]> {
+    return this.database.transaction(['sessions', 'tasks', 'meta'], 'readonly', async tx => {
+      const interactions = await pendingInteractions(tx);
+      const tasks = await cursorPage<LeadTask>(tx.objectStore('tasks'), undefined, Number.MAX_SAFE_INTEGER, 'next', 0,
+        task => ['running', 'queued', 'waiting', 'paused'].includes(task.status));
+      const ids = new Set([...tasks.map(task => task.sessionId), ...interactions.keys(), ...includeIds.slice(0, 200)]);
+      const rows = await cursorPage<SessionArchive>(tx.objectStore('sessions').index('updatedAt'), undefined, 200, 'prev', 0,
+        row => (ids.has(row.id) || ['running', 'waiting'].includes(row.snapshot.status)) && row.title.toLowerCase().includes(search.toLowerCase()));
+      return Promise.all(rows.map(async ({ snapshot, ...row }) => ({ ...row, status: snapshot.status,
+        activity: getSessionActivity(snapshot, await request<LeadTask[]>(tx.objectStore('tasks').index('sessionId').getAll(row.id)), interactions.get(row.id)) })));
     });
   }
 
@@ -319,13 +345,44 @@ export class WorkspaceRepository {
     });
   }
 
-  async readLead(id: string): Promise<{ lead: Lead; facts: LeadFact[]; assessments: Assessment[]; deliveries: Delivery[]; links: EntityLink[] }> {
-    return this.database.transaction(['leads', 'facts', 'assessments', 'deliveries', 'entityLinks'], 'readonly', async tx => {
+  async readLead(id: string): Promise<LeadDetail> {
+    return this.database.transaction(['leads', 'facts', 'assessments', 'deliveries', 'entityLinks', 'meta', 'tasks'], 'readonly', async tx => {
       const lead = await request<Lead | undefined>(tx.objectStore('leads').get(id));
       if (!lead) throw new Error('线索不存在');
-      return { lead, facts: await request(tx.objectStore('facts').index('leadId').getAll(id)),
-        assessments: await request(tx.objectStore('assessments').index('leadId').getAll(id)), deliveries: await request(tx.objectStore('deliveries').index('leadId').getAll(id)),
+      const history = await cursorPage<{ value: LeadProfile }>(tx.objectStore('meta'), IDBKeyRange.bound(`lead-profile:${id}:`, `lead-profile:${id}:\uffff`), 30, 'prev', 0, row => row.value.leadId === id);
+      const assessments = await request<Assessment[]>(tx.objectStore('assessments').index('leadId').getAll(id));
+      const assessed = await Promise.all(assessments.map(async item => ({ ...item, current: item.goalRevision === (await request<LeadTask | undefined>(tx.objectStore('tasks').get(item.taskId)))?.goalRevision })));
+      return { lead, contacts: getLeadContacts(lead), profileHistory: history.map(row => row.value), facts: await request(tx.objectStore('facts').index('leadId').getAll(id)),
+        assessments: assessed, deliveries: await request(tx.objectStore('deliveries').index('leadId').getAll(id)),
         links: await request(tx.objectStore('entityLinks').index('sourceLeadId').getAll(id)) };
+    });
+  }
+
+  async saveLeadProfile(input: { leadId: string; taskId: string; expectedRevision: number; profile: unknown; factIds: string[]; evidenceIds: string[]; model: string; promptVersion: string }): Promise<LeadProfile> {
+    const content = parseLeadProfileContent(input.profile);
+    if (!Number.isInteger(input.expectedRevision) || input.expectedRevision < 0) throw new Error('请提供当前档案版本，首次为 0');
+    if (!input.evidenceIds.length) throw new Error('企业档案需要引用来源证据');
+    return this.database.transaction(['tasks', 'taskLeads', 'leads', 'facts', 'evidence', 'meta', 'events'], 'readwrite', async tx => {
+      const task = await request<LeadTask | undefined>(tx.objectStore('tasks').get(input.taskId));
+      const lead = await request<Lead | undefined>(tx.objectStore('leads').get(input.leadId));
+      if (!task || !lead || !await request(tx.objectStore('taskLeads').getKey(`${task.id}:${lead.id}`))) throw new Error('档案线索不属于此任务');
+      if ((lead.profile?.revision || 0) !== input.expectedRevision) throw new WorkspaceConflict('档案版本已更新，请重新读取后整理');
+      for (const id of input.evidenceIds) {
+        if (!lead.evidenceIds.includes(id) || !await request(tx.objectStore('evidence').getKey(id))) throw new Error('档案证据不存在或不属于该线索');
+      }
+      for (const id of input.factIds) {
+        const fact = await request<LeadFact | undefined>(tx.objectStore('facts').get(id));
+        if (!fact || fact.leadId !== lead.id || !input.evidenceIds.includes(fact.evidenceId)) throw new Error('档案事实不属于该线索或缺少证据');
+      }
+      // 合并备份可能补入比本机当前档案更新的历史；继续整理不覆盖这些历史版本。
+      const [latest] = await cursorPage<{ value: LeadProfile }>(tx.objectStore('meta'), IDBKeyRange.bound(`lead-profile:${lead.id}:`, `lead-profile:${lead.id}:\uffff`), 1, 'prev', 0, row => row.value.leadId === lead.id);
+      const profile: LeadProfile = { ...content, id: uuid(), leadId: lead.id, taskId: task.id, revision: Math.max(input.expectedRevision, latest?.value.revision || 0) + 1,
+        factIds: [...new Set(input.factIds)], evidenceIds: [...new Set(input.evidenceIds)], model: input.model, promptVersion: input.promptVersion,
+        author: 'agent', createdAt: Math.max(now(), (lead.profile?.createdAt || 0) + 1) };
+      await request(tx.objectStore('meta').add({ id: leadProfileHistoryKey(lead.id, profile.revision), value: profile }));
+      await request(tx.objectStore('leads').put({ ...lead, profile, updatedAt: profile.createdAt }));
+      await emit(tx, { sessionId: task.sessionId, taskId: task.id, type: 'workspace:profile_saved', content: JSON.stringify({ leadId: lead.id, profileId: profile.id, revision: profile.revision }) });
+      return profile;
     });
   }
 
@@ -491,8 +548,15 @@ export class WorkspaceRepository {
             await request(tx.objectStore(name).add(record));
             continue;
           }
-          // 合并只补齐缺失记录，绝不让旧备份覆盖本机较新的交付回执。
-          if (await request(tx.objectStore(name).getKey(record.id as string))) continue;
+          // 补齐历史的来源指针，但不覆盖本机当前字段、Agent 档案或交付回执。
+          if (name === 'leads') {
+            const existing = await request<Lead | undefined>(tx.objectStore(name).get(record.id as string));
+            if (existing) {
+              if (existing.sourceKey !== record.sourceKey) throw new WorkspaceConflict('备份线索标识与本机来源不一致');
+              await request(tx.objectStore(name).put({ ...existing, evidenceIds: [...new Set([...existing.evidenceIds, ...(record.evidenceIds as string[])])] }));
+              continue;
+            }
+          } else if (await request(tx.objectStore(name).getKey(record.id as string))) continue;
           if (name === 'tasks' && ['queued', 'running', 'waiting'].includes(String(record.status))) { record.status = 'paused'; record.reason = '从备份导入，等待明确继续'; }
           if (name === 'commands') record.status = 'interrupted';
           if (name === 'sessions') {

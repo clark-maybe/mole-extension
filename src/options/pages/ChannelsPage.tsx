@@ -31,11 +31,17 @@ export function ChannelsPage() {
     const url = URL.createObjectURL(new Blob([JSON.stringify(data)], { type: 'application/json' }));
     const link = document.createElement('a'); link.href = url; link.download = `Mole完整备份-${Date.now()}.json`; link.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
   };
-  const channels = [{ label: '抖音', url: 'https://www.douyin.com/' }, { label: '励销云', url: 'https://lxcrm.weiwenjia.com/' }, { label: '风鸟云', url: 'https://riskbird.com/' }];
+  const channels = [{ label: '抖音', url: 'https://www.douyin.com/' }, { label: '励销云', url: 'https://lxcrm.weiwenjia.com/' }];
   return <Space direction="vertical" size="large" style={{ width: '100%' }}>
     {error && <Alert type="error" message={error} />}{message && <Alert type="success" message={message} />}
     <Card title="平台渠道"><Space wrap>{channels.map(channel => <Button key={channel.label} onClick={() => void chrome.tabs.create({ url: channel.url })}>打开{channel.label}</Button>)}</Space>
       <Typography.Paragraph type="secondary" style={{ marginTop: 12 }}>平台复用各自的浏览器登录态。任务遇到登录或验证码时暂停，处理后在任务中继续。线索采集、企业与联系方式查询均可独立使用，CRM 仅用于录入数据。</Typography.Paragraph></Card>
+    <Card title="从活跃企业到可联系线索"><Space direction="vertical">
+      <Typography.Text>01 · 抖音等内容平台：发现正在经营、近期活跃的企业，保存内容与时间依据。</Typography.Text>
+      <Typography.Text>02 · 明确企业主体：核实企业名称与主营业务，存在歧义时先确认。</Typography.Text>
+      <Typography.Text>03 · 励销云：按已知企业精确补全工商信息、法人及手机号，字段关联原始证据。</Typography.Text>
+      <Typography.Text type="secondary">当前企业信息渠道仅启用励销云。CRM 作为可选录入渠道单独使用。</Typography.Text>
+    </Space></Card>
     <Card title="可选录入渠道 · 螳螂 CRM"><Space direction="vertical" style={{ width: '100%' }}>
       <Typography.Paragraph type="secondary">找线索默认保存为结果表。只有需要录入此 CRM 时才配置以下信息；后续可接入其他录入渠道。</Typography.Paragraph>
       <Space wrap><Select placeholder="选择已登录的 CRM 工作台" value={tabId} onChange={setTabId} style={{ minWidth: 300 }} options={tabs.map(tab => ({ value: tab.id, label: tab.title || tab.url }))} />

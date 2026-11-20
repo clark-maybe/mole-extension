@@ -31,8 +31,8 @@ export const ON_DEMAND_CATEGORIES: Record<string, {
 }> = {
   sales: {
     label: 'Sales Lead Discovery',
-    description: 'Durable Douyin collection, independent Lixiaoyun/Riskbird company and contact lookup, optional company-specific CRM recording',
-    tools: ['douyin_collect_users', 'lixiaoyun_search_companies', 'riskbird_search_companies', 'lixiaoyun_get_contacts', 'mantis_crm_record'],
+    description: 'Discover active businesses on Douyin, then precisely enrich known companies and legal representative mobiles through Lixiaoyun; optional company-specific CRM recording',
+    tools: ['douyin_collect_users', 'lixiaoyun_search_companies', 'lixiaoyun_get_contacts', 'mantis_crm_record'],
   },
   cdp_advanced: {
     label: 'CDP Advanced Tools',

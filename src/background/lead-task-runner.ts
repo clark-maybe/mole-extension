@@ -30,6 +30,7 @@ async function dispatch(): Promise<void> {
   if (next) {
     const attempt = await repository.claimTask(next.id);
     if (attempt) {
+      Channel.broadcast('__workspace_changed', { sessionId: next.sessionId, taskId: next.id });
       try {
         const adapter = adapters[next.kind];
         if (!adapter) throw new PlatformError('此平台作业尚未配置执行适配器');
