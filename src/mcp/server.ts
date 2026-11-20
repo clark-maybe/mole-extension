@@ -8,6 +8,7 @@ import type { FunctionDefinition } from '../functions/types';
 import { validateSchema } from './validator';
 import { channelAccess } from '../lib/channel-access';
 import { guardWebTool } from '../functions/web-access';
+import { WorkspacePersistenceError } from '../workspace/errors';
 import type {
   MCPTool,
   MCPToolCallRequest,
@@ -175,6 +176,10 @@ export class MCPServer {
         isError: !result.success,
       };
     } catch (err: any) {
+      if (err instanceof WorkspacePersistenceError) return {
+        content: [{ type: 'text', text: JSON.stringify({ success: false, code: 'E_WORKSPACE_STORAGE', retryable: false, error: err.message }) }],
+        isError: true,
+      };
       if (err?.name === 'AbortError' || signal?.aborted) {
         return {
           content: [{

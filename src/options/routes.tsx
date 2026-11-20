@@ -10,6 +10,9 @@ import {
   StopOutlined,
   HistoryOutlined,
   ApiOutlined,
+  MessageOutlined,
+  TeamOutlined,
+  CloudSyncOutlined,
 } from '@ant-design/icons';
 
 export interface RouteItem {
@@ -20,6 +23,9 @@ export interface RouteItem {
 }
 
 export const routes: RouteItem[] = [
+  { key: 'workspace', label: '对话与任务', icon: <MessageOutlined />, description: '直接对话、复原会话并接续获客任务。' },
+  { key: 'leads', label: '线索库', icon: <TeamOutlined />, description: '检索已保存线索、画像字段与来源证据。' },
+  { key: 'channels', label: '渠道与交付', icon: <CloudSyncOutlined />, description: '处理平台登录、配置可选录入渠道、备份本地数据。' },
   {
     key: 'settings',
     label: '模型设置',
@@ -52,11 +58,11 @@ export const routes: RouteItem[] = [
   },
 ];
 
-const DEFAULT_KEY = 'settings';
+const DEFAULT_KEY = 'workspace';
 
 /** 解析 hash 值为路由 key */
 const parseHash = (): string => {
-  const hash = window.location.hash.replace(/^#\/?/, '').split('?')[0];
+  const hash = window.location.hash.replace(/^#\/?/, '').split('?')[0].split('/')[0];
   const matched = routes.find((r) => r.key === hash);
   return matched ? matched.key : DEFAULT_KEY;
 };

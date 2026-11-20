@@ -13,6 +13,7 @@ export const ALWAYS_ON_TOOLS: ReadonlySet<string> = new Set([
   'screenshot',            // 截图
   'extract_data',          // 数据提取
   'douyin_search_users',   // 抖音用户搜索
+  'lead_workspace',        // 持久线索与任务入口
   'data_pipeline',         // 数据管道
   'skill',                 // Skill 工作流
   'ask_user',              // 向用户提问
@@ -28,6 +29,11 @@ export const ON_DEMAND_CATEGORIES: Record<string, {
   description: string;
   tools: string[];
 }> = {
+  sales: {
+    label: 'Sales Lead Discovery',
+    description: 'Durable Douyin collection, independent Lixiaoyun/Riskbird company and contact lookup, optional company-specific CRM recording',
+    tools: ['douyin_collect_users', 'lixiaoyun_search_companies', 'riskbird_search_companies', 'lixiaoyun_get_contacts', 'mantis_crm_record'],
+  },
   cdp_advanced: {
     label: 'CDP Advanced Tools',
     description: 'DOM manipulation, JS execution, network monitoring, device emulation, dialog handling, debugging tools',

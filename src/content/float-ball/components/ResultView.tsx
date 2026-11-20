@@ -11,6 +11,7 @@ import { markdownToHtml } from '../markdown';
 import Channel from '../../../lib/channel';
 import type { RoundItem } from '../context/types';
 import { ToolLoginCard } from './ToolLoginCard';
+import { CallsGroup, UserMessage } from './ConversationItems';
 import {
   sanitizeUserFacingRuntimeText,
   clipRuntimeText,
@@ -20,52 +21,6 @@ import {
 /** 判断滚动容器是否在底部附近（阈值 60px） */
 const isNearBottom = (el: HTMLElement, threshold = 60): boolean => {
   return el.scrollHeight - el.scrollTop - el.clientHeight < threshold;
-};
-
-/** 工具调用折叠组 */
-const CallsGroup: React.FC<{
-  calls: Array<{ funcName: string; icon: string; text: string; userSummary?: string }>;
-  isRunning: boolean;
-}> = ({ calls, isRunning }) => {
-  const [isOpen, setIsOpen] = useState(true);
-
-  if (calls.length === 0) return null;
-
-  return (
-    <div className="mole-calls-group mole-agent-state-ops">
-      <div
-        className="mole-calls-summary"
-        onClick={() => setIsOpen(!isOpen)}
-        style={{ cursor: 'pointer' }}
-      >
-        <span className={`arrow${isOpen ? ' open' : ''}`}>▶</span>
-        <span className="calls-text">查看执行过程 · 共 {calls.length} 条</span>
-      </div>
-      {isOpen && (
-        <div className="mole-calls-detail open">
-          {calls.map((call, idx) => (
-            <div key={idx} className={`mole-call-item tone-${isRunning && idx === calls.length - 1 ? 'action' : 'done'}`}>
-              <div className="mole-call-header">
-                {call.icon
-                  ? <img className="mole-func-icon" src={call.icon} alt="" />
-                  : <span className="mole-task-runtime-step-dot" />
-                }
-                <span className="mole-call-main">
-                  <span className="mole-call-title">{call.text}</span>
-                  {call.userSummary && (
-                    <span className="mole-call-intent">{call.userSummary}</span>
-                  )}
-                </span>
-                <span className={`mole-call-status${isRunning && idx === calls.length - 1 ? ' running' : ''}`}>
-                  {isRunning && idx === calls.length - 1 ? '···' : '✓'}
-                </span>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
 };
 
 /** 进展状态面板 */
@@ -128,7 +83,7 @@ const HistoryRound: React.FC<{ round: RoundItem; index: number }> = ({ round }) 
   return (
     <div className="mole-round-history">
       {/* 用户消息气泡 */}
-      <div className="mole-user-msg">{round.query}</div>
+      <UserMessage text={round.query} />
       {/* 折叠摘要 */}
       <div className="mole-round-summary" onClick={() => setIsOpen(!isOpen)}>
         <span className={`arrow${isOpen ? ' open' : ''}`}>▶</span>
@@ -283,7 +238,7 @@ export const ResultView: React.FC = () => {
 
       {/* 当前轮用户消息（仅多轮时显示） */}
       {rounds.length > 0 && task.query && (
-        <div className="mole-user-msg">{task.query}</div>
+        <UserMessage text={task.query} />
       )}
 
       {/* 进展面板 */}

@@ -58,7 +58,6 @@ const useSidePanelEvents = () => {
             }
 
             if (s.currentTask) {
-                Channel.send('__session_clear', { sessionId: s.currentTask.id });
                 dispatch({ type: 'SET_TASK', payload: null });
                 return;
             }
@@ -165,11 +164,8 @@ const SidePanelInner: React.FC = () => {
 
     // 新对话
     const handleNewChat = useCallback(() => {
-        if (task) {
-            Channel.send('__session_clear', { sessionId: task.id });
-        }
         dispatch({ type: 'SET_TASK', payload: null });
-    }, [task, dispatch]);
+    }, [dispatch]);
 
     // 打开设置
     const handleOpenSettings = useCallback(() => {
@@ -185,6 +181,9 @@ const SidePanelInner: React.FC = () => {
                     <span className="sidepanel-header-title">Mole</span>
                 </div>
                 <div className="sidepanel-header-actions">
+                    <button className="sidepanel-header-btn" title="在工作台打开当前会话" onClick={() => {
+                        void chrome.tabs.create({ url: chrome.runtime.getURL(`options.html#/workspace${task?.id ? `/${task.id}` : ''}`) });
+                    }}>↗</button>
                     <button
                         className="sidepanel-header-btn"
                         title="新对话"

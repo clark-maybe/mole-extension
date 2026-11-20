@@ -2,6 +2,21 @@
 
 MoleClaw 内置了 37+ 个工具，覆盖浏览器自动化的各个场景。AI 会根据用户的自然语言指令自动选择最合适的工具。
 
+## 销售线索与录入
+
+`lead_workspace` 默认可用，平台工具通过 `load_tools` 的 `sales` 分类按需加载。
+
+| 工具 | 说明 |
+|------|------|
+| `lead_workspace` | 管理持久任务、读取线索/事实/证据、记录符合性判断和企业主体关联 |
+| `douyin_collect_users` | 启动按批次落盘的抖音用户采集作业 |
+| `lixiaoyun_search_companies` | 通过励销云独立查询候选企业及工商画像 |
+| `riskbird_search_companies` | 通过风鸟云独立查询候选企业及工商画像 |
+| `lixiaoyun_get_contacts` | 通过励销云补充企业联系方式 |
+| `mantis_crm_record` | 按用户要求将选定企业录入指定公司的螳螂 CRM；仅录入，不提供查询 |
+
+找客默认交付可追溯的线索表。CRM 是可选录入渠道，不是查询门槛，也不是任务必经步骤。详见[销售线索工作台](/guide/lead-workspace)。
+
 ## 页面感知类
 
 | 工具 | 说明 |

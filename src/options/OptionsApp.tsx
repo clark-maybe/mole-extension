@@ -11,9 +11,15 @@ import { WorkflowsPage } from './pages/WorkflowsPage';
 import { BlocklistPage } from './pages/BlocklistPage';
 import { HistoryPage } from './pages/HistoryPage';
 import { WebhookPage } from './pages/WebhookPage';
+import { WorkspacePage } from './pages/WorkspacePage';
+import { LeadsPage } from './pages/LeadsPage';
+import { ChannelsPage } from './pages/ChannelsPage';
 
 /** 路由 key → 页面组件映射 */
 const PAGE_MAP: Record<string, React.ComponentType> = {
+  workspace: WorkspacePage,
+  leads: LeadsPage,
+  channels: ChannelsPage,
   settings: LLMSettingsPage,
   workflows: WorkflowsPage,
   blocklist: BlocklistPage,
@@ -27,7 +33,7 @@ function OptionsLayout() {
   const activeRoute = routes.find((route) => route.key === activeKey) || routes[0];
 
   return (
-    <div className="options-page">
+    <div className={`options-page${activeKey === 'workspace' ? ' options-workspace-page' : ''}`}>
       <div className="options-panel">
         {/* 左侧菜单 */}
         <nav className="options-menu">
@@ -40,13 +46,13 @@ function OptionsLayout() {
               />
               <div>
                 <span className="options-menu-title">Mole</span>
-                <span className="options-menu-subtitle">Extension Console</span>
+                <span className="options-menu-subtitle">Sales Workspace</span>
               </div>
             </div>
-            <div className="options-menu-pill">设置中心</div>
+            <div className="options-menu-pill">销售工作台</div>
           </div>
 
-          <div className="options-menu-section-title">系统配置</div>
+          <div className="options-menu-section-title">工作台与设置</div>
 
           <div className="options-menu-items">
             {routes.map((route) => (
@@ -73,12 +79,12 @@ function OptionsLayout() {
         <div className="options-body">
           <div className="options-body-topbar">
             <div>
-              <div className="options-body-breadcrumb">Mole Console / 设置</div>
+              <div className="options-body-breadcrumb">Mole / 工作台</div>
               <div className="options-body-heading">{activeRoute.label}</div>
             </div>
             <div className="options-body-status">
               <span className="options-body-status-dot" />
-              本地扩展设置
+              本地数据持久化
             </div>
           </div>
 

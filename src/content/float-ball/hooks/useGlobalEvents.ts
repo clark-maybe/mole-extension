@@ -5,7 +5,6 @@
  */
 
 import { useEffect, useRef, useState } from 'react';
-import Channel from '../../../lib/channel';
 import { useMole } from '../context/useMole';
 
 /**
@@ -36,7 +35,6 @@ export const useGlobalEvents = () => {
 
       // 有会话 → 清除会话（新对话）
       if (s.currentTask) {
-        Channel.send('__session_clear', { sessionId: s.currentTask.id });
         dispatch({ type: 'SET_TASK', payload: null });
         return;
       }

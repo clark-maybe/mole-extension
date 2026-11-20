@@ -182,12 +182,9 @@ export const InputBar: React.FC<InputBarProps> = ({ resultRef }) => {
   // 新对话
   const handleNew = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
-    if (task) {
-      Channel.send('__session_clear', { sessionId: task.id });
-    }
     dispatch({ type: 'SET_TASK', payload: null });
     requestAnimationFrame(() => inputRef.current?.focus());
-  }, [task, dispatch]);
+  }, [dispatch]);
 
   // 重试（断点恢复）
   const handleRetry = useCallback((e: React.MouseEvent) => {

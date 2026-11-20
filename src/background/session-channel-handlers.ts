@@ -4,6 +4,8 @@
  */
 import Channel from '../lib/channel';
 import { channelAccess } from '../lib/channel-access';
+import { flushSessionArchive } from './workspace-storage';
+import { repairInterruptedContext } from './workspace-runtime-context';
 import { matchDouyinVerification } from './douyin-verification';
 import { mcpClient } from '../functions/registry';
 import type { AIStreamEvent, SessionReplayPayload, SessionFailureCode } from '../ai/types';
@@ -18,16 +20,17 @@ import {
     respondSessionOp,
     resolveSessionTaskRequest,
     createSession,
+    loadArchivedSession,
     buildSessionSyncPayload,
     buildSessionReplayPayload,
     buildSessionOpQueueSnapshot,
     buildErrorContent,
     runSessionNow,
+    isSessionScheduled,
     abortSessionTask,
     rollbackSessionTurns,
     extractLatestStartedRunId,
     extractExecuteSessionOptions,
-    getPrimaryRunningTask,
     findRunningTask,
     getRunningTasks,
     hasRunningTasks,
@@ -101,6 +104,7 @@ async function handleSessionCreateOp(op: SessionCreateOp) {
     respondSessionOp(op.sendResponse, buildSessionSyncPayload(session), op.label);
     Channel.broadcast('__session_sync', buildSessionSyncPayload(session));
 
+    await repairInterruptedContext(session);
     await runSessionNow(session, resolvedRequest.query, op.tabId, {
         ...op.taskOptions,
         taskKind: resolvedRequest.taskKind,
@@ -112,8 +116,8 @@ async function handleSessionContinueOp(op: SessionContinueOp) {
         respondSessionOp(op.sendResponse, payload, op.label);
     };
     const rollbackCommand = parseRollbackCommand(String(op.query || ''));
-    const runningTask = getPrimaryRunningTask();
-    const runningSessionId = runningTask?.sessionId || null;
+    const runningTask = findRunningTask(op.sessionId);
+    const runningSessionId = isSessionScheduled(op.sessionId) ? op.sessionId : null;
     const runningRunId = runningTask?.runId || null;
 
     if (rollbackCommand) {
@@ -190,14 +194,15 @@ async function handleSessionContinueOp(op: SessionContinueOp) {
             return;
         }
 
-        activeSession.context.push({ role: 'user', content: injectedQuery });
+        activeSession.pendingUserInputs = [...(activeSession.pendingUserInputs || []), { id: crypto.randomUUID(), text: injectedQuery }];
+        await flushSessionArchive(activeSession);
         persistRuntimeSessions();
         respond({ accepted: true, mode: 'injected', sessionId: runningSessionId, runId: runningRunId });
         return;
     }
 
     const resolvedRequest = resolveSessionTaskRequest(op.query, op.requestedTaskKind);
-    const session = sessions.get(op.sessionId);
+    const session = await loadArchivedSession(op.sessionId);
     if (!session) {
         console.warn(`[Mole] 会话不存在: ${op.sessionId}`);
         respond({
@@ -264,6 +269,7 @@ async function handleSessionContinueOp(op: SessionContinueOp) {
     Channel.broadcast('__session_sync', buildSessionSyncPayload(session));
     persistRuntimeSessions();
 
+    await repairInterruptedContext(session);
     await runSessionNow(session, resolvedRequest.query, op.tabId, {
         ...op.taskOptions,
         taskKind: resolvedRequest.taskKind,
@@ -289,7 +295,7 @@ async function handleSessionResumeOp(op: SessionResumeOp) {
         respondSessionOp(op.sendResponse, payload, op.label);
     };
 
-    const session = sessions.get(op.sessionId);
+    const session = await loadArchivedSession(op.sessionId);
     if (!session) {
         respond({
             accepted: false,
@@ -331,7 +337,7 @@ async function handleSessionResumeOp(op: SessionResumeOp) {
 
     // 构建恢复提示
     const failureDesc = session.failureCode || '异常';
-    const resumeHint = `上一轮任务因 ${failureDesc} 中断，请基于已有的工具调用结果继续完成任务。不要重复已经完成的步骤。`;
+    const resumeHint = session.channelResumeQuery || session.summary;
 
     // 重置 session 状态
     session.status = 'running';
@@ -363,8 +369,9 @@ async function handleSessionResumeOp(op: SessionResumeOp) {
 
     // 通过 runSessionNow 重新执行，传入 resumeHint 作为 query
     // session.context 已保存了之前的上下文，runSessionTaskChat 会自动用它作为 previousContext
+    await repairInterruptedContext(session);
     await runSessionNow(session, resumeHint, op.tabId, {
-        appendUserQuery: true,
+        appendUserQuery: false,
         taskKind: getSessionTaskKind(session.id),
     });
 
@@ -384,7 +391,7 @@ async function handleSessionRollbackOp(op: SessionRollbackOp) {
         }, op.label);
         return;
     }
-    const session = sessions.get(op.sessionId);
+    const session = await loadArchivedSession(op.sessionId);
     if (!session) {
         respondSessionOp(op.sendResponse, {
             success: false,
@@ -408,7 +415,7 @@ async function handleSessionClearOp(op: SessionClearOp) {
     const clearedTaskKind = getSessionTaskKind(op.sessionId);
     const now = Date.now();
 
-    const session = sessions.get(op.sessionId);
+    const session = await loadArchivedSession(op.sessionId);
     const isRunningSession = session?.status === 'running';
     if (session) {
         if (session.status === 'running' || session.status === 'waiting') {
@@ -455,7 +462,7 @@ async function handleSessionCancelOp(op: SessionCancelOp) {
         await RuntimeResourceManager.closeAll(op.sessionId);
     }
 
-    const session = sessions.get(op.sessionId);
+    const session = await loadArchivedSession(op.sessionId);
     if (session && session.status === 'error') {
         Channel.broadcast('__session_sync', buildSessionSyncPayload(session));
     }

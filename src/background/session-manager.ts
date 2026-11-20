@@ -5,6 +5,9 @@
  */
 import Channel from '../lib/channel';
 import _console from '../lib/console';
+import { flushSessionArchive, queueArchiveEvent } from './workspace-storage';
+import { workspaceRepository } from '../lib/workspace-db/repository';
+import { archiveEvent } from '../workspace/types';
 import { channelAccess } from '../lib/channel-access';
 import { handleChat } from '../ai/orchestrator';
 import { getTextContent } from '../ai/context-manager';
@@ -573,6 +576,10 @@ export function createSessionPushEvent(session: Session) {
             applyTurnLifecycleEventToSession(session, 'turn_completed', payload);
         }
 
+        queueArchiveEvent(session, archiveEvent(session.id, { ...event, timestamp: Date.now() }));
+        // 内存回放有限，完整事件已进入独立档案写入队列。
+        if (session.eventLog.length > 500) session.eventLog.splice(0, session.eventLog.length - 500);
+
         const streamPayload = { ...event, sessionId: session.id, taskId: session.id };
         const shouldSync = SESSION_SYNC_EVENT_TYPES.has(event.type);
         const shouldPersistImmediate = SESSION_IMMEDIATE_PERSIST_EVENT_TYPES.has(event.type);
@@ -607,7 +614,7 @@ export function createSessionPushEvent(session: Session) {
 // ============ Checkpoint ============
 
 export function createSessionCheckpointHandler(session: Session): NonNullable<HandleChatOptions['onCheckpoint']> {
-    return (checkpoint) => {
+    return async (checkpoint) => {
         if (session.status !== 'running') return;
         if (Array.isArray(checkpoint.contextSnapshot) && checkpoint.contextSnapshot.length > 0) {
             session.context = compactSessionContext(checkpoint.contextSnapshot);
@@ -621,11 +628,14 @@ export function createSessionCheckpointHandler(session: Session): NonNullable<Ha
             ? 'act'
             : checkpoint.phase;
         session.agentState = {
-            phase: normalizedPhase,
+            phase: ['plan', 'act', 'observe', 'verify', 'finalize'].includes(normalizedPhase)
+                ? normalizedPhase as Session['agentState']['phase'] : 'act',
             round: checkpoint.round,
             reason: checkpoint.summary || session.agentState.reason,
             updatedAt: checkpoint.updatedAt || Date.now(),
         };
+        if (checkpoint.meta?.budget) session.budgetSnapshot = checkpoint.meta.budget as Session['budgetSnapshot'];
+        await flushSessionArchive(session);
         persistRuntimeSessions();
     };
 }
@@ -650,12 +660,16 @@ async function runSessionTaskChat(
     pushEvent: (event: AIStreamEvent) => void,
     taskScopedOptions: TaskScopedHandleChatOptions,
 ) {
+    const consumed = new Set<string>();
+    const checkpointHandler = createSessionCheckpointHandler(session);
     const finalInput = await handleChat(taskScopedQuery, (event: AIStreamEvent) => {
         pushEvent(event);
     }, tabId, signal, session.context.length > 0 ? session.context : undefined, {
         sessionId: session.id,
+        persistToolEvidence: true,
         resumeTodoSnapshot: taskScopedOptions.appendUserQuery === false ? session.todoSnapshot : undefined,
         resumeWebAccessSnapshot: taskScopedOptions.appendUserQuery === false ? session.webAccessSnapshot : undefined,
+        resumeBudget: taskScopedOptions.appendUserQuery === false ? session.budgetSnapshot : undefined,
         disallowTools: taskScopedOptions.disallowTools,
         maxRounds: taskScopedOptions.maxRounds,
         maxToolCalls: taskScopedOptions.maxToolCalls,
@@ -663,7 +677,17 @@ async function runSessionTaskChat(
         appendUserQuery: taskScopedOptions.appendUserQuery,
         suppressNextStepHint: taskScopedOptions.suppressNextStepHint,
         maxInputItems: MAX_MODEL_CONTEXT_ITEMS,
-        onCheckpoint: createSessionCheckpointHandler(session),
+        consumePendingUserInputs: () => {
+            const inputs = (session.pendingUserInputs || []).filter(item => !consumed.has(item.id));
+            inputs.forEach(item => consumed.add(item.id));
+            return inputs.map(item => item.text);
+        },
+        onCheckpoint: async checkpoint => {
+            const pendingBefore = session.pendingUserInputs;
+            session.pendingUserInputs = pendingBefore?.filter(item => !consumed.has(item.id));
+            try { await checkpointHandler(checkpoint); }
+            catch (error) { session.pendingUserInputs = pendingBefore; throw error; }
+        },
     });
 
     if (finalInput) {
@@ -965,6 +989,7 @@ async function executeSessionChat(session: Session, query: string, tabId?: numbe
             reason: `开始处理：${normalizedQuery.slice(0, 30)}`,
             updatedAt: Date.now(),
         };
+        await flushSessionArchive(session);
         await persistRuntimeSessionsImmediate();
         if (taskRunner.emitTurnStarted !== false) {
             pushEvent({
@@ -1078,6 +1103,10 @@ async function executeSessionChat(session: Session, query: string, tabId?: numbe
         persistSessionHistory(session);
         persistRuntimeSessions();
     } finally {
+        await flushSessionArchive(session).catch(error => {
+            _console.error('[Workspace] 会话收尾保存失败', error);
+            Channel.broadcast('__workspace_storage_error', { sessionId: session.id, message: '会话收尾保存失败，请检查本地存储' });
+        });
         completeActiveTask(session.id, runId);
         if (session.status === 'done') {
             await channelAccess.cancelSession(session.id).catch((error) => {
@@ -1096,8 +1125,8 @@ async function executeSessionChat(session: Session, query: string, tabId?: numbe
  * @param originTabId 发起任务的标签页 ID
  * @returns 新会话对象
  */
-export function createSession(summary: string, originTabId?: number): Session {
-    const id = Date.now().toString();
+export function createSession(summary: string, originTabId?: number, fixedId?: string): Session {
+    const id = fixedId || crypto.randomUUID();
     const session: Session = {
         id,
         status: 'running',
@@ -1114,7 +1143,6 @@ export function createSession(summary: string, originTabId?: number): Session {
             reason: '会话创建，等待规划',
             updatedAt: Date.now(),
         },
-        taskRuntime: undefined,
         failureCode: undefined,
         lastError: undefined,
         originTabId,
@@ -1123,17 +1151,14 @@ export function createSession(summary: string, originTabId?: number): Session {
 
     // 超过容量上限时清理最早的非活跃会话
     if (sessions.size > MAX_SESSIONS) {
-        for (const [sid] of sessions) {
-            if (sid !== id) {
-                // 如果旧会话还有活跃 controller，先取消
-                const oldController = activeControllers.get(sid);
-                if (oldController) {
-                    oldController.abort();
-                    completeActiveTask(sid);
-                }
-                void RuntimeResourceManager.closeAll(sid);
-                sessionTaskKinds.delete(sid);
-                sessions.delete(sid);
+        for (const [sid, old] of sessions) {
+            if (sid !== id && old.status !== 'running' && old.status !== 'waiting' && !activeControllers.has(sid)) {
+                void flushSessionArchive(old).then(() => {
+                    if (!activeControllers.has(sid) && old.status !== 'running' && old.status !== 'waiting') {
+                        sessionTaskKinds.delete(sid);
+                        sessions.delete(sid);
+                    }
+                }).catch(error => _console.error('[Workspace] 归档失败，保留内存会话', error));
                 break;
             }
         }
@@ -1142,6 +1167,15 @@ export function createSession(summary: string, originTabId?: number): Session {
     setActiveSessionId(id);
     persistRuntimeSessions();
     return session;
+}
+
+/** 历史会话按需装载；仅打开档案不会改变全局执行目标。 */
+export async function loadArchivedSession(id: string): Promise<Session | undefined> {
+    const cached = sessions.get(id);
+    if (cached) return cached;
+    const restored = await workspaceRepository.loadRuntimeSession(id);
+    if (restored) sessions.set(id, restored);
+    return restored;
 }
 
 export async function abortSessionTask(
@@ -1222,26 +1256,29 @@ export async function abortSessionTask(
     });
 }
 
-async function stopOtherRunningSessions(reason: string, exceptSessionId?: string) {
-    for (const session of sessions.values()) {
-        if (session.id !== exceptSessionId && session.status === 'waiting') {
-            await abortSessionTask(session.id, 'replaced', reason, 'E_SUPERSEDED');
-        }
-    }
-    for (const task of getRunningTasks()) {
-        if (task.sessionId === exceptSessionId) continue;
-        await abortSessionTask(task.sessionId, 'replaced', reason, 'E_SUPERSEDED');
-    }
-}
+let sessionRunQueue: Promise<void> = Promise.resolve();
+const scheduledSessions = new Set<string>();
+let onWorkspaceIdle: (() => void) | undefined;
+export function setWorkspaceIdleHandler(handler: () => void): void { onWorkspaceIdle = handler; }
+export function isSessionScheduled(id: string): boolean { return scheduledSessions.has(id) || Boolean(findRunningTask(id)); }
 
 export async function runSessionNow(session: Session, query: string, tabId?: number, options?: ExecuteSessionOptions) {
+    if (isSessionScheduled(session.id)) return;
     if (!tryAcquireCoalesceKey(options?.coalesceKey)) return;
-    await stopOtherRunningSessions('新任务已启动，当前任务被替换', session.id);
     const resolvedRequest = resolveSessionTaskRequest(query, options?.taskKind);
     sessionTaskKinds.set(session.id, resolvedRequest.taskKind);
 
     setActiveSessionId(session.id);
-    session.status = 'running';
+    session.status = 'waiting';
+    session.failureCode = undefined;
+    scheduledSessions.add(session.id);
+    // 排队前保存输入；重启后可从同一上下文明确继续，不能丢掉已接收的消息。
+    if (options?.appendUserQuery !== false) {
+        session.context.push({ role: 'user', content: resolvedRequest.query });
+        session.todoSnapshot = undefined;
+        session.webAccessSnapshot = undefined;
+        session.budgetSnapshot = undefined;
+    }
 
     session.agentState = {
         phase: 'plan',
@@ -1251,13 +1288,16 @@ export async function runSessionNow(session: Session, query: string, tabId?: num
     };
     Channel.broadcast('__session_sync', buildSessionSyncPayload(session));
     persistRuntimeSessions();
+    try { await flushSessionArchive(session); }
+    catch (error) { scheduledSessions.delete(session.id); releaseCoalesceKey(options?.coalesceKey); throw error; }
 
-    void executeSessionChat(session, resolvedRequest.query, tabId, {
-        ...options,
-        taskKind: resolvedRequest.taskKind,
-    }).finally(() => {
-        releaseCoalesceKey(options?.coalesceKey);
-    });
+    // 模型主编排串行排队，新会话不会取消旧会话。
+    const run = sessionRunQueue.then(async () => {
+        if (session.failureCode === 'E_CANCELLED') return;
+        session.status = 'running';
+        await executeSessionChat(session, resolvedRequest.query, tabId, { ...options, appendUserQuery: false, taskKind: resolvedRequest.taskKind });
+    }).finally(() => { scheduledSessions.delete(session.id); releaseCoalesceKey(options?.coalesceKey); onWorkspaceIdle?.(); });
+    sessionRunQueue = run.catch(error => _console.error('[Workspace] 会话队列执行失败', error));
 }
 
 export async function rollbackSessionTurns(session: Session, turns: number, source: 'rollback' | 'undo'): Promise<{

@@ -20,6 +20,11 @@ import Storage from './lib/storage';
 import { ensureToolRegistryReady } from './functions/registry';
 import { restoreChannelRecovery } from './background/channel-recovery';
 import { restoreRuntimeTimers, restoreSessionState } from './background/timer-dispatch';
+import { startWorkspace } from './background/workspace-handlers';
+import { installLeadTaskWakeups } from './background/lead-task-runner';
+import { workspaceStorageReady } from './background/workspace-storage';
+import { workspaceRepository } from './lib/workspace-db/repository';
+import { sessions } from './background/session-state';
 
 // 注册所有 Channel 处理器（副作用导入，统一模式）
 import './background/channel-handlers';
@@ -34,6 +39,7 @@ import './background/timer-dispatch';
 
 // 启动 Channel 监听（background 侧不传 tabId）
 Channel.listen();
+installLeadTaskWakeups();
 
 console.log(`[Mole] Background Service Worker 已启动, V${VERSION}`);
 void ensureToolRegistryReady().catch((err) => {
@@ -61,8 +67,14 @@ chrome.runtime.onInstalled.addListener((details) => {
 // 顺序恢复（先会话，再定时器）
 (async () => {
     try {
+        await workspaceStorageReady();
         await restoreSessionState();
+        for (const id of sessions.keys()) {
+            const archived = await workspaceRepository.loadRuntimeSession(id);
+            if (archived) sessions.set(id, archived);
+        }
         await restoreChannelRecovery();
+        await startWorkspace();
     } catch (err) {
         console.error('[Mole] 恢复会话状态失败:', err);
     }

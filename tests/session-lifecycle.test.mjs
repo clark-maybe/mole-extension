@@ -1,3 +1,4 @@
+import 'fake-indexeddb/auto';
 import assert from 'node:assert/strict';
 import { test, after } from 'node:test';
 import { Buffer } from 'node:buffer';
@@ -8,7 +9,8 @@ const { structuredClone } = globalThis;
 // 保留真实会话执行、持久化、事件队列及同步，仅隔离模型与浏览器工具。
 const bundle = await build({
   stdin: { contents: `export * from './src/background/session-manager';
-    export { default as Channel } from './src/lib/channel';`,
+    export { default as Channel } from './src/lib/channel';
+    export {workspaceRepository as repo} from './src/lib/workspace-db/repository';`,
     resolveDir: fileURLToPath(new URL('../', import.meta.url)) },
   bundle: true, format: 'esm', platform: 'node', write: false,
   plugins: [{ name: 'lifecycle-fixtures', setup(build) {
@@ -19,9 +21,10 @@ const bundle = await build({
         export const getBuiltinFunction = () => undefined;
         export const ensureToolRegistryReady = async () => {};`
       : `export const handleChat = async (query, emit, _tabId, _signal, previous, options) => {
+          if (globalThis.workspaceModelGate) await globalThis.workspaceModelGate;
           const context = [...(previous || []), {role:'assistant',content:'查询已完成，结果已整理。'}];
           emit({type:'text',content:'查询已完成，结果已整理。'});
-          options.onCheckpoint({phase:'finalize',round:1,contextSnapshot:context});
+          await options.onCheckpoint({phase:'finalize',round:1,contextSnapshot:context});
           return context;
         };`,
     }));
@@ -53,7 +56,7 @@ test('网页访问限制随检查点持久化，独立于模型上下文', async
   session.status = 'running';
   const snapshot = [{ url: 'https://example.com/denied', aliases: [], code: 'E_WEB_ACCESS_DENIED',
     message: '拒绝访问', retryable: false, failures: 1, nextRetryAt: 1000 }];
-  api.createSessionCheckpointHandler(session)({ phase: 'act', round: 1, summary: '网页不可用', updatedAt: 1,
+  await api.createSessionCheckpointHandler(session)({ phase: 'act', round: 1, summary: '网页不可用', updatedAt: 1,
     contextSnapshot: [{ role: 'user', content: '压缩后的任务目标' }], meta: { webAccessSnapshot: snapshot } });
   await api.persistRuntimeSessionsImmediate();
   const saved = stored.mole_session_runtime_v1.sessions.find(item => item.id === session.id);
@@ -85,8 +88,7 @@ test('最终结果写盘期间发生状态查询，仍会发送完成事件并�
   };
   try {
     await api.runSessionNow(session, session.summary);
-    const task = api.findRunningTask(session.id);
-    if (task) await task.done;
+    while (api.isSessionScheduled(session.id)) await new Promise(resolve => setTimeout(resolve, 1));
     await api.dispatchSessionOp('test_flush', () => {});
     assert.equal(interleaved, true);
     assert.equal(session.status, 'done');
@@ -109,8 +111,7 @@ test('发送队列积压时，旧事件附带的同步状态不能把已完成�
   const session = api.createSession('整理已有线索');
   try {
     await api.runSessionNow(session, session.summary);
-    const task = api.findRunningTask(session.id);
-    if (task) await task.done;
+    while (api.isSessionScheduled(session.id)) await new Promise(resolve => setTimeout(resolve, 1));
     const beforeFlush = broadcasts.length;
     release(); await held;
     await api.dispatchSessionOp('test_flush', () => {});
@@ -122,4 +123,25 @@ test('发送队列积压时，旧事件附带的同步状态不能把已完成�
     await api.persistRuntimeSessionsImmediate();
     api.sessions.clear();
   }
+});
+
+
+test('新会话排队不取消旧执行；消息在执行前已落盘，模型上下文中只出现一次', async () => {
+  let release;
+  globalThis.workspaceModelGate = new Promise(resolve => { release = resolve; });
+  const first = api.createSession('持续执行的旧任务');
+  const second = api.createSession('新会话用户输入');
+  try {
+    await api.runSessionNow(first, first.summary);
+    for (let i = 0; i < 100 && !api.findRunningTask(first.id); i++) await new Promise(resolve => setTimeout(resolve, 1));
+    await api.runSessionNow(second, second.summary);
+    assert.equal(api.findRunningTask(first.id).controller.signal.aborted, false);
+    assert.equal(second.status, 'waiting');
+    const saved = await api.repo.loadRuntimeSession(second.id);
+    assert.equal(saved.context.filter(item => item.role === 'user' && item.content === second.summary).length, 1);
+    release(); delete globalThis.workspaceModelGate;
+    while (api.isSessionScheduled(first.id) || api.isSessionScheduled(second.id)) await new Promise(resolve => setTimeout(resolve, 1));
+    assert.equal(first.status, 'done'); assert.equal(second.status, 'done');
+    assert.equal(second.context.filter(item => item.role === 'user' && item.content === second.summary).length, 1);
+  } finally { release(); delete globalThis.workspaceModelGate; api.sessions.clear(); }
 });

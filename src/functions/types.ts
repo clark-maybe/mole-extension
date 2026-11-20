@@ -10,6 +10,9 @@ export type PermissionLevel = 'read' | 'interact' | 'sensitive' | 'dangerous';
 
 /** 单个工具函数的定义 */
 export interface ToolExecutionContext {
+  callId?: string;
+  recoveryWatchId?: string;
+  onChannelPage?: (tabId: number) => Promise<void>;
   tabId?: number;
   /** 关联渠道受阻调用，供用户处理后自动接续。 */
   sessionId?: string;

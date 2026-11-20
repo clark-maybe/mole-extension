@@ -2,6 +2,21 @@
 
 MoleClaw includes 37+ built-in tools covering all aspects of browser automation. The AI automatically selects the most suitable tools based on your natural language instructions.
 
+## Sales Leads and Recording
+
+`lead_workspace` is available by default. Platform tools load on demand through the `sales` category of `load_tools`.
+
+| Tool | Description |
+|------|-------------|
+| `lead_workspace` | Manage durable jobs, read leads/facts/evidence, and record qualification decisions and company identity links |
+| `douyin_collect_users` | Start a Douyin account collection job that saves each batch |
+| `lixiaoyun_search_companies` | Independently find candidate companies and business profiles through Lixiaoyun |
+| `riskbird_search_companies` | Independently find candidate companies and business profiles through Riskbird |
+| `lixiaoyun_get_contacts` | Enrich company contact details through Lixiaoyun |
+| `mantis_crm_record` | Record selected companies in a company-specific Mantis CRM when requested; recording only, with no lookup capability |
+
+Prospecting delivers a traceable lead table by default. CRM is an optional recording destination, not a query prerequisite or a required task step. See [Sales Lead Workspace](/en/guide/lead-workspace).
+
 ## Page Awareness
 
 | Tool | Description |

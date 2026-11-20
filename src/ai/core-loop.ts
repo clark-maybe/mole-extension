@@ -198,7 +198,7 @@ const injectPendingInputs = async (
 };
 
 /** 发送检查点 */
-const emitCheckpoint = (
+const emitCheckpoint = async (
   options: HandleChatOptions | undefined,
   phase: string,
   round: number,
@@ -207,7 +207,7 @@ const emitCheckpoint = (
   todoSnapshot?: import('./todo-manager').TodoSnapshot,
 ) => {
   if (!options?.onCheckpoint) return;
-  options.onCheckpoint({
+  await options.onCheckpoint({
     phase,
     round,
     summary,
@@ -400,7 +400,7 @@ export const agenticLoop = async (
   let roundsSinceTodoOp = 0;
 
   emit({ type: 'thinking', content: 'AI 正在思考...' });
-  emitCheckpoint(options, 'act', 0, '开始处理', context);
+  await emitCheckpoint(options, 'act', 0, '开始处理', context);
 
   while (round < budget.maxRounds && runState.rounds < runState.maxRounds &&
     totalToolCalls < budget.maxToolCalls && runState.toolCalls < runState.maxToolCalls && runState.failureRounds < 6) {
@@ -424,7 +424,7 @@ export const agenticLoop = async (
     const estimatedTokens = estimateContextTokens(context);
     if (phaseControl?.shouldHandoff?.(estimatedTokens, round)) {
       phaseControl.handoffRequested = true;
-      emitCheckpoint(options, 'act', round, '阶段交接', context, todoManager?.active ? todoManager.toSnapshot() : undefined);
+      await emitCheckpoint(options, 'act', round, '阶段交接', context, todoManager?.active ? todoManager.toSnapshot() : undefined);
       break;
     }
 
@@ -446,7 +446,7 @@ export const agenticLoop = async (
     // ── 机制：调用 LLM ──
     round++;
     runState.rounds++;
-    emitCheckpoint(options, 'act', round, `第 ${round} 轮`, context);
+    await emitCheckpoint(options, 'act', round, `第 ${round} 轮`, context);
 
     let fullText: string;
     let functionCalls: OutputFunctionCallItem[];
@@ -685,6 +685,7 @@ export const agenticLoop = async (
             emit({ type: 'function_result', content: JSON.stringify({ name: fc.name, callId: fc.call_id, success: false, message: error }) });
           } else allowedCalls.push(fc);
         }
+        await emitCheckpoint(options, 'act', round, '工具执行前检查点', context, todoManager?.active ? todoManager.toSnapshot() : undefined);
         results.push(...await executeToolCalls(allowedCalls, tabId, signal, emit, agentRunner, options?.sessionId, runState));
         for (const r of results) context.push(r);
         let failed = 0;
@@ -763,12 +764,12 @@ export const agenticLoop = async (
       }
 
       const todoSnap = todoManager?.active ? todoManager.toSnapshot() : undefined;
-      emitCheckpoint(options, 'act', round, `工具执行完毕（共 ${totalToolCalls} 次调用）`, context, todoSnap);
+      await emitCheckpoint(options, 'act', round, `工具执行完毕（共 ${totalToolCalls} 次调用）`, context, todoSnap);
 
       // ── 边界：Todo 完成驱动的阶段交接 ──
       if (phaseControl?.handoffRequested && runState.failureRounds < 6 &&
         runState.rounds < runState.maxRounds && runState.toolCalls < runState.maxToolCalls) {
-        emitCheckpoint(options, 'act', round, '阶段交接（Todo 完成）', context, todoSnap);
+        await emitCheckpoint(options, 'act', round, '阶段交接（Todo 完成）', context, todoSnap);
         break;
       }
 
@@ -800,7 +801,7 @@ export const agenticLoop = async (
     }
 
     // 模型给出了非空文本回复 → 循环自然结束
-    emitCheckpoint(options, 'finalize', round, '任务完成', context, todoManager?.active ? todoManager.toSnapshot() : undefined);
+    await emitCheckpoint(options, 'finalize', round, '任务完成', context, todoManager?.active ? todoManager.toSnapshot() : undefined);
     break;
   }
 
@@ -823,7 +824,7 @@ export const agenticLoop = async (
         for (const item of finalResponse.outputItems) context.push(item as InputItem);
       } catch { /* 忽略 */ }
     }
-    emitCheckpoint(options, 'finalize', round, runState.failureRounds >= 6 ? '连续失败，基于已有结果收尾' : '达到任务处理边界', context,
+    await emitCheckpoint(options, 'finalize', round, runState.failureRounds >= 6 ? '连续失败，基于已有结果收尾' : '达到任务处理边界', context,
       todoManager?.active ? todoManager.toSnapshot() : undefined);
   }
 

@@ -4,13 +4,21 @@ import { WebNavigationObserver } from '../lib/web-navigation';
 import type { WebAccessSnapshot } from '../lib/web-access';
 import type { LoopBudget } from './loop-config';
 
-export const createRunState = (budget: LoopBudget, snapshot?: WebAccessSnapshot) => ({
+export interface AgentBudgetSnapshot {
+  rounds: number;
+  toolCalls: number;
+  failureRounds: number;
+  failedSignatures: Array<[string, number]>;
+}
+
+export const createRunState = (budget: LoopBudget, snapshot?: WebAccessSnapshot, saved?: AgentBudgetSnapshot) => ({
+  persistToolEvidence: false,
   webAccess: new WebAccessGuard(snapshot),
   webNavigation: new WebNavigationObserver(),
-  rounds: 0,
-  toolCalls: 0,
-  failureRounds: 0,
-  failedSignatures: new Map<string, number>(),
+  rounds: saved?.rounds || 0,
+  toolCalls: saved?.toolCalls || 0,
+  failureRounds: saved?.failureRounds || 0,
+  failedSignatures: new Map<string, number>(saved?.failedSignatures || []),
   maxRounds: budget.maxRounds,
   maxToolCalls: budget.maxToolCalls,
 });

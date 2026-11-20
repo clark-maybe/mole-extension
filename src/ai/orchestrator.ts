@@ -134,10 +134,14 @@ export const handleChat = async (
   // 标签页生命周期追踪：任务结束后自动关闭 AI 打开的标签页
   const tabTracker = new TabTracker();
   await tabTracker.startListening();
-  const runState = createRunState(budget, options?.resumeWebAccessSnapshot);
+  const runState = createRunState(budget, options?.resumeWebAccessSnapshot, options?.resumeBudget);
+  runState.persistToolEvidence = options?.persistToolEvidence === true;
   const checkpoint = options?.onCheckpoint;
   const runOptions: HandleChatOptions = { ...options, onCheckpoint: state => checkpoint?.({
-    ...state, meta: { ...state.meta, webAccessSnapshot: runState.webAccess.snapshot() },
+    ...state, meta: { ...state.meta, webAccessSnapshot: runState.webAccess.snapshot(), budget: {
+      rounds: runState.rounds, toolCalls: runState.toolCalls, failureRounds: runState.failureRounds,
+      failedSignatures: [...runState.failedSignatures],
+    } },
   }) };
   try {
     runState.webNavigation.start();

@@ -31,6 +31,7 @@ const channelBundle = await build({
         export const ${[
           'setActiveSessionId', 'activeControllers', 'sessionTaskKinds', 'activeCoalescedTasks',
           'parseRollbackCommand', 'respondSessionOp', 'resolveSessionTaskRequest', 'createSession',
+          'loadArchivedSession', 'isSessionScheduled',
           'buildSessionSyncPayload', 'buildSessionReplayPayload', 'buildSessionOpQueueSnapshot',
           'buildErrorContent', 'runSessionNow', 'abortSessionTask', 'rollbackSessionTurns',
           'extractLatestStartedRunId', 'extractExecuteSessionOptions', 'getPrimaryRunningTask',

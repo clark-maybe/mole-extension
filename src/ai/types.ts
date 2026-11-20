@@ -225,6 +225,8 @@ export interface SessionAgentStateSnapshot {
 
 /** 集中管理的会话数据 */
 export interface Session {
+  pendingUserInputs?: Array<{ id: string; text: string }>;
+  budgetSnapshot?: import('./run-state').AgentBudgetSnapshot;
   webAccessSnapshot?: WebAccessSnapshot;
   /** 恢复人工介入前的待办进度。 */
   todoSnapshot?: TodoSnapshot;

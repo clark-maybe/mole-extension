@@ -25,7 +25,8 @@
     "preview": "vite preview",
     "docs:dev": "vitepress dev docs",
     "docs:build": "vitepress build docs",
-    "docs:preview": "vitepress preview docs"
+    "docs:preview": "vitepress preview docs",
+    "test": "node --test tests/*.test.mjs"
   },
   "dependencies": {
     "@ant-design/icons": "^5.6.1",
@@ -46,6 +47,7 @@
     "eslint": "^8.45.0",
     "eslint-plugin-react-hooks": "^4.6.0",
     "eslint-plugin-react-refresh": "^0.4.3",
+    "fake-indexeddb": "^6.2.8",
     "typescript": "^5.0.2",
     "vite": "^5.0.0",
     "vitepress": "^1.6.4"

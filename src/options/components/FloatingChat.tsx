@@ -1314,10 +1314,6 @@ export function FloatingChat({ mode = 'float' }: FloatingChatProps) {
 
   // ---- 新对话 ----
   const handleNew = useCallback(() => {
-    const task = currentTaskRef.current;
-    if (task) {
-      Channel.send('__session_clear', { sessionId: task.id });
-    }
     currentTaskRef.current = null;
     replayKnownEventCountRef.current = 0;
     replayAppliedEventCountRef.current = 0;

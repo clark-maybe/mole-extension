@@ -11,6 +11,8 @@
 
 import type { FunctionDefinition, FunctionResult, ToolExecutionContext } from './types';
 import Channel from '../lib/channel';
+import { workspaceRepository } from '../lib/workspace-db/repository';
+import { WorkspacePersistenceError } from '../workspace/errors';
 
 let requestCounter = 0;
 
@@ -63,15 +65,20 @@ export const askUserFunction: FunctionDefinition = {
     const signal = context?.signal;
 
     // 广播提问请求到所有标签页
-    Channel.broadcast('__ask_user_request', {
+    const interaction = {
       requestId,
+      sessionId: context?.sessionId,
+      kind: 'question',
+      state: 'pending',
       question,
       options: options.length > 0 ? options : undefined,
       allowFreeText,
-    });
+    };
+    if (context?.sessionId) await workspaceRepository.setMeta(`interaction:${requestId}`, interaction);
+    Channel.broadcast('__ask_user_request', interaction);
 
     // 阻塞等待用户回答
-    return new Promise<FunctionResult>((resolve) => {
+    return new Promise<FunctionResult>((resolve, reject) => {
       let settled = false;
 
       const cleanup = () => {
@@ -81,9 +88,14 @@ export const askUserFunction: FunctionDefinition = {
       };
 
       // 监听用户回答（匹配 requestId）
-      const handler = (data: any) => {
+      const handler = async (data: any) => {
         if (settled || data?.requestId !== requestId) return;
         cleanup();
+        try {
+          if (context?.sessionId) await workspaceRepository.setMeta(`interaction:${requestId}`, { ...interaction, state: 'settled', answer: String(data.answer || '') });
+        } catch {
+          reject(new WorkspacePersistenceError('用户回答保存失败，已停止继续执行')); return;
+        }
         // 广播给所有标签页，同步更新卡片状态
         Channel.broadcast('__ask_user_settled', {
           requestId,
@@ -100,9 +112,14 @@ export const askUserFunction: FunctionDefinition = {
       };
 
       // abort 时清理并通知悬浮球取消
-      const onAbort = () => {
+      const onAbort = async () => {
         if (settled) return;
         cleanup();
+        try {
+          if (context?.sessionId) await workspaceRepository.setMeta(`interaction:${requestId}`, { ...interaction, state: 'interrupted' });
+        } catch {
+          reject(new WorkspacePersistenceError('取消状态保存失败')); return;
+        }
         Channel.broadcast('__ask_user_cancel', { requestId });
         resolve({ success: false, error: 'Task cancelled' });
       };

@@ -137,6 +137,10 @@ async function searchUsersInPage(
     const items = (payload.user_list ?? []).flatMap((entry: unknown) => {
       if (!isRecord(entry) || !isRecord(entry.user_info)) return [];
       const user = entry.user_info;
+      let certification = user.account_cert_info;
+      if (typeof certification === 'string') {
+        try { certification = JSON.parse(certification); } catch { certification = null; }
+      }
       const uid = text(user.uid);
       const secUid = text(user.sec_uid);
       if (!uid || !secUid) return [];
@@ -148,6 +152,7 @@ async function searchUsersInPage(
         signature: text(user.signature),
         custom_verify: text(user.custom_verify),
         enterprise_verify_reason: text(user.enterprise_verify_reason),
+        is_enterprise: Boolean(text(user.enterprise_verify_reason)) || (isRecord(certification) && certification.is_biz_account === 1),
         follower_count: metric(user.follower_count),
         total_favorited: metric(user.total_favorited),
         profile_url: `https://www.douyin.com/user/${encodeURIComponent(secUid)}`,
@@ -171,6 +176,7 @@ async function searchUsersInPage(
       success: true,
       data: {
         platform: 'douyin',
+        raw_response: payload,
         search_type: 'user',
         keyword: text(payload.input_keyword) || keyword,
         count: items.length,
@@ -245,7 +251,8 @@ export const douyinSearchUsersFunction: FunctionDefinition = {
       }
 
       const runSearch = async (tabId: number): Promise<FunctionResult> => {
-        const watchId = crypto.randomUUID();
+        const watchId = context?.recoveryWatchId || crypto.randomUUID();
+        await context?.onChannelPage?.(tabId);
         const ready = await waitForAnySelector(tabId, [CAPTCHA_SELECTOR, 'input[placeholder*="搜索"]'], 20_000, 300, signal);
         if (!ready) return { success: false, error: '抖音页面未准备好，请打开 https://www.douyin.com/ 并确认登录或完成验证' };
         if (signal?.aborted) return { success: false, error: '操作已取消' };

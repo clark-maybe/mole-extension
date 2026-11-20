@@ -344,3 +344,14 @@ test('验证码匹配限定域名和路径，普通 iframe 不影响查询', asy
   try { assert.equal((await tool.execute({ keyword: '汽车贴膜' })).code, 'E_VERIFICATION_REQUIRED'); }
   finally { fixture.restore(); }
 });
+
+test('企业认证兼容旧平台 account_cert_info，持久作业观察器在查询前关联页签', async () => {
+  const fixture = browser({ response: { status_code: 0, user_list: [{ user_info: { ...user, account_cert_info: JSON.stringify({ is_biz_account: 1 }) } }], cursor: 20, has_more: 0 } });
+  const pages = [];
+  try {
+    const result = await tool.execute({ keyword: '贴膜' }, { recoveryWatchId: 'workspace:task:1', onChannelPage: async id => { pages.push(id); } });
+    assert.equal(result.data.items[0].is_enterprise, true);
+    assert.deepEqual(pages, [7]);
+    assert.equal(fixture.watcherInstalls[0].watchId, 'workspace:task:1');
+  } finally { fixture.restore(); }
+});

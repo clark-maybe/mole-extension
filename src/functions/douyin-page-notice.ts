@@ -114,7 +114,7 @@ export function updateDouyinPageNotice(
         readyAttempts++;
         nextReadyAt = Date.now() + 500;
         try {
-          chrome.runtime.sendMessage({ type: '__channel_access_ready', data: { watchId } }, (response) => {
+          chrome.runtime.sendMessage({ type: watchId.startsWith('workspace:') ? '__workspace_channel_ready' : '__channel_access_ready', data: { watchId } }, (response) => {
             const error = chrome.runtime.lastError;
             if (!stopped && (error || response?.accepted !== true)) readyReported = false;
           });
@@ -128,6 +128,7 @@ export function updateDouyinPageNotice(
     marker.setAttribute('data-recovery-kind', 'verification');
     if (!wasPresent) renderNotice('verification');
     wasPresent = true;
+    if (watchId.startsWith('workspace:')) return;
     if (delivered || sending || attempts >= 60 || Date.now() < nextReportAt) return;
     sending = true;
     attempts++;

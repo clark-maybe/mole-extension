@@ -2,6 +2,10 @@
 
 This page covers the technical architecture behind Mole. For user-facing features, see [Tips & Tricks](/en/guide/tips).
 
+## Sales Lead Workspace
+
+Options provides direct conversations, complete session archives, durable jobs, and traceable lead tables. Batches commit incrementally; fields and qualification decisions reference original evidence, and jobs recover from committed checkpoints. Company and contact queries use each provider's own login session. CRM is an optional recording destination, with no lookup capability or mandatory role in a task. See [Sales Lead Workspace](/en/guide/lead-workspace).
+
 ## Agentic Loop Architecture
 
 At Mole's core is a minimal Agentic Loop, with this design philosophy:

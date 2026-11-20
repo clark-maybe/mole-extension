@@ -44,6 +44,7 @@ export interface PendingTurnResponseRequest {
 
 /** handleChat 选项（保持向后兼容） */
 export interface HandleChatOptions {
+  persistToolEvidence?: boolean;
   sessionId?: string;
   /** 禁用指定工具 */
   disallowTools?: string[];
@@ -56,7 +57,9 @@ export interface HandleChatOptions {
   /** 是否追加用户 query 到 previousContext（默认 true） */
   appendUserQuery?: boolean;
   /** 检查点回调 */
-  onCheckpoint?: (checkpoint: HandleChatCheckpoint) => void;
+  onCheckpoint?: (checkpoint: HandleChatCheckpoint) => void | Promise<void>;
+  /** 同一业务运行接续时保留累计预算。 */
+  resumeBudget?: import('./run-state').AgentBudgetSnapshot;
   /** 消费待处理的用户输入 */
   consumePendingUserInputs?: () => Promise<string[] | undefined> | string[] | undefined;
   /** 上下文条目上限 */

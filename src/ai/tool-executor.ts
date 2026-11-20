@@ -9,6 +9,7 @@ import { mcpClient, getBuiltinFunction } from '../functions/registry';
 import { truncateToolResult, getTextContent } from './context-manager';
 import { requestConfirmationFunction } from '../functions/request-confirmation';
 import type { AgentRunState } from './run-state';
+import { beginObservation, commitObservation, WorkspacePersistenceError } from '../background/workspace-tool-evidence';
 
 /** Agent 执行器类型（由 orchestrator 注入） */
 export type AgentRunner = (params: {
@@ -202,7 +203,7 @@ export const executeToolCalls = async (
 
     const approvalResult = await requestConfirmationFunction.execute(
       { message: approvalMessage },
-      { tabId, signal },
+      { tabId, sessionId, signal },
     );
     const approved = approvalResult.success && approvalResult.data?.approved;
     // 用户选择"本次不再询问"时，后续自动跳过确认
@@ -268,15 +269,31 @@ export const executeToolCalls = async (
     } else {
       // 常规工具执行
       try {
+        const observation = runState?.persistToolEvidence ? await beginObservation(sessionId, call.call_id, call.name, params) : undefined;
         const result = await mcpClient.callTool(
           call.name,
           params,
-          { tabId, sessionId, webAccess: runState?.webAccess, webNavigation: runState?.webNavigation },
+          { tabId, sessionId, callId: call.call_id, webAccess: runState?.webAccess, webNavigation: runState?.webNavigation },
           { signal },
         );
-        const text = result.content?.[0]?.text || '{}';
+        let text = result.content?.[0]?.text || '{}';
+        let workspaceFailure: { code?: string; error?: string } | undefined;
+        try { workspaceFailure = JSON.parse(text); } catch { /* 普通文本回包无需解析 */ }
+        if (workspaceFailure?.code === 'E_WORKSPACE_STORAGE') throw new WorkspacePersistenceError(workspaceFailure.error || '本地保存失败，已停止执行');
+        if (observation) {
+          let sourceUrl = String(params.url || '');
+          try {
+            const parsed = JSON.parse(text);
+            sourceUrl = String(parsed.data?.url || parsed.data?.source_url || sourceUrl);
+            const sourceTab = parsed.data?.tab_id || params.tab_id || tabId;
+            if (!sourceUrl && sourceTab) sourceUrl = (await chrome.tabs.get(sourceTab)).url || '';
+          } catch { /* 来源缺失时保留空值，不编造来源 */ }
+          if (!/^https?:\/\//.test(sourceUrl)) sourceUrl = '';
+          text = await commitObservation(observation, text, sourceUrl);
+        }
         output = truncateToolResult(text);
       } catch (err: any) {
+        if (err instanceof WorkspacePersistenceError) throw err;
         if (signal?.aborted) {
           output = JSON.stringify({ success: false, error: '任务已取消' });
         } else {
