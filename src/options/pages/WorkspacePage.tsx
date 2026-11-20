@@ -103,7 +103,7 @@ export function WorkspacePage() {
           <Space size={8}>{id && isModelRunning && <Button type="text" loading={sessionBusy} icon={<StopOutlined />} onClick={() => void sessionAction('stop_session')}>停止回复</Button>}
           {id && workspace.archive?.snapshot.status === 'error' && <Button type="text" loading={sessionBusy} icon={<PlayCircleOutlined />} onClick={() => void sessionAction('resume_session')}>继续对话</Button>}
           <Button type="primary" className="workspace-send" shape="circle" icon={<ArrowUpOutlined />} aria-label="发送消息" title="发送消息" loading={sending} disabled={!input.trim()} onClick={() => void send()} /></Space></div>
-        </div><div className="workspace-composer-hint"><span>{['running', 'queued'].includes(activity.state) && id ? '任务在后台推进，你可以继续追加条件' : '发现活跃企业 · 核实主体 · 精确补全'}</span><span>Enter 发送 · Shift + Enter 换行</span></div>
+        </div><div className="workspace-composer-hint"><span>{['running', 'queued'].includes(activity.state) && id ? '任务在后台推进，你可以继续追加条件' : '描述行业、地区或企业名称'}</span><span>Enter 发送 · Shift + Enter 换行</span></div>
       </div>
     </section>
     <section className="workspace-results"><Tabs activeKey={resultsTab} onChange={setResultsTab} items={[

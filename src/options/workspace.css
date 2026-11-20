@@ -291,10 +291,6 @@ body:has(.options-workspace-page) { min-width: 0; overflow: hidden; }
 .workspace-welcome h2 { margin: 26px 0 18px; color: #27354a; font-size: clamp(24px, 2.2vw, 34px); font-weight: 600; line-height: 1.55; letter-spacing: -.035em; }
 .workspace-welcome h2 em { font-style: normal; color: #248f7a; }
 .workspace-welcome > p { max-width: 520px; font-size: 12px; color: #8391a3; line-height: 2; }
-.workspace-discovery-path { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 30px 0; font-size: 10px; color: #7d8fa3; }
-.workspace-discovery-path > span { display: flex; align-items: center; gap: 6px; }
-.workspace-discovery-path > span > .anticon { font-size: 13px; color: #789b98; }
-.workspace-discovery-path > i { width: 22px; height: 1px; background: linear-gradient(90deg, #d6e6e0, #e6edf6); }
 .workspace-starters { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 34px; }
 .workspace-starters > button { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-width: 0; padding: 16px; border: 1px solid #e8edf3; border-radius: 12px; background: linear-gradient(140deg, #fbfcfe, #fff); color: #62768f; text-align: left; cursor: pointer; font-size: 12px; transition: transform .2s, border-color .2s, box-shadow .2s; }
 .workspace-starters > button:hover { transform: translateY(-3px); border-color: #bcded4; box-shadow: 0 8px 22px #366c5b0b; }

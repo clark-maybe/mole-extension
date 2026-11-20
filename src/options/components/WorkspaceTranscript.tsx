@@ -2,7 +2,7 @@
 import { useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { Button } from 'antd';
-import { ArrowDownOutlined, ArrowRightOutlined, SearchOutlined, SafetyCertificateOutlined, UserOutlined } from '@ant-design/icons';
+import { ArrowDownOutlined, ArrowRightOutlined } from '@ant-design/icons';
 import { CallsGroup, MarkdownAnswer, UserMessage } from '../../content/float-ball/components/ConversationItems';
 import { FUNCTION_ICONS, FUNCTION_LABELS } from '../../content/float-ball/icons';
 import type { TranscriptItem } from '../../chat/transcript';
@@ -66,10 +66,9 @@ export function WorkspaceTranscript({ sessionId, items, live, running, waitingFo
       {!items.length && !live && !running && <div className="workspace-welcome">
         <div className="workspace-welcome-brand"><img src={chrome.runtime.getURL('logo.png')} alt="" /><span>从一个诉求，到一批可联系的客户</span></div>
         <h2>让下一次联系，<br /><em>从找到对的企业开始。</em></h2>
-        <p>在内容平台发现活跃企业，核实业务与主体，再用励销云补全企业信息和法人联系方式。过程有记录，结果有来源。</p>
-        <div className="workspace-discovery-path"><span><SearchOutlined />发现活跃企业</span><i /><span><SafetyCertificateOutlined />核实企业主体</span><i /><span><UserOutlined />补全法人信息</span></div>
-        <div className="workspace-starters"><button type="button" onClick={() => onSuggest('帮我寻找上海做汽车贴膜的企业，优先最近 30 天在抖音更新过内容的，核实企业主体后补全法人联系方式。')}><span>寻找活跃客户<small>上海 · 汽车贴膜 · 近期更新</small></span><ArrowRightOutlined rotate={-45} /></button>
-          <button type="button" onClick={() => onSuggest('我有一家已知名称的企业，想用励销云补全企业信息和法人手机号。')}><span>补全已知企业<small>工商信息 · 法人 · 手机号</small></span><ArrowRightOutlined rotate={-45} /></button></div>
+        <p>描述你想找的客户，获取整理好的企业资料、联系方式和来源。</p>
+        <div className="workspace-starters"><button type="button" onClick={() => onSuggest('帮我寻找上海做汽车贴膜的企业，优先近期活跃的，整理企业资料和联系方式。')}><span>寻找活跃客户<small>上海 · 汽车贴膜 · 近期活跃</small></span><ArrowRightOutlined rotate={-45} /></button>
+          <button type="button" onClick={() => onSuggest('帮我查询一家企业的工商资料、法人和联系方式。')}><span>查询企业资料<small>工商信息 · 法人 · 联系方式</small></span><ArrowRightOutlined rotate={-45} /></button></div>
       </div>}
       {entries.map((entry, index) => {
         if (entry.kind === 'calls') return <CallsGroup key={entry.id} initiallyOpen={false} isRunning={running} calls={entry.items.map(item => ({
